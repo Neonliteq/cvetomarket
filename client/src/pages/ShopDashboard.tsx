@@ -1,6 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Edit, Trash2, Package, ShoppingBag, BarChart2, MessageCircle, Eye, EyeOff, Star } from "lucide-react";
+import {
+  Plus, Edit, Trash2, Package, ShoppingBag, BarChart2, MessageCircle,
+  Eye, EyeOff, Star, MapPin, Phone, Calendar, Clock, User, FileText, Send
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -25,11 +28,21 @@ import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 
 const STATUS_LABELS: Record<string, string> = {
-  new: "Новый", confirmed: "Подтверждён", in_delivery: "В доставке",
-  delivered: "Доставлен", completed: "Завершён", cancelled: "Отменён",
+  new: "Новый", confirmed: "Подтверждён", assembling: "Сборка",
+  delivering: "Доставка", delivered: "Доставлен", cancelled: "Отменён",
 };
 
-type OrderWithItems = Order & { buyerName?: string; items?: { productName: string; quantity: number; price: string }[] };
+const STATUS_COLORS: Record<string, string> = {
+  new: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+  confirmed: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200",
+  assembling: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
+  delivering: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+  delivered: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+  cancelled: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+};
+
+type OrderItem = { productName: string; productImage?: string | null; quantity: number; price: string };
+type OrderWithItems = Order & { buyerName?: string; items?: OrderItem[] };
 
 const productSchema = z.object({
   name: z.string().min(2, "Минимум 2 символа"),
@@ -140,7 +153,7 @@ function ProductForm({
 }
 
 export default function ShopDashboard() {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const qc = useQueryClient();
@@ -193,10 +206,14 @@ export default function ShopDashboard() {
     },
   });
 
-  if (!user || user.role !== "shop") {
-    navigate("/auth");
-    return null;
-  }
+  useEffect(() => {
+    if (!isLoading && (!user || user.role !== "shop")) {
+      navigate("/auth");
+    }
+  }, [user, isLoading, navigate]);
+
+  if (isLoading) return null;
+  if (!user || user.role !== "shop") return null;
 
   if (loadingShop) return (
     <div className="max-w-6xl mx-auto px-4 py-8 space-y-4">
@@ -363,41 +380,147 @@ export default function ShopDashboard() {
         <TabsContent value="orders">
           {loadingOrders ? (
             <div className="space-y-4">
-              {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-lg" />)}
+              {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-48 rounded-lg" />)}
             </div>
           ) : orders?.length ? (
             <div className="space-y-4">
               {orders.map((order) => (
                 <Card key={order.id} data-testid={`card-order-${order.id}`}>
                   <CardContent className="p-5">
-                    <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
+                    <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
                       <div>
-                        <p className="font-semibold text-sm">Заказ #{order.id.slice(0, 8).toUpperCase()}</p>
-                        {order.buyerName && <p className="text-xs text-muted-foreground">Покупатель: {order.buyerName}</p>}
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-bold text-base">Заказ #{order.id.slice(0, 8).toUpperCase()}</p>
+                          <Badge className={`text-xs ${STATUS_COLORS[order.status] || ""}`}>
+                            {STATUS_LABELS[order.status] || order.status}
+                          </Badge>
+                        </div>
                         {order.createdAt && (
                           <p className="text-xs text-muted-foreground">
-                            {format(new Date(order.createdAt), "d MMM yyyy, HH:mm", { locale: ru })}
+                            {format(new Date(order.createdAt), "d MMMM yyyy, HH:mm", { locale: ru })}
                           </p>
                         )}
                       </div>
                       <div className="text-right">
-                        <p className="font-bold">{Number(order.totalAmount).toLocaleString("ru-RU")} ₽</p>
-                        <p className="text-xs text-muted-foreground">{order.deliveryDate} {order.deliveryTime}</p>
+                        <p className="text-xl font-bold text-primary">{Number(order.totalAmount).toLocaleString("ru-RU")} ₽</p>
+                        {Number(order.deliveryCost) > 0 && (
+                          <p className="text-xs text-muted-foreground">вкл. доставка {Number(order.deliveryCost).toLocaleString("ru-RU")} ₽</p>
+                        )}
                       </div>
                     </div>
-                    <p className="text-sm text-muted-foreground mb-3">{order.deliveryAddress}</p>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-xs text-muted-foreground">Статус:</span>
-                      <Select value={order.status} onValueChange={(s) => updateOrderMutation.mutate({ id: order.id, status: s })}>
-                        <SelectTrigger className="w-40 h-7 text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Object.entries(STATUS_LABELS).map(([k, v]) => (
-                            <SelectItem key={k} value={k}>{v}</SelectItem>
+
+                    {order.items && order.items.length > 0 && (
+                      <div className="mb-4">
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Товары</p>
+                        <div className="space-y-2">
+                          {order.items.map((item, idx) => (
+                            <div key={idx} className="flex items-center gap-3 p-2 rounded-md bg-muted/50" data-testid={`order-item-${order.id}-${idx}`}>
+                              <div className="w-10 h-10 rounded-md overflow-hidden bg-muted shrink-0">
+                                <img
+                                  src={item.productImage || "/images/placeholder-bouquet.png"}
+                                  alt={item.productName}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">{item.productName}</p>
+                                <p className="text-xs text-muted-foreground">{item.quantity} шт. x {Number(item.price).toLocaleString("ru-RU")} ₽</p>
+                              </div>
+                              <p className="text-sm font-semibold shrink-0">
+                                {(item.quantity * Number(item.price)).toLocaleString("ru-RU")} ₽
+                              </p>
+                            </div>
                           ))}
-                        </SelectContent>
-                      </Select>
+                        </div>
+                      </div>
+                    )}
+
+                    <Separator className="my-4" />
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                      <div className="space-y-2">
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Получатель</p>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 text-sm">
+                            <User className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                            <span>{order.recipientName}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm">
+                            <Phone className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                            <a href={`tel:${order.recipientPhone}`} className="text-primary hover:underline">{order.recipientPhone}</a>
+                          </div>
+                        </div>
+                        {order.buyerName && (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <ShoppingBag className="w-3.5 h-3.5 shrink-0" />
+                            <span>Заказчик: {order.buyerName}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Доставка</p>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 text-sm">
+                            <MapPin className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                            <span>{order.deliveryAddress}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm">
+                            <Calendar className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                            <span>{order.deliveryDate}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm">
+                            <Clock className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                            <span>{order.deliveryTime}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {order.comment && (
+                      <div className="mb-4 p-3 rounded-md bg-muted/50 border border-border">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <FileText className="w-3.5 h-3.5 text-muted-foreground" />
+                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Комментарий к заказу</p>
+                        </div>
+                        <p className="text-sm">{order.comment}</p>
+                      </div>
+                    )}
+
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">Статус:</span>
+                        <Select value={order.status} onValueChange={(s) => updateOrderMutation.mutate({ id: order.id, status: s })}>
+                          <SelectTrigger className="w-40 h-8 text-xs" data-testid={`select-status-${order.id}`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(STATUS_LABELS).map(([k, v]) => (
+                              <SelectItem key={k} value={k}>{v}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1.5 ml-auto"
+                        onClick={async () => {
+                          try {
+                            await apiRequest("POST", "/api/messages", {
+                              receiverId: order.buyerId,
+                              content: `Здравствуйте! По вашему заказу #${order.id.slice(0, 8).toUpperCase()}`,
+                            });
+                            navigate(`/chat?userId=${order.buyerId}`);
+                          } catch {
+                            navigate("/chat");
+                          }
+                        }}
+                        data-testid={`button-message-buyer-${order.id}`}
+                      >
+                        <MessageCircle className="w-3.5 h-3.5" />
+                        Написать заказчику
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
