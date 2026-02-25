@@ -29,10 +29,12 @@ export interface IStorage {
   getApprovedShops(): Promise<Shop[]>;
   createShop(shop: InsertShop): Promise<Shop>;
   updateShop(id: string, data: Partial<Shop>): Promise<Shop | undefined>;
+  deleteShop(id: string): Promise<void>;
 
   // Products
   getProduct(id: string): Promise<Product | undefined>;
   getProducts(): Promise<Product[]>;
+  getAllProducts(): Promise<Product[]>;
   getProductsByShop(shopId: string): Promise<Product[]>;
   createProduct(product: InsertProduct): Promise<Product>;
   updateProduct(id: string, data: Partial<Product>): Promise<Product | undefined>;
@@ -120,6 +122,9 @@ export class DbStorage implements IStorage {
     const [s] = await db.update(shops).set(data).where(eq(shops.id, id)).returning();
     return s;
   }
+  async deleteShop(id: string) {
+    await db.delete(shops).where(eq(shops.id, id));
+  }
 
   async getProduct(id: string) {
     const [p] = await db.select().from(products).where(eq(products.id, id));
@@ -127,6 +132,9 @@ export class DbStorage implements IStorage {
   }
   async getProducts() {
     return db.select().from(products).where(eq(products.isActive, true)).orderBy(desc(products.createdAt));
+  }
+  async getAllProducts() {
+    return db.select().from(products).orderBy(desc(products.createdAt));
   }
   async getProductsByShop(shopId: string) {
     return db.select().from(products).where(eq(products.shopId, shopId)).orderBy(desc(products.createdAt));

@@ -67,6 +67,8 @@ function ProductForm({
   onSuccess: () => void;
 }) {
   const { toast } = useToast();
+  const [uploadedImages, setUploadedImages] = useState<string[]>(product?.images || []);
+  const [uploading, setUploading] = useState(false);
   const form = useForm<z.infer<typeof productSchema>>({
     resolver: zodResolver(productSchema),
     defaultValues: {
@@ -77,18 +79,40 @@ function ProductForm({
       assemblyTime: product?.assemblyTime || 60,
       inStock: product?.inStock ?? true,
       isActive: product?.isActive ?? true,
-      images: product?.images?.join(",") || "",
+      images: "",
     },
   });
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files?.length) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      Array.from(files).forEach((f) => formData.append("images", f));
+      const res = await fetch("/api/upload", { method: "POST", body: formData, credentials: "include" });
+      const data = await res.json();
+      if (data.urls) {
+        setUploadedImages((prev) => [...prev, ...data.urls]);
+        toast({ title: `Загружено ${data.urls.length} фото` });
+      }
+    } catch {
+      toast({ title: "Ошибка загрузки", variant: "destructive" });
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  };
+
+  const removeImage = (idx: number) => {
+    setUploadedImages((prev) => prev.filter((_, i) => i !== idx));
+  };
+
   const mutation = useMutation({
     mutationFn: (data: z.infer<typeof productSchema>) => {
-      const payload = {
-        ...data,
-        shopId,
-        price: data.price,
-        images: data.images ? data.images.split(",").map((s) => s.trim()).filter(Boolean) : [],
-      };
+      const urlImages = data.images ? data.images.split(",").map((s) => s.trim()).filter(Boolean) : [];
+      const allImages = [...uploadedImages, ...urlImages];
+      const payload = { ...data, shopId, price: data.price, images: allImages };
       return product
         ? apiRequest("PATCH", `/api/products/${product.id}`, payload)
         : apiRequest("POST", "/api/products", payload);
@@ -127,9 +151,48 @@ function ProductForm({
             </Select>
           <FormMessage /></FormItem>
         )} />
+
+        <div className="space-y-2">
+          <FormLabel>Фото товара</FormLabel>
+          <div className="flex flex-wrap gap-2 mb-2">
+            {uploadedImages.map((img, idx) => (
+              <div key={idx} className="relative w-16 h-16 rounded-md overflow-hidden border group">
+                <img src={img} alt="" className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => removeImage(idx)}
+                  className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                >
+                  <Trash2 className="w-4 h-4 text-white" />
+                </button>
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <label className="flex-1 cursor-pointer" data-testid="input-file-upload">
+              <div className="border-2 border-dashed rounded-md p-3 text-center text-sm text-muted-foreground hover:border-primary/50 transition-colors">
+                {uploading ? "Загружаем..." : "Нажмите для загрузки фото"}
+              </div>
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={handleFileUpload}
+                disabled={uploading}
+              />
+            </label>
+          </div>
+        </div>
+
         <FormField control={form.control} name="images" render={({ field }) => (
-          <FormItem><FormLabel>Ссылки на фото (через запятую)</FormLabel><FormControl><Input {...field} placeholder="https://..." /></FormControl><FormMessage /></FormItem>
+          <FormItem>
+            <FormLabel>Или ссылки на фото (через запятую)</FormLabel>
+            <FormControl><Input {...field} placeholder="https://..." /></FormControl>
+            <FormMessage />
+          </FormItem>
         )} />
+
         <div className="flex gap-6">
           <FormField control={form.control} name="inStock" render={({ field }) => (
             <FormItem className="flex items-center gap-2">
@@ -144,7 +207,7 @@ function ProductForm({
             </FormItem>
           )} />
         </div>
-        <Button type="submit" className="w-full" disabled={mutation.isPending}>
+        <Button type="submit" className="w-full" disabled={mutation.isPending || uploading}>
           {mutation.isPending ? "Сохраняем..." : product ? "Сохранить изменения" : "Добавить товар"}
         </Button>
       </form>

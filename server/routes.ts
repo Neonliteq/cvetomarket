@@ -4,9 +4,30 @@ import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { Pool } from "pg";
 import bcrypt from "bcrypt";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 import { storage } from "./storage";
 import { insertUserSchema, insertShopSchema, insertProductSchema, insertOrderSchema, insertReviewSchema, insertMessageSchema, insertCategorySchema, insertCitySchema } from "@shared/schema";
 import { z } from "zod";
+
+const uploadsDir = path.join(process.cwd(), "uploads");
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, uploadsDir),
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname);
+      cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
+    },
+  }),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowed = /\.(jpg|jpeg|png|gif|webp)$/i;
+    cb(null, allowed.test(path.extname(file.originalname)));
+  },
+});
 
 const SALT_ROUNDS = 10;
 
@@ -58,6 +79,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     cookie: { secure: false, maxAge: 30 * 24 * 60 * 60 * 1000 },
   }));
 
+  app.use("/uploads", (await import("express")).default.static(uploadsDir));
+
+  app.post("/api/upload", requireAuth, upload.array("images", 10), (req, res) => {
+    const files = req.files as Express.Multer.File[];
+    if (!files || files.length === 0) return res.status(400).json({ error: "No files uploaded" });
+    const urls = files.map((f) => `/uploads/${f.filename}`);
+    res.json({ urls });
+  });
+
   // ---- AUTH ----
   app.get("/api/auth/me", async (req, res) => {
     const userId = (req.session as any).userId;
@@ -76,7 +106,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const hash = await bcrypt.hash(password, SALT_ROUNDS);
       const user = await storage.createUser({ email, password: hash, name, phone: phone || null, role: role || "buyer" });
       if (role === "shop") {
-        await storage.createShop({ ownerId: user.id, name, email, phone: phone || null, status: "pending" });
+        const { inn, ogrn, legalName, legalAddress, legalType, description, cityId, address } = req.body;
+        await storage.createShop({
+          ownerId: user.id, name, email, phone: phone || null, status: "pending",
+          inn: inn || null, ogrn: ogrn || null, legalName: legalName || null,
+          legalAddress: legalAddress || null, legalType: legalType || null,
+          description: description || null, cityId: cityId || null, address: address || null,
+        });
       }
       (req.session as any).userId = user.id;
       const { password: _, ...safe } = user;
@@ -146,6 +182,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.get("/api/shops/approved", async (_req, res) => {
     const shopsList = await storage.getApprovedShops();
     res.json(await enrichShops(shopsList));
+  });
+
+  app.get("/api/shops/all", async (_req, res) => {
+    const shopsList = await storage.getShops();
+    const visible = shopsList.filter((s) => s.status !== "rejected");
+    res.json(await enrichShops(visible));
   });
 
   app.get("/api/shops/my", requireRole("shop"), async (req, res) => {
@@ -456,6 +498,44 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       totalProducts: allProducts.length,
       avgOrderValue: Math.round(avgOrderValue),
     });
+  });
+
+  app.get("/api/admin/products", requireRole("admin"), async (_req, res) => {
+    const list = await storage.getAllProducts();
+    res.json(await enrichProducts(list));
+  });
+
+  app.delete("/api/admin/shops/:id", requireRole("admin"), async (req, res) => {
+    try {
+      await storage.deleteShop(req.params.id);
+      res.json({ ok: true });
+    } catch (e: any) {
+      if (e.code === "23503") return res.status(400).json({ error: "Невозможно удалить магазин, у него есть связанные данные" });
+      throw e;
+    }
+  });
+
+  app.patch("/api/admin/shops/:id", requireRole("admin"), async (req, res) => {
+    const shop = await storage.updateShop(req.params.id, req.body);
+    res.json(shop);
+  });
+
+  app.patch("/api/admin/products/:id", requireRole("admin"), async (req, res) => {
+    const p = await storage.updateProduct(req.params.id, req.body);
+    res.json(p);
+  });
+
+  app.delete("/api/admin/products/:id", requireRole("admin"), async (req, res) => {
+    try {
+      await storage.deleteProduct(req.params.id);
+    } catch (e: any) {
+      if (e.code === "23503") {
+        await storage.updateProduct(req.params.id, { isActive: false, inStock: false });
+      } else {
+        throw e;
+      }
+    }
+    res.json({ ok: true });
   });
 
   app.get("/api/shops/:id/owner", requireAuth, async (req, res) => {

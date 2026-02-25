@@ -13,7 +13,7 @@ export default function Home() {
     queryKey: ["/api/products/featured"],
   });
   const { data: shops, isLoading: loadingShops } = useQuery<(Shop & { cityName?: string })[]>({
-    queryKey: ["/api/shops/approved"],
+    queryKey: ["/api/shops/all"],
   });
   const { data: categories } = useQuery<Category[]>({
     queryKey: ["/api/categories"],

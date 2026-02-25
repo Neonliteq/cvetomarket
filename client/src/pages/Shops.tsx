@@ -13,7 +13,7 @@ export default function Shops() {
   const [search, setSearch] = useState("");
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
 
-  const { data: shops, isLoading } = useQuery<ShopWithMeta[]>({ queryKey: ["/api/shops/approved"] });
+  const { data: shops, isLoading } = useQuery<ShopWithMeta[]>({ queryKey: ["/api/shops/all"] });
   const { data: cities } = useQuery<City[]>({ queryKey: ["/api/cities"] });
 
   const filtered = (shops || []).filter((s) => {

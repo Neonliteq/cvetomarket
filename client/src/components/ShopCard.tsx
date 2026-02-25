@@ -24,7 +24,12 @@ export function ShopCard({ shop, className }: ShopCardProps) {
         </Avatar>
         <div className="flex-1 min-w-0 space-y-1">
           <div className="flex items-start justify-between gap-2">
-            <p className="font-semibold line-clamp-1 group-hover:text-primary transition-colors">{shop.name}</p>
+            <div className="flex items-center gap-2">
+              <p className="font-semibold line-clamp-1 group-hover:text-primary transition-colors">{shop.name}</p>
+              {shop.status === "pending" && (
+                <Badge variant="secondary" className="text-xs shrink-0">На модерации</Badge>
+              )}
+            </div>
             {Number(shop.rating) > 0 && (
               <StarRating rating={Number(shop.rating)} showValue count={shop.reviewCount || 0} size="sm" />
             )}

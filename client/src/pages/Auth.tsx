@@ -8,10 +8,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
+import type { City } from "@shared/schema";
 
 const loginSchema = z.object({
   email: z.string().email("Введите корректный email"),
@@ -25,6 +30,14 @@ const registerSchema = z.object({
   password: z.string().min(6, "Пароль должен содержать минимум 6 символов"),
   confirmPassword: z.string(),
   role: z.enum(["buyer", "shop"]),
+  legalType: z.string().optional(),
+  inn: z.string().optional(),
+  ogrn: z.string().optional(),
+  legalName: z.string().optional(),
+  legalAddress: z.string().optional(),
+  description: z.string().optional(),
+  address: z.string().optional(),
+  cityId: z.string().optional(),
 }).refine((d) => d.password === d.confirmPassword, {
   message: "Пароли не совпадают",
   path: ["confirmPassword"],
@@ -43,8 +56,15 @@ export default function Auth() {
 
   const registerForm = useForm<z.infer<typeof registerSchema>>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { name: "", email: "", phone: "", password: "", confirmPassword: "", role: "buyer" },
+    defaultValues: {
+      name: "", email: "", phone: "", password: "", confirmPassword: "", role: "buyer",
+      legalType: "", inn: "", ogrn: "", legalName: "", legalAddress: "", description: "", address: "", cityId: "",
+    },
   });
+
+  const { data: cities } = useQuery<City[]>({ queryKey: ["/api/cities"] });
+
+  const watchRole = registerForm.watch("role");
 
   const onLogin = async (data: z.infer<typeof loginSchema>) => {
     try {
@@ -57,7 +77,8 @@ export default function Auth() {
 
   const onRegister = async (data: z.infer<typeof registerSchema>) => {
     try {
-      await register({ email: data.email, password: data.password, name: data.name, phone: data.phone, role: data.role });
+      const { confirmPassword, ...payload } = data;
+      await register(payload);
       toast({ title: "Добро пожаловать!", description: "Аккаунт успешно создан" });
       if (data.role === "shop") navigate("/shop-dashboard");
       else navigate("/");
@@ -172,6 +193,87 @@ export default function Auth() {
                         <FormMessage />
                       </FormItem>
                     )} />
+
+                    {watchRole === "shop" && (
+                      <>
+                        <Separator className="my-2" />
+                        <p className="text-sm font-semibold text-muted-foreground">Юридическая информация</p>
+                        <FormField control={registerForm.control} name="legalType" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Форма собственности</FormLabel>
+                            <Select value={field.value || ""} onValueChange={field.onChange}>
+                              <FormControl><SelectTrigger data-testid="select-legal-type"><SelectValue placeholder="Выберите форму" /></SelectTrigger></FormControl>
+                              <SelectContent>
+                                <SelectItem value="ip">ИП</SelectItem>
+                                <SelectItem value="ooo">ООО</SelectItem>
+                                <SelectItem value="self">Самозанятый</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                        <FormField control={registerForm.control} name="legalName" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Юридическое наименование</FormLabel>
+                            <FormControl><Input {...field} placeholder='ИП Иванов И.И. / ООО "Цветы"' data-testid="input-legal-name" /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                        <div className="grid grid-cols-2 gap-3">
+                          <FormField control={registerForm.control} name="inn" render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>ИНН</FormLabel>
+                              <FormControl><Input {...field} placeholder="1234567890" data-testid="input-inn" /></FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )} />
+                          <FormField control={registerForm.control} name="ogrn" render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>ОГРН / ОГРНИП</FormLabel>
+                              <FormControl><Input {...field} placeholder="1234567890123" data-testid="input-ogrn" /></FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )} />
+                        </div>
+                        <FormField control={registerForm.control} name="legalAddress" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Юридический адрес</FormLabel>
+                            <FormControl><Input {...field} placeholder="г. Москва, ул. Примерная, д. 1" data-testid="input-legal-address" /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+
+                        <Separator className="my-2" />
+                        <p className="text-sm font-semibold text-muted-foreground">Информация о магазине</p>
+                        <FormField control={registerForm.control} name="description" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Описание магазина</FormLabel>
+                            <FormControl><Textarea {...field} placeholder="Расскажите о вашем магазине..." data-testid="input-shop-description" /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                        <FormField control={registerForm.control} name="cityId" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Город</FormLabel>
+                            <Select value={field.value || ""} onValueChange={field.onChange}>
+                              <FormControl><SelectTrigger data-testid="select-city"><SelectValue placeholder="Выберите город" /></SelectTrigger></FormControl>
+                              <SelectContent>
+                                {cities?.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                        <FormField control={registerForm.control} name="address" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Адрес магазина</FormLabel>
+                            <FormControl><Input {...field} placeholder="Фактический адрес точки" data-testid="input-shop-address" /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                      </>
+                    )}
+
                     <Button type="submit" className="w-full" disabled={registerForm.formState.isSubmitting} data-testid="button-submit-register">
                       {registerForm.formState.isSubmitting ? "Создаём аккаунт..." : "Создать аккаунт"}
                     </Button>
