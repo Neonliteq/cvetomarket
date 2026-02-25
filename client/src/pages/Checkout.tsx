@@ -2,7 +2,7 @@ import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import { useCart } from "@/lib/cart";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import type { Shop } from "@shared/schema";
 
 const checkoutSchema = z.object({
   deliveryAddress: z.string().min(5, "Введите адрес доставки"),
@@ -37,7 +38,11 @@ export default function Checkout() {
   const [success, setSuccess] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
 
-  const DELIVERY = 300;
+  const { data: shop } = useQuery<Shop>({
+    queryKey: ["/api/shops", shopId],
+    enabled: !!shopId,
+  });
+  const DELIVERY = shop ? Number(shop.deliveryPrice) || 0 : 300;
 
   const form = useForm<z.infer<typeof checkoutSchema>>({
     resolver: zodResolver(checkoutSchema),

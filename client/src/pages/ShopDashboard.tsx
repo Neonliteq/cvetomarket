@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Plus, Edit, Trash2, Package, ShoppingBag, BarChart2, MessageCircle,
-  Eye, EyeOff, Star, MapPin, Phone, Calendar, Clock, User, FileText, Send
+  Eye, EyeOff, Star, MapPin, Phone, Calendar, Clock, User, FileText, Send, Settings, Truck
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -269,6 +269,14 @@ export default function ShopDashboard() {
     },
   });
 
+  const updateShopMutation = useMutation({
+    mutationFn: (data: Record<string, any>) => apiRequest("PATCH", `/api/shops/${myShop?.id}`, data),
+    onSuccess: () => {
+      toast({ title: "Настройки сохранены" });
+      qc.invalidateQueries({ queryKey: ["/api/shops/my"] });
+    },
+  });
+
   useEffect(() => {
     if (!isLoading && (!user || user.role !== "shop")) {
       navigate("/auth");
@@ -344,6 +352,7 @@ export default function ShopDashboard() {
             Заказы {pendingOrders > 0 && <Badge className="ml-1.5">{pendingOrders}</Badge>}
           </TabsTrigger>
           <TabsTrigger value="reviews">Отзывы</TabsTrigger>
+          <TabsTrigger value="settings">Настройки</TabsTrigger>
         </TabsList>
 
         <TabsContent value="products">
@@ -627,6 +636,126 @@ export default function ShopDashboard() {
               <p>Отзывов пока нет</p>
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="settings">
+          <div className="max-w-lg space-y-6">
+            <Card>
+              <CardContent className="p-5 space-y-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Truck className="w-5 h-5 text-primary" />
+                  <h3 className="font-semibold">Доставка</h3>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Стоимость доставки (₽)</label>
+                  <div className="flex gap-3">
+                    <Input
+                      type="number"
+                      min="0"
+                      step="50"
+                      defaultValue={myShop?.deliveryPrice?.toString() || "300"}
+                      key={myShop?.deliveryPrice?.toString()}
+                      id="delivery-price-input"
+                      placeholder="300"
+                      data-testid="input-delivery-price"
+                    />
+                    <Button
+                      onClick={() => {
+                        const input = document.getElementById("delivery-price-input") as HTMLInputElement;
+                        const val = input?.value;
+                        if (val !== undefined && val !== "") {
+                          updateShopMutation.mutate({ deliveryPrice: val });
+                        }
+                      }}
+                      disabled={updateShopMutation.isPending}
+                      data-testid="button-save-delivery-price"
+                    >
+                      Сохранить
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Текущая стоимость: {Number(myShop?.deliveryPrice || 300).toLocaleString("ru-RU")} ₽. Установите 0 для бесплатной доставки.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-5 space-y-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Settings className="w-5 h-5 text-primary" />
+                  <h3 className="font-semibold">Информация о магазине</h3>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-sm font-medium">Описание</label>
+                    <Textarea
+                      defaultValue={myShop?.description || ""}
+                      key={`desc-${myShop?.description}`}
+                      id="shop-description-input"
+                      placeholder="Расскажите о вашем магазине..."
+                      data-testid="input-shop-description"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Телефон</label>
+                    <Input
+                      defaultValue={myShop?.phone || ""}
+                      key={`phone-${myShop?.phone}`}
+                      id="shop-phone-input"
+                      placeholder="+7 (999) 000-00-00"
+                      data-testid="input-shop-phone"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Адрес</label>
+                    <Input
+                      defaultValue={myShop?.address || ""}
+                      key={`addr-${myShop?.address}`}
+                      id="shop-address-input"
+                      placeholder="Город, улица, дом"
+                      data-testid="input-shop-address"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Часы работы</label>
+                    <Input
+                      defaultValue={myShop?.workingHours || ""}
+                      key={`wh-${myShop?.workingHours}`}
+                      id="shop-hours-input"
+                      placeholder="Пн-Пт 9:00-18:00, Сб 10:00-16:00"
+                      data-testid="input-shop-hours"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Зона доставки</label>
+                    <Input
+                      defaultValue={myShop?.deliveryZone || ""}
+                      key={`dz-${myShop?.deliveryZone}`}
+                      id="shop-zone-input"
+                      placeholder="В пределах МКАД"
+                      data-testid="input-shop-zone"
+                    />
+                  </div>
+                  <Button
+                    className="w-full"
+                    onClick={() => {
+                      const desc = (document.getElementById("shop-description-input") as HTMLTextAreaElement)?.value;
+                      const phone = (document.getElementById("shop-phone-input") as HTMLInputElement)?.value;
+                      const address = (document.getElementById("shop-address-input") as HTMLInputElement)?.value;
+                      const workingHours = (document.getElementById("shop-hours-input") as HTMLInputElement)?.value;
+                      const deliveryZone = (document.getElementById("shop-zone-input") as HTMLInputElement)?.value;
+                      updateShopMutation.mutate({ description: desc, phone, address, workingHours, deliveryZone });
+                    }}
+                    disabled={updateShopMutation.isPending}
+                    data-testid="button-save-shop-info"
+                  >
+                    Сохранить информацию
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

@@ -18,6 +18,7 @@ A full-featured flower marketplace (маркетплейс цветочных м
 - Multi-role authentication (email/password with bcrypt, express-session)
 - Product catalog with filters (price, category, availability)
 - Shopping cart with shop constraint (one shop per cart)
+- Per-shop delivery pricing (shops set their own delivery cost; displayed in cart, checkout, shop detail page)
 - Order lifecycle: New → Confirmed → Assembling → Delivering → Delivered → Cancelled
 - Real-time chat between buyers and shops (HTTP polling)
 - "Chat with seller" button on product and shop pages

@@ -39,6 +39,7 @@ export const shops = pgTable("shops", {
   legalName: text("legal_name"),
   legalAddress: text("legal_address"),
   legalType: text("legal_type"),
+  deliveryPrice: decimal("delivery_price", { precision: 10, scale: 2 }).default("300"),
   deliveryZone: text("delivery_zone"),
   workingHours: text("working_hours"),
   status: text("status").notNull().default("pending"),

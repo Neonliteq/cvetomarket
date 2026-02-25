@@ -90,9 +90,16 @@ export default function ShopDetail() {
               <span>{shop.address}</span>
             </div>
           )}
-          {shop.deliveryZone && (
-            <Badge variant="secondary">Зона доставки: {shop.deliveryZone}</Badge>
-          )}
+          <div className="flex flex-wrap gap-2">
+            {shop.deliveryPrice !== undefined && (
+              <Badge variant="secondary" data-testid="badge-delivery-price">
+                Доставка: {Number(shop.deliveryPrice) === 0 ? "Бесплатно" : `${Number(shop.deliveryPrice).toLocaleString("ru-RU")} ₽`}
+              </Badge>
+            )}
+            {shop.deliveryZone && (
+              <Badge variant="secondary">Зона доставки: {shop.deliveryZone}</Badge>
+            )}
+          </div>
           {user && (
             <Button
               variant="outline"

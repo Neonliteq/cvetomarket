@@ -1,17 +1,24 @@
 import { Link, useLocation } from "wouter";
 import { Trash2, Plus, Minus, ShoppingCart, ArrowRight } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useCart } from "@/lib/cart";
 import { useAuth } from "@/lib/auth";
+import type { Shop } from "@shared/schema";
 
 export default function Cart() {
-  const { items, removeItem, updateQuantity, clearCart, total, itemCount } = useCart();
+  const { items, shopId, removeItem, updateQuantity, clearCart, total, itemCount } = useCart();
   const { user } = useAuth();
   const [, navigate] = useLocation();
 
-  const DELIVERY = 300;
+  const { data: shop } = useQuery<Shop>({
+    queryKey: ["/api/shops", shopId],
+    enabled: !!shopId,
+  });
+  const DELIVERY = shop ? Number(shop.deliveryPrice) || 0 : 300;
 
   if (items.length === 0) {
     return (
