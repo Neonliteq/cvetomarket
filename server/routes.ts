@@ -403,6 +403,97 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.json(msg);
   });
 
+  // ---- NOTIFICATIONS ----
+  app.get("/api/notifications", requireAuth, async (req, res) => {
+    const userId = (req.session as any).userId;
+    const user = await storage.getUser(userId);
+    if (!user) return res.status(401).json({ error: "Unauthorized" });
+
+    const notifications: { id: string; type: string; title: string; text: string; link: string; time: string }[] = [];
+
+    const partnerIds = await storage.getConversations(userId);
+    let totalUnread = 0;
+    for (const pid of partnerIds) {
+      const msgs = await storage.getMessages(userId, pid);
+      const unread = msgs.filter((m) => m.receiverId === userId && !m.isRead);
+      totalUnread += unread.length;
+      if (unread.length > 0) {
+        const last = unread[unread.length - 1];
+        const allUsers = await storage.getAllUsers();
+        const sender = allUsers.find((u) => u.id === pid);
+        notifications.push({
+          id: `msg-${pid}`,
+          type: "message",
+          title: `Новое сообщение от ${sender?.name || "пользователя"}`,
+          text: last.content.length > 60 ? last.content.slice(0, 60) + "..." : last.content,
+          link: `/chat?userId=${pid}`,
+          time: last.createdAt ? new Date(last.createdAt).toISOString() : new Date().toISOString(),
+        });
+      }
+    }
+
+    if (user.role === "buyer") {
+      const orders = await storage.getOrdersByBuyer(userId);
+      const recent = orders
+        .filter((o) => o.createdAt && Date.now() - new Date(o.createdAt).getTime() < 7 * 24 * 60 * 60 * 1000)
+        .slice(0, 10);
+      for (const order of recent) {
+        const statusLabels: Record<string, string> = {
+          confirmed: "подтверждён магазином",
+          assembling: "собирается",
+          delivering: "передан в доставку",
+          delivered: "доставлен",
+          cancelled: "отменён",
+        };
+        if (statusLabels[order.status]) {
+          const allShops = await storage.getShops();
+          const shop = allShops.find((s) => s.id === order.shopId);
+          notifications.push({
+            id: `order-${order.id}`,
+            type: "order",
+            title: `Заказ ${statusLabels[order.status]}`,
+            text: shop ? `Магазин «${shop.name}»` : `Заказ #${order.id.slice(0, 8)}`,
+            link: "/account",
+            time: order.createdAt ? new Date(order.createdAt).toISOString() : new Date().toISOString(),
+          });
+        }
+      }
+    }
+
+    if (user.role === "shop") {
+      const shop = await storage.getShopByOwnerId(userId);
+      if (shop) {
+        const orders = await storage.getOrdersByShop(shop.id);
+        const newOrders = orders.filter((o) => o.status === "new");
+        if (newOrders.length > 0) {
+          notifications.push({
+            id: "new-orders",
+            type: "order",
+            title: `${newOrders.length} новых заказов`,
+            text: "Требуют подтверждения",
+            link: "/shop-dashboard",
+            time: newOrders[0].createdAt ? new Date(newOrders[0].createdAt).toISOString() : new Date().toISOString(),
+          });
+        }
+        const revs = await storage.getReviewsByShop(shop.id);
+        const recentRevs = revs.filter((r) => r.createdAt && Date.now() - new Date(r.createdAt).getTime() < 7 * 24 * 60 * 60 * 1000);
+        if (recentRevs.length > 0) {
+          notifications.push({
+            id: "new-reviews",
+            type: "review",
+            title: `${recentRevs.length} новых отзывов`,
+            text: `Средняя оценка: ${(recentRevs.reduce((s, r) => s + r.rating, 0) / recentRevs.length).toFixed(1)}`,
+            link: "/shop-dashboard",
+            time: recentRevs[0].createdAt ? new Date(recentRevs[0].createdAt).toISOString() : new Date().toISOString(),
+          });
+        }
+      }
+    }
+
+    notifications.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
+    res.json({ notifications, unreadMessages: totalUnread });
+  });
+
   // ---- ADMIN ----
   app.get("/api/admin/shops", requireRole("admin"), async (_req, res) => {
     const shopsList = await storage.getShops();

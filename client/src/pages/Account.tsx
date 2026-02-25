@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Package, MessageCircle, User, LogOut, Star, CheckCircle } from "lucide-react";
@@ -222,11 +222,14 @@ export default function Account() {
     productReviewMap.set(`${r.orderId}_${r.productId}`, r);
   });
 
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate("/auth");
+    }
+  }, [authLoading, user, navigate]);
+
   if (authLoading) return null;
-  if (!user) {
-    navigate("/auth");
-    return null;
-  }
+  if (!user) return null;
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">

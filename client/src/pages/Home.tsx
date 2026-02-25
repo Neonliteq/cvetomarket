@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProductCard } from "@/components/ProductCard";
 import { ShopCard } from "@/components/ShopCard";
+import { NotificationPanel } from "@/components/NotificationPanel";
 import type { Product, Shop, Category } from "@shared/schema";
 
 export default function Home() {
@@ -92,6 +93,8 @@ export default function Home() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-12 space-y-16">
+        <NotificationPanel />
+
         <section>
           <div className="flex items-center justify-between gap-4 mb-6">
             <div>
