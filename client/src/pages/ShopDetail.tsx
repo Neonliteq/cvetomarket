@@ -1,6 +1,6 @@
-import { useParams, Link } from "wouter";
+import { useParams, Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, MapPin, Clock, Phone, Mail } from "lucide-react";
+import { ArrowLeft, MapPin, Clock, Phone, Mail, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -8,12 +8,16 @@ import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ProductCard } from "@/components/ProductCard";
 import { StarRating } from "@/components/StarRating";
+import { useAuth } from "@/lib/auth";
+import { apiRequest } from "@/lib/queryClient";
 import type { Shop, Product } from "@shared/schema";
 
 type ProductWithMeta = Product & { shopName?: string; categoryName?: string };
 
 export default function ShopDetail() {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
+  const [, navigate] = useLocation();
 
   const { data: shop, isLoading: loadingShop } = useQuery<Shop & { cityName?: string }>({
     queryKey: [`/api/shops/${id}`],
@@ -88,6 +92,31 @@ export default function ShopDetail() {
           )}
           {shop.deliveryZone && (
             <Badge variant="secondary">Зона доставки: {shop.deliveryZone}</Badge>
+          )}
+          {user && (
+            <Button
+              variant="outline"
+              className="gap-2 w-fit"
+              onClick={async () => {
+                try {
+                  const res = await fetch(`/api/shops/${id}/owner`, { credentials: "include" });
+                  const data = await res.json();
+                  if (data.ownerId) {
+                    await apiRequest("POST", "/api/messages", {
+                      receiverId: data.ownerId,
+                      content: `Здравствуйте! У меня вопрос по магазину «${shop.name}»`,
+                    });
+                    navigate(`/chat?userId=${data.ownerId}`);
+                  }
+                } catch {
+                  navigate("/chat");
+                }
+              }}
+              data-testid="button-chat-shop"
+            >
+              <MessageCircle className="w-4 h-4" />
+              Написать продавцу
+            </Button>
           )}
         </div>
       </div>

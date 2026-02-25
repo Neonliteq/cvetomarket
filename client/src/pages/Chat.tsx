@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import type { Message } from "@shared/schema";
 import { format } from "date-fns";
@@ -20,7 +20,9 @@ type ConversationUser = { id: string; name: string; unreadCount: number };
 export default function Chat() {
   const { user, isLoading } = useAuth();
   const [, navigate] = useLocation();
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const search = useSearch();
+  const urlUserId = new URLSearchParams(search).get("userId");
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(urlUserId);
   const [text, setText] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const qc = useQueryClient();
@@ -45,6 +47,12 @@ export default function Chat() {
       qc.invalidateQueries({ queryKey: ["/api/messages/conversations"] });
     },
   });
+
+  useEffect(() => {
+    if (urlUserId && urlUserId !== selectedUserId) {
+      setSelectedUserId(urlUserId);
+    }
+  }, [urlUserId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });

@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { useParams, Link } from "wouter";
+import { useParams, Link, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ShoppingCart, ArrowLeft, Clock, Store, Star } from "lucide-react";
+import { ShoppingCart, ArrowLeft, Clock, Store, Star, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -27,6 +27,7 @@ export default function ProductDetail() {
   const { user } = useAuth();
   const { toast } = useToast();
   const qc = useQueryClient();
+  const [, navigate] = useLocation();
   const [selectedImg, setSelectedImg] = useState(0);
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
@@ -149,6 +150,33 @@ export default function ProductDetail() {
             <ShoppingCart className="w-5 h-5" />
             {product.inStock ? "Добавить в корзину" : "Нет в наличии"}
           </Button>
+
+          {user && shop && (
+            <Button
+              variant="outline"
+              size="lg"
+              className="w-full gap-2"
+              onClick={async () => {
+                try {
+                  const res = await fetch(`/api/shops/${shop.id}/owner`, { credentials: "include" });
+                  const data = await res.json();
+                  if (data.ownerId) {
+                    await apiRequest("POST", "/api/messages", {
+                      receiverId: data.ownerId,
+                      content: `Здравствуйте! Вопрос по товару «${product.name}»`,
+                    });
+                    navigate(`/chat?userId=${data.ownerId}`);
+                  }
+                } catch {
+                  navigate("/chat");
+                }
+              }}
+              data-testid="button-chat-seller"
+            >
+              <MessageCircle className="w-5 h-5" />
+              Написать продавцу
+            </Button>
+          )}
         </div>
       </div>
 

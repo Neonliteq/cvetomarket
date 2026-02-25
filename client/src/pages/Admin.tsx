@@ -1,7 +1,11 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { CheckCircle, XCircle, Users, Store, Package, Settings, Plus, Trash2 } from "lucide-react";
+import {
+  CheckCircle, XCircle, Users, Store, Package, Settings, Plus, Trash2,
+  BarChart3, MapPin, Tag, ShieldAlert, ShieldCheck, TrendingUp, DollarSign,
+  Ban, UserCheck, Eye, ChevronDown
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
@@ -18,8 +22,49 @@ import type { Shop, User, Category, City, Order, PlatformSettings } from "@share
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 
+type ShopWithMeta = Shop & { cityName?: string; ownerName?: string };
+type OrderWithMeta = Order & { buyerName?: string; shopName?: string };
+type Analytics = {
+  totalRevenue: number;
+  monthRevenue: number;
+  weekRevenue: number;
+  totalCommission: number;
+  totalOrders: number;
+  monthOrders: number;
+  weekOrders: number;
+  statusCounts: Record<string, number>;
+  dailyRevenue: Record<string, number>;
+  topShops: { name: string; revenue: number }[];
+  totalUsers: number;
+  newUsers30d: number;
+  buyerCount: number;
+  shopOwnerCount: number;
+  blockedCount: number;
+  totalShops: number;
+  approvedShops: number;
+  pendingShops: number;
+  totalProducts: number;
+  avgOrderValue: number;
+};
+
+const ORDER_STATUSES = [
+  { value: "new", label: "Новый", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" },
+  { value: "confirmed", label: "Подтверждён", color: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200" },
+  { value: "assembling", label: "Сборка", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200" },
+  { value: "delivering", label: "Доставка", color: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200" },
+  { value: "delivered", label: "Доставлен", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
+  { value: "cancelled", label: "Отменён", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
+];
+
+function getStatusLabel(status: string) {
+  return ORDER_STATUSES.find((s) => s.value === status)?.label || status;
+}
+function getStatusColor(status: string) {
+  return ORDER_STATUSES.find((s) => s.value === status)?.color || "bg-gray-100 text-gray-800";
+}
+
 export default function Admin() {
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const qc = useQueryClient();
@@ -27,79 +72,130 @@ export default function Admin() {
   const [newCategorySlug, setNewCategorySlug] = useState("");
   const [newCityName, setNewCityName] = useState("");
   const [commission, setCommission] = useState("");
+  const [deliveryCost, setDeliveryCost] = useState("");
+  const [shopFilter, setShopFilter] = useState("all");
+  const [orderFilter, setOrderFilter] = useState("all");
 
-  const { data: shops, isLoading: loadingShops } = useQuery<(Shop & { cityName?: string; ownerName?: string })[]>({
+  const isAdmin = !!user && user.role === "admin";
+
+  const { data: shops, isLoading: loadingShops } = useQuery<ShopWithMeta[]>({
     queryKey: ["/api/admin/shops"],
-    enabled: !!user && user.role === "admin",
+    enabled: isAdmin,
   });
   const { data: users, isLoading: loadingUsers } = useQuery<User[]>({
     queryKey: ["/api/admin/users"],
-    enabled: !!user && user.role === "admin",
+    enabled: isAdmin,
   });
-  const { data: orders, isLoading: loadingOrders } = useQuery<(Order & { buyerName?: string; shopName?: string })[]>({
+  const { data: orders, isLoading: loadingOrders } = useQuery<OrderWithMeta[]>({
     queryKey: ["/api/admin/orders"],
-    enabled: !!user && user.role === "admin",
+    enabled: isAdmin,
   });
   const { data: categories } = useQuery<Category[]>({ queryKey: ["/api/categories"] });
   const { data: cities } = useQuery<City[]>({ queryKey: ["/api/cities"] });
-  const { data: settings } = useQuery<PlatformSettings>({ queryKey: ["/api/admin/settings"] });
+  const { data: settings } = useQuery<PlatformSettings>({
+    queryKey: ["/api/admin/settings"],
+    enabled: isAdmin,
+  });
+  const { data: analytics, isLoading: loadingAnalytics } = useQuery<Analytics>({
+    queryKey: ["/api/admin/analytics"],
+    enabled: isAdmin,
+  });
 
   const moderateShopMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) => apiRequest("PATCH", `/api/admin/shops/${id}/status`, { status }),
-    onSuccess: () => { toast({ title: "Статус магазина обновлён" }); qc.invalidateQueries({ queryKey: ["/api/admin/shops"] }); },
+    onSuccess: () => {
+      toast({ title: "Статус магазина обновлён" });
+      qc.invalidateQueries({ queryKey: ["/api/admin/shops"] });
+      qc.invalidateQueries({ queryKey: ["/api/admin/analytics"] });
+    },
   });
 
   const blockUserMutation = useMutation({
     mutationFn: (id: string) => apiRequest("PATCH", `/api/admin/users/${id}/block`, {}),
-    onSuccess: () => { toast({ title: "Пользователь заблокирован" }); qc.invalidateQueries({ queryKey: ["/api/admin/users"] }); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      qc.invalidateQueries({ queryKey: ["/api/admin/analytics"] });
+    },
+  });
+
+  const updateOrderStatusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) => apiRequest("PATCH", `/api/orders/${id}/status`, { status }),
+    onSuccess: () => {
+      toast({ title: "Статус заказа обновлён" });
+      qc.invalidateQueries({ queryKey: ["/api/admin/orders"] });
+      qc.invalidateQueries({ queryKey: ["/api/admin/analytics"] });
+    },
   });
 
   const addCategoryMutation = useMutation({
     mutationFn: () => apiRequest("POST", "/api/categories", { name: newCategoryName, slug: newCategorySlug }),
-    onSuccess: () => { setNewCategoryName(""); setNewCategorySlug(""); qc.invalidateQueries({ queryKey: ["/api/categories"] }); toast({ title: "Категория добавлена" }); },
+    onSuccess: () => {
+      setNewCategoryName("");
+      setNewCategorySlug("");
+      qc.invalidateQueries({ queryKey: ["/api/categories"] });
+      toast({ title: "Категория добавлена" });
+    },
   });
 
   const deleteCategoryMutation = useMutation({
     mutationFn: (id: string) => apiRequest("DELETE", `/api/categories/${id}`, {}),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["/api/categories"] }),
+    onError: () => toast({ title: "Невозможно удалить категорию", description: "Она используется товарами", variant: "destructive" }),
   });
 
   const addCityMutation = useMutation({
     mutationFn: () => apiRequest("POST", "/api/cities", { name: newCityName }),
-    onSuccess: () => { setNewCityName(""); qc.invalidateQueries({ queryKey: ["/api/cities"] }); toast({ title: "Город добавлен" }); },
+    onSuccess: () => {
+      setNewCityName("");
+      qc.invalidateQueries({ queryKey: ["/api/cities"] });
+      toast({ title: "Город добавлен" });
+    },
   });
 
   const deleteCityMutation = useMutation({
     mutationFn: (id: string) => apiRequest("DELETE", `/api/cities/${id}`, {}),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["/api/cities"] }),
+    onError: () => toast({ title: "Невозможно удалить город", description: "Он используется магазинами", variant: "destructive" }),
   });
 
   const updateSettingsMutation = useMutation({
-    mutationFn: () => apiRequest("PATCH", "/api/admin/settings", { commissionRate: commission }),
-    onSuccess: () => { toast({ title: "Настройки сохранены" }); qc.invalidateQueries({ queryKey: ["/api/admin/settings"] }); },
+    mutationFn: () => {
+      const payload: any = {};
+      if (commission) payload.commissionRate = commission;
+      if (deliveryCost) payload.deliveryCost = deliveryCost;
+      return apiRequest("PATCH", "/api/admin/settings", payload);
+    },
+    onSuccess: () => {
+      toast({ title: "Настройки сохранены" });
+      setCommission("");
+      setDeliveryCost("");
+      qc.invalidateQueries({ queryKey: ["/api/admin/settings"] });
+    },
   });
 
+  if (authLoading) return null;
   if (!user || user.role !== "admin") {
     navigate("/");
     return null;
   }
 
   const pendingShops = (shops || []).filter((s) => s.status === "pending");
-  const totalRevenue = (orders || []).filter((o) => o.status !== "cancelled").reduce((s, o) => s + Number(o.totalAmount), 0);
+  const filteredShops = shopFilter === "all" ? shops : shops?.filter((s) => s.status === shopFilter);
+  const filteredOrders = orderFilter === "all" ? orders : orders?.filter((o) => o.status === orderFilter);
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold">Панель администратора</h1>
+        <h1 className="text-2xl font-bold" data-testid="text-admin-title">Панель администратора</h1>
         <p className="text-muted-foreground text-sm mt-1">Управление платформой ЦветоМаркет</p>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
         {[
-          { title: "Магазины", value: shops?.length || 0, sub: `${pendingShops.length} на модерации`, icon: Store },
+          { title: "Магазины", value: shops?.length || 0, sub: pendingShops.length > 0 ? `${pendingShops.length} на модерации` : undefined, icon: Store },
           { title: "Пользователи", value: users?.length || 0, icon: Users },
           { title: "Заказы", value: orders?.length || 0, icon: Package },
-          { title: "Оборот", value: `${totalRevenue.toLocaleString("ru")} ₽`, icon: Settings },
+          { title: "Оборот", value: `${(analytics?.totalRevenue || 0).toLocaleString("ru")} ₽`, icon: TrendingUp },
         ].map((s) => (
           <Card key={s.title}>
             <CardContent className="p-4 flex items-center gap-3">
@@ -108,7 +204,7 @@ export default function Admin() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">{s.title}</p>
-                <p className="text-lg font-bold">{s.value}</p>
+                <p className="text-lg font-bold" data-testid={`text-stat-${s.title}`}>{s.value}</p>
                 {s.sub && <p className="text-xs text-amber-500">{s.sub}</p>}
               </div>
             </CardContent>
@@ -118,69 +214,158 @@ export default function Admin() {
 
       <Tabs defaultValue="shops">
         <TabsList className="mb-6 flex-wrap">
-          <TabsTrigger value="shops">
+          <TabsTrigger value="shops" data-testid="tab-shops">
+            <Store className="w-4 h-4 mr-1.5" />
             Магазины {pendingShops.length > 0 && <Badge className="ml-1.5">{pendingShops.length}</Badge>}
           </TabsTrigger>
-          <TabsTrigger value="users">Пользователи</TabsTrigger>
-          <TabsTrigger value="orders">Заказы</TabsTrigger>
-          <TabsTrigger value="categories">Категории</TabsTrigger>
-          <TabsTrigger value="cities">Города</TabsTrigger>
-          <TabsTrigger value="settings">Настройки</TabsTrigger>
+          <TabsTrigger value="users" data-testid="tab-users">
+            <Users className="w-4 h-4 mr-1.5" />
+            Пользователи
+          </TabsTrigger>
+          <TabsTrigger value="orders" data-testid="tab-orders">
+            <Package className="w-4 h-4 mr-1.5" />
+            Заказы
+          </TabsTrigger>
+          <TabsTrigger value="categories" data-testid="tab-categories">
+            <Tag className="w-4 h-4 mr-1.5" />
+            Категории
+          </TabsTrigger>
+          <TabsTrigger value="cities" data-testid="tab-cities">
+            <MapPin className="w-4 h-4 mr-1.5" />
+            Города
+          </TabsTrigger>
+          <TabsTrigger value="analytics" data-testid="tab-analytics">
+            <BarChart3 className="w-4 h-4 mr-1.5" />
+            Аналитика
+          </TabsTrigger>
+          <TabsTrigger value="settings" data-testid="tab-settings">
+            <Settings className="w-4 h-4 mr-1.5" />
+            Настройки
+          </TabsTrigger>
         </TabsList>
 
+        {/* ==================== SHOPS ==================== */}
         <TabsContent value="shops">
+          <div className="flex items-center gap-3 mb-4">
+            <Select value={shopFilter} onValueChange={setShopFilter}>
+              <SelectTrigger className="w-48" data-testid="select-shop-filter">
+                <SelectValue placeholder="Все магазины" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Все магазины</SelectItem>
+                <SelectItem value="pending">На модерации</SelectItem>
+                <SelectItem value="approved">Одобренные</SelectItem>
+                <SelectItem value="rejected">Отклонённые</SelectItem>
+              </SelectContent>
+            </Select>
+            <span className="text-sm text-muted-foreground">
+              Показано: {filteredShops?.length || 0}
+            </span>
+          </div>
           {loadingShops ? (
             <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-lg" />)}</div>
-          ) : (
+          ) : filteredShops?.length ? (
             <div className="space-y-3">
-              {shops?.map((shop) => (
+              {filteredShops.map((shop) => (
                 <Card key={shop.id} data-testid={`card-shop-${shop.id}`}>
-                  <CardContent className="p-4 flex flex-wrap items-center gap-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm">{shop.name}</p>
-                      <div className="flex flex-wrap gap-2 mt-1">
-                        {shop.cityName && <span className="text-xs text-muted-foreground">{shop.cityName}</span>}
-                        {shop.ownerName && <span className="text-xs text-muted-foreground">Владелец: {shop.ownerName}</span>}
+                  <CardContent className="p-4">
+                    <div className="flex flex-wrap items-start gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-semibold text-sm">{shop.name}</p>
+                          <Badge variant={shop.status === "approved" ? "default" : shop.status === "pending" ? "secondary" : "destructive"}>
+                            {shop.status === "approved" ? "Одобрен" : shop.status === "pending" ? "На модерации" : "Отклонён"}
+                          </Badge>
+                        </div>
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                          {shop.cityName && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{shop.cityName}</span>}
+                          {shop.ownerName && <span>Владелец: {shop.ownerName}</span>}
+                          {shop.email && <span>{shop.email}</span>}
+                          {shop.phone && <span>{shop.phone}</span>}
+                        </div>
+                        {shop.description && (
+                          <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2">{shop.description}</p>
+                        )}
+                        {shop.address && (
+                          <p className="text-xs text-muted-foreground mt-1">{shop.address}</p>
+                        )}
                       </div>
-                    </div>
-                    <Badge variant={shop.status === "approved" ? "default" : shop.status === "pending" ? "secondary" : "destructive"}>
-                      {shop.status === "approved" ? "Одобрен" : shop.status === "pending" ? "На модерации" : "Отклонён"}
-                    </Badge>
-                    <div className="flex gap-2">
-                      {shop.status !== "approved" && (
-                        <Button size="sm" onClick={() => moderateShopMutation.mutate({ id: shop.id, status: "approved" })} className="gap-1.5" data-testid={`button-approve-${shop.id}`}>
-                          <CheckCircle className="w-3.5 h-3.5" /> Одобрить
-                        </Button>
-                      )}
-                      {shop.status !== "rejected" && (
-                        <Button size="sm" variant="outline" onClick={() => moderateShopMutation.mutate({ id: shop.id, status: "rejected" })} className="gap-1.5 text-destructive" data-testid={`button-reject-${shop.id}`}>
-                          <XCircle className="w-3.5 h-3.5" /> Отклонить
-                        </Button>
-                      )}
+                      <div className="flex gap-2 shrink-0">
+                        {shop.status !== "approved" && (
+                          <Button
+                            size="sm"
+                            onClick={() => moderateShopMutation.mutate({ id: shop.id, status: "approved" })}
+                            className="gap-1.5"
+                            disabled={moderateShopMutation.isPending}
+                            data-testid={`button-approve-${shop.id}`}
+                          >
+                            <CheckCircle className="w-3.5 h-3.5" /> Одобрить
+                          </Button>
+                        )}
+                        {shop.status !== "rejected" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => moderateShopMutation.mutate({ id: shop.id, status: "rejected" })}
+                            className="gap-1.5 text-destructive"
+                            disabled={moderateShopMutation.isPending}
+                            data-testid={`button-reject-${shop.id}`}
+                          >
+                            <XCircle className="w-3.5 h-3.5" /> Отклонить
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
               ))}
             </div>
+          ) : (
+            <div className="text-center py-12 text-muted-foreground text-sm">Нет магазинов</div>
           )}
         </TabsContent>
 
+        {/* ==================== USERS ==================== */}
         <TabsContent value="users">
           {loadingUsers ? (
             <div className="space-y-3">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-14 rounded-lg" />)}</div>
           ) : (
             <div className="space-y-2">
               {users?.map((u) => (
-                <Card key={u.id}>
+                <Card key={u.id} data-testid={`card-user-${u.id}`}>
                   <CardContent className="p-4 flex items-center gap-3">
-                    <div className="flex-1">
-                      <p className="font-medium text-sm">{u.name}</p>
-                      <p className="text-xs text-muted-foreground">{u.email}</p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-sm">{u.name}</p>
+                        {u.isBlocked && (
+                          <Badge variant="destructive" className="text-xs gap-1">
+                            <Ban className="w-3 h-3" /> Заблокирован
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap gap-x-3 text-xs text-muted-foreground mt-0.5">
+                        <span>{u.email}</span>
+                        {u.phone && <span>{u.phone}</span>}
+                        {u.createdAt && <span>Регистрация: {format(new Date(u.createdAt), "d MMM yyyy", { locale: ru })}</span>}
+                      </div>
                     </div>
-                    <Badge variant="outline">{u.role}</Badge>
+                    <Badge variant="outline">
+                      {u.role === "admin" ? "Админ" : u.role === "shop" ? "Продавец" : "Покупатель"}
+                    </Badge>
                     {u.role !== "admin" && (
-                      <Button size="sm" variant="destructive" onClick={() => blockUserMutation.mutate(u.id)} data-testid={`button-block-${u.id}`}>
-                        Заблокировать
+                      <Button
+                        size="sm"
+                        variant={u.isBlocked ? "default" : "destructive"}
+                        onClick={() => blockUserMutation.mutate(u.id)}
+                        disabled={blockUserMutation.isPending}
+                        className="gap-1.5"
+                        data-testid={`button-block-${u.id}`}
+                      >
+                        {u.isBlocked ? (
+                          <><UserCheck className="w-3.5 h-3.5" /> Разблокировать</>
+                        ) : (
+                          <><Ban className="w-3.5 h-3.5" /> Заблокировать</>
+                        )}
                       </Button>
                     )}
                   </CardContent>
@@ -190,46 +375,94 @@ export default function Admin() {
           )}
         </TabsContent>
 
+        {/* ==================== ORDERS ==================== */}
         <TabsContent value="orders">
+          <div className="flex items-center gap-3 mb-4">
+            <Select value={orderFilter} onValueChange={setOrderFilter}>
+              <SelectTrigger className="w-48" data-testid="select-order-filter">
+                <SelectValue placeholder="Все заказы" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Все заказы</SelectItem>
+                {ORDER_STATUSES.map((s) => (
+                  <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <span className="text-sm text-muted-foreground">
+              Показано: {filteredOrders?.length || 0}
+            </span>
+          </div>
           {loadingOrders ? (
             <div className="space-y-3">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-lg" />)}</div>
-          ) : (
+          ) : filteredOrders?.length ? (
             <div className="space-y-3">
-              {orders?.map((order) => (
-                <Card key={order.id}>
-                  <CardContent className="p-4 flex flex-wrap items-center gap-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm">#{order.id.slice(0, 8).toUpperCase()}</p>
-                      <div className="flex flex-wrap gap-2 text-xs text-muted-foreground mt-1">
-                        {order.buyerName && <span>Покупатель: {order.buyerName}</span>}
-                        {order.shopName && <span>Магазин: {order.shopName}</span>}
-                        {order.createdAt && <span>{format(new Date(order.createdAt), "d MMM HH:mm", { locale: ru })}</span>}
+              {filteredOrders.map((order) => (
+                <Card key={order.id} data-testid={`card-order-${order.id}`}>
+                  <CardContent className="p-4">
+                    <div className="flex flex-wrap items-start gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm">#{order.id.slice(0, 8).toUpperCase()}</p>
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground mt-1">
+                          {order.buyerName && <span>Покупатель: {order.buyerName}</span>}
+                          {order.shopName && <span>Магазин: {order.shopName}</span>}
+                          {order.createdAt && <span>{format(new Date(order.createdAt), "d MMM yyyy, HH:mm", { locale: ru })}</span>}
+                        </div>
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground mt-1">
+                          <span>Получатель: {order.recipientName}</span>
+                          <span>Тел: {order.recipientPhone}</span>
+                          <span>Адрес: {order.deliveryAddress}</span>
+                        </div>
+                        {Number(order.platformCommission) > 0 && (
+                          <p className="text-xs text-green-600 mt-1">Комиссия: {Number(order.platformCommission).toLocaleString("ru-RU")} ₽</p>
+                        )}
                       </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold">{Number(order.totalAmount).toLocaleString("ru-RU")} ₽</p>
-                      <Badge variant="secondary">{order.status}</Badge>
+                      <div className="flex flex-col items-end gap-2 shrink-0">
+                        <p className="font-bold">{Number(order.totalAmount).toLocaleString("ru-RU")} ₽</p>
+                        <Select
+                          value={order.status}
+                          onValueChange={(status) => updateOrderStatusMutation.mutate({ id: order.id, status })}
+                        >
+                          <SelectTrigger className="w-40 h-8 text-xs" data-testid={`select-order-status-${order.id}`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {ORDER_STATUSES.map((s) => (
+                              <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
               ))}
             </div>
+          ) : (
+            <div className="text-center py-12 text-muted-foreground text-sm">Нет заказов</div>
           )}
         </TabsContent>
 
+        {/* ==================== CATEGORIES ==================== */}
         <TabsContent value="categories">
           <div className="space-y-4">
-            <div className="flex gap-3">
-              <Input placeholder="Название категории" value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} data-testid="input-category-name" />
-              <Input placeholder="slug (birthday)" value={newCategorySlug} onChange={(e) => setNewCategorySlug(e.target.value)} data-testid="input-category-slug" />
-              <Button onClick={() => addCategoryMutation.mutate()} disabled={!newCategoryName || !newCategorySlug} data-testid="button-add-category">
-                <Plus className="w-4 h-4" />
-              </Button>
-            </div>
+            <Card>
+              <CardContent className="p-4">
+                <h3 className="font-semibold text-sm mb-3">Добавить категорию</h3>
+                <div className="flex gap-3">
+                  <Input placeholder="Название категории" value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} data-testid="input-category-name" />
+                  <Input placeholder="slug (birthday)" value={newCategorySlug} onChange={(e) => setNewCategorySlug(e.target.value)} data-testid="input-category-slug" />
+                  <Button onClick={() => addCategoryMutation.mutate()} disabled={!newCategoryName || !newCategorySlug || addCategoryMutation.isPending} data-testid="button-add-category">
+                    <Plus className="w-4 h-4 mr-1.5" /> Добавить
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
             <div className="space-y-2">
               {categories?.map((c) => (
                 <Card key={c.id}>
                   <CardContent className="p-3 flex items-center gap-3">
+                    <Tag className="w-4 h-4 text-muted-foreground shrink-0" />
                     <div className="flex-1">
                       <p className="font-medium text-sm">{c.name}</p>
                       <p className="text-xs text-muted-foreground">{c.slug}</p>
@@ -240,22 +473,30 @@ export default function Admin() {
                   </CardContent>
                 </Card>
               ))}
+              {!categories?.length && <p className="text-center text-sm text-muted-foreground py-8">Нет категорий</p>}
             </div>
           </div>
         </TabsContent>
 
+        {/* ==================== CITIES ==================== */}
         <TabsContent value="cities">
           <div className="space-y-4">
-            <div className="flex gap-3">
-              <Input placeholder="Название города" value={newCityName} onChange={(e) => setNewCityName(e.target.value)} data-testid="input-city-name" />
-              <Button onClick={() => addCityMutation.mutate()} disabled={!newCityName} data-testid="button-add-city">
-                <Plus className="w-4 h-4" />
-              </Button>
-            </div>
+            <Card>
+              <CardContent className="p-4">
+                <h3 className="font-semibold text-sm mb-3">Добавить город</h3>
+                <div className="flex gap-3">
+                  <Input placeholder="Название города" value={newCityName} onChange={(e) => setNewCityName(e.target.value)} data-testid="input-city-name" />
+                  <Button onClick={() => addCityMutation.mutate()} disabled={!newCityName || addCityMutation.isPending} data-testid="button-add-city">
+                    <Plus className="w-4 h-4 mr-1.5" /> Добавить
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
             <div className="space-y-2">
               {cities?.map((c) => (
                 <Card key={c.id}>
                   <CardContent className="p-3 flex items-center gap-3">
+                    <MapPin className="w-4 h-4 text-muted-foreground shrink-0" />
                     <p className="flex-1 font-medium text-sm">{c.name}</p>
                     <Button size="icon" variant="ghost" className="text-destructive" onClick={() => deleteCityMutation.mutate(c.id)} data-testid={`button-delete-city-${c.id}`}>
                       <Trash2 className="w-4 h-4" />
@@ -263,17 +504,207 @@ export default function Admin() {
                   </CardContent>
                 </Card>
               ))}
+              {!cities?.length && <p className="text-center text-sm text-muted-foreground py-8">Нет городов</p>}
             </div>
           </div>
         </TabsContent>
 
+        {/* ==================== ANALYTICS ==================== */}
+        <TabsContent value="analytics">
+          {loadingAnalytics ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-lg" />)}
+              </div>
+            </div>
+          ) : analytics ? (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Card>
+                  <CardContent className="p-4">
+                    <p className="text-xs text-muted-foreground mb-1">Общий оборот</p>
+                    <p className="text-xl font-bold" data-testid="text-analytics-total-revenue">{analytics.totalRevenue.toLocaleString("ru-RU")} ₽</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <p className="text-xs text-muted-foreground mb-1">За месяц</p>
+                    <p className="text-xl font-bold">{analytics.monthRevenue.toLocaleString("ru-RU")} ₽</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <p className="text-xs text-muted-foreground mb-1">За неделю</p>
+                    <p className="text-xl font-bold">{analytics.weekRevenue.toLocaleString("ru-RU")} ₽</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <p className="text-xs text-muted-foreground mb-1">Комиссия платформы</p>
+                    <p className="text-xl font-bold text-green-600">{analytics.totalCommission.toLocaleString("ru-RU")} ₽</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <p className="text-xs text-muted-foreground mb-1">Средний чек</p>
+                    <p className="text-xl font-bold">{analytics.avgOrderValue.toLocaleString("ru-RU")} ₽</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <p className="text-xs text-muted-foreground mb-1">Товаров</p>
+                    <p className="text-xl font-bold">{analytics.totalProducts}</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <p className="text-xs text-muted-foreground mb-1">Новых за 30 дней</p>
+                    <p className="text-xl font-bold">{analytics.newUsers30d} пользователей</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <p className="text-xs text-muted-foreground mb-1">Заблокировано</p>
+                    <p className="text-xl font-bold text-destructive">{analytics.blockedCount}</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">Статусы заказов</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {ORDER_STATUSES.map((s) => {
+                        const count = analytics.statusCounts[s.value] || 0;
+                        const total = analytics.totalOrders || 1;
+                        const pct = Math.round((count / total) * 100);
+                        return (
+                          <div key={s.value} className="flex items-center gap-3" data-testid={`analytics-status-${s.value}`}>
+                            <span className="text-sm w-24">{s.label}</span>
+                            <div className="flex-1 h-6 bg-muted rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full ${s.color} flex items-center px-2 text-xs font-medium transition-all`}
+                                style={{ width: `${Math.max(pct, 2)}%` }}
+                              >
+                                {count > 0 && count}
+                              </div>
+                            </div>
+                            <span className="text-xs text-muted-foreground w-10 text-right">{pct}%</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">Топ магазинов по выручке</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {analytics.topShops.length > 0 ? (
+                      <div className="space-y-3">
+                        {analytics.topShops.map((shop, i) => (
+                          <div key={shop.name} className="flex items-center gap-3" data-testid={`analytics-top-shop-${i}`}>
+                            <span className="w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center shrink-0">
+                              {i + 1}
+                            </span>
+                            <span className="flex-1 text-sm font-medium truncate">{shop.name}</span>
+                            <span className="text-sm font-bold">{shop.revenue.toLocaleString("ru-RU")} ₽</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Нет данных</p>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">Пользователи</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-2xl font-bold">{analytics.buyerCount}</p>
+                        <p className="text-xs text-muted-foreground">Покупателей</p>
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold">{analytics.shopOwnerCount}</p>
+                        <p className="text-xs text-muted-foreground">Продавцов</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">Магазины</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <p className="text-2xl font-bold">{analytics.totalShops}</p>
+                        <p className="text-xs text-muted-foreground">Всего</p>
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold text-green-600">{analytics.approvedShops}</p>
+                        <p className="text-xs text-muted-foreground">Активных</p>
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold text-amber-500">{analytics.pendingShops}</p>
+                        <p className="text-xs text-muted-foreground">На модерации</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {Object.keys(analytics.dailyRevenue).length > 0 && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">Выручка по дням (последние 30 дней)</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-end gap-1 h-32">
+                      {(() => {
+                        const entries = Object.entries(analytics.dailyRevenue).sort(([a], [b]) => a.localeCompare(b));
+                        const maxVal = Math.max(...entries.map(([, v]) => v), 1);
+                        return entries.map(([day, val]) => (
+                          <div
+                            key={day}
+                            className="flex-1 bg-primary/80 rounded-t hover:bg-primary transition-colors group relative"
+                            style={{ height: `${(val / maxVal) * 100}%`, minHeight: "4px" }}
+                            title={`${format(new Date(day), "d MMM", { locale: ru })}: ${val.toLocaleString("ru-RU")} ₽`}
+                          >
+                            <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-foreground text-background text-xs px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                              {val.toLocaleString("ru-RU")} ₽
+                            </div>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-12 text-muted-foreground">Нет данных</div>
+          )}
+        </TabsContent>
+
+        {/* ==================== SETTINGS ==================== */}
         <TabsContent value="settings">
           <Card>
-            <CardContent className="p-5 space-y-4">
+            <CardContent className="p-5 space-y-6">
               <h3 className="font-semibold">Настройки платформы</h3>
               <div className="space-y-2">
                 <Label>Комиссия платформы (%)</Label>
-                <div className="flex gap-3">
+                <div className="flex gap-3 items-center">
                   <Input
                     type="number"
                     placeholder={settings?.commissionRate?.toString() || "10"}
@@ -282,14 +713,34 @@ export default function Admin() {
                     className="max-w-32"
                     data-testid="input-commission"
                   />
-                  <Button onClick={() => updateSettingsMutation.mutate()} disabled={!commission} data-testid="button-save-settings">
-                    Сохранить
-                  </Button>
+                  {settings && (
+                    <span className="text-sm text-muted-foreground">Текущая: {settings.commissionRate}%</span>
+                  )}
                 </div>
-                {settings && (
-                  <p className="text-xs text-muted-foreground">Текущая комиссия: {settings.commissionRate}%</p>
-                )}
               </div>
+              <div className="space-y-2">
+                <Label>Стоимость доставки (₽)</Label>
+                <div className="flex gap-3 items-center">
+                  <Input
+                    type="number"
+                    placeholder={settings?.deliveryCost?.toString() || "300"}
+                    value={deliveryCost}
+                    onChange={(e) => setDeliveryCost(e.target.value)}
+                    className="max-w-32"
+                    data-testid="input-delivery-cost"
+                  />
+                  {settings && (
+                    <span className="text-sm text-muted-foreground">Текущая: {settings.deliveryCost} ₽</span>
+                  )}
+                </div>
+              </div>
+              <Button
+                onClick={() => updateSettingsMutation.mutate()}
+                disabled={(!commission && !deliveryCost) || updateSettingsMutation.isPending}
+                data-testid="button-save-settings"
+              >
+                Сохранить настройки
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>

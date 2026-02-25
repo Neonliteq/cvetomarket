@@ -10,6 +10,7 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   phone: text("phone"),
   role: text("role").notNull().default("buyer"),
+  isBlocked: boolean("is_blocked").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

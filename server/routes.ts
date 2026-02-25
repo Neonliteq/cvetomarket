@@ -93,6 +93,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!user) return res.status(401).json({ error: "Неверный email или пароль" });
       const match = await bcrypt.compare(password, user.password);
       if (!match) return res.status(401).json({ error: "Неверный email или пароль" });
+      if (user.isBlocked) return res.status(403).json({ error: "Ваш аккаунт заблокирован" });
       (req.session as any).userId = user.id;
       const { password: _, ...safe } = user;
       res.json({ user: safe });
@@ -114,8 +115,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.json(city);
   });
   app.delete("/api/cities/:id", requireRole("admin"), async (req, res) => {
-    await storage.deleteCity(req.params.id);
-    res.json({ ok: true });
+    try {
+      await storage.deleteCity(req.params.id);
+      res.json({ ok: true });
+    } catch (e: any) {
+      if (e.code === "23503") return res.status(400).json({ error: "Невозможно удалить город, он используется магазинами" });
+      throw e;
+    }
   });
 
   // ---- CATEGORIES ----
@@ -127,8 +133,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.json(cat);
   });
   app.delete("/api/categories/:id", requireRole("admin"), async (req, res) => {
-    await storage.deleteCategory(req.params.id);
-    res.json({ ok: true });
+    try {
+      await storage.deleteCategory(req.params.id);
+      res.json({ ok: true });
+    } catch (e: any) {
+      if (e.code === "23503") return res.status(400).json({ error: "Невозможно удалить категорию, она используется товарами" });
+      throw e;
+    }
   });
 
   // ---- SHOPS ----
@@ -347,8 +358,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.json(shop);
   });
 
-  app.patch("/api/admin/users/:id/block", requireRole("admin"), async (_req, res) => {
-    res.json({ ok: true });
+  app.patch("/api/admin/users/:id/block", requireRole("admin"), async (req, res) => {
+    const targetUser = await storage.getUser(req.params.id);
+    if (!targetUser) return res.status(404).json({ error: "User not found" });
+    const updated = await storage.updateUser(req.params.id, { isBlocked: !targetUser.isBlocked });
+    if (!updated) return res.status(500).json({ error: "Failed to update user" });
+    const { password: _, ...safe } = updated;
+    res.json(safe);
   });
 
   app.get("/api/admin/settings", requireRole("admin"), async (_req, res) => {
@@ -359,6 +375,85 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.patch("/api/admin/settings", requireRole("admin"), async (req, res) => {
     const s = await storage.updateSettings(req.body);
     res.json(s);
+  });
+
+  app.get("/api/admin/analytics", requireRole("admin"), async (_req, res) => {
+    const allOrders = await storage.getAllOrders();
+    const allUsers = await storage.getAllUsers();
+    const allShops = await storage.getShops();
+    const allProducts = await storage.getProducts();
+
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    const recentOrders = allOrders.filter((o) => o.createdAt && new Date(o.createdAt) >= thirtyDaysAgo);
+    const weekOrders = allOrders.filter((o) => o.createdAt && new Date(o.createdAt) >= sevenDaysAgo);
+
+    const totalRevenue = allOrders.filter((o) => o.status !== "cancelled").reduce((s, o) => s + Number(o.totalAmount), 0);
+    const monthRevenue = recentOrders.filter((o) => o.status !== "cancelled").reduce((s, o) => s + Number(o.totalAmount), 0);
+    const weekRevenue = weekOrders.filter((o) => o.status !== "cancelled").reduce((s, o) => s + Number(o.totalAmount), 0);
+    const totalCommission = allOrders.filter((o) => o.status !== "cancelled").reduce((s, o) => s + Number(o.platformCommission || 0), 0);
+
+    const statusCounts: Record<string, number> = {};
+    for (const o of allOrders) {
+      statusCounts[o.status] = (statusCounts[o.status] || 0) + 1;
+    }
+
+    const dailyRevenue: Record<string, number> = {};
+    for (const o of recentOrders) {
+      if (o.status === "cancelled" || !o.createdAt) continue;
+      const day = new Date(o.createdAt).toISOString().slice(0, 10);
+      dailyRevenue[day] = (dailyRevenue[day] || 0) + Number(o.totalAmount);
+    }
+
+    const shopRevenue = allOrders
+      .filter((o) => o.status !== "cancelled")
+      .reduce((acc, o) => {
+        acc[o.shopId] = (acc[o.shopId] || 0) + Number(o.totalAmount);
+        return acc;
+      }, {} as Record<string, number>);
+    const shopMap = Object.fromEntries(allShops.map((s) => [s.id, s.name]));
+    const topShops = Object.entries(shopRevenue)
+      .map(([id, revenue]) => ({ name: shopMap[id] || "Unknown", revenue }))
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 5);
+
+    const newUsers30d = allUsers.filter((u) => u.createdAt && new Date(u.createdAt) >= thirtyDaysAgo).length;
+    const buyerCount = allUsers.filter((u) => u.role === "buyer").length;
+    const shopOwnerCount = allUsers.filter((u) => u.role === "shop").length;
+    const blockedCount = allUsers.filter((u) => u.isBlocked).length;
+
+    const avgOrderValue = allOrders.length > 0 ? totalRevenue / allOrders.filter((o) => o.status !== "cancelled").length : 0;
+
+    res.json({
+      totalRevenue,
+      monthRevenue,
+      weekRevenue,
+      totalCommission,
+      totalOrders: allOrders.length,
+      monthOrders: recentOrders.length,
+      weekOrders: weekOrders.length,
+      statusCounts,
+      dailyRevenue,
+      topShops,
+      totalUsers: allUsers.length,
+      newUsers30d,
+      buyerCount,
+      shopOwnerCount,
+      blockedCount,
+      totalShops: allShops.length,
+      approvedShops: allShops.filter((s) => s.status === "approved").length,
+      pendingShops: allShops.filter((s) => s.status === "pending").length,
+      totalProducts: allProducts.length,
+      avgOrderValue: Math.round(avgOrderValue),
+    });
+  });
+
+  app.get("/api/shops/:id/owner", requireAuth, async (req, res) => {
+    const shop = await storage.getShop(req.params.id);
+    if (!shop) return res.status(404).json({ error: "Shop not found" });
+    res.json({ ownerId: shop.ownerId });
   });
 
   return httpServer;
