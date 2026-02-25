@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Package, MessageCircle, User, LogOut, Star } from "lucide-react";
+import { Package, MessageCircle, User, LogOut, Star, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,11 +10,11 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { InteractiveStarRating } from "@/components/StarRating";
+import { InteractiveStarRating, StarRating } from "@/components/StarRating";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import type { Order, OrderItem } from "@shared/schema";
+import type { Order, OrderItem, Review } from "@shared/schema";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 
@@ -26,18 +26,18 @@ type OrderWithItems = Order & {
 const STATUS_LABELS: Record<string, string> = {
   new: "Новый",
   confirmed: "Подтверждён",
-  in_delivery: "В доставке",
+  assembling: "Собирается",
+  delivering: "Доставка",
   delivered: "Доставлен",
-  completed: "Завершён",
   cancelled: "Отменён",
 };
 
 const STATUS_COLORS: Record<string, string> = {
   new: "secondary",
   confirmed: "default",
-  in_delivery: "default",
+  assembling: "default",
+  delivering: "default",
   delivered: "default",
-  completed: "outline",
   cancelled: "destructive",
 };
 
@@ -56,35 +56,47 @@ function ReviewDialog({ order }: { order: OrderWithItems }) {
       comment,
     }),
     onSuccess: () => {
-      toast({ title: "Отзыв отправлен", description: "Спасибо за вашу оценку!" });
+      toast({ title: "Отзыв отправлен!", description: "Спасибо за вашу оценку!" });
       qc.invalidateQueries({ queryKey: ["/api/orders/my"] });
+      qc.invalidateQueries({ queryKey: ["/api/reviews/my"] });
+      qc.invalidateQueries({ queryKey: ["/api/shops", order.shopId, "reviews"] });
       setOpen(false);
     },
-    onError: () => toast({ title: "Ошибка", variant: "destructive" }),
+    onError: (err: any) => toast({ title: err?.message || "Ошибка", variant: "destructive" }),
   });
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button size="sm" variant="outline" className="gap-1.5" data-testid={`button-review-${order.id}`}>
-          <Star className="w-3.5 h-3.5" /> Оставить отзыв
+          <Star className="w-3.5 h-3.5" /> Оставить отзыв о магазине
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Оценить заказ</DialogTitle>
+          <DialogTitle>Оценить магазин{order.shopName ? ` «${order.shopName}»` : ""}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 mt-2">
+          <p className="text-sm text-muted-foreground">
+            Оцените качество обслуживания и доставки по пятибалльной шкале
+          </p>
           <div className="space-y-2">
             <p className="text-sm font-medium">Ваша оценка</p>
             <InteractiveStarRating value={rating} onChange={setRating} />
+            <p className="text-xs text-muted-foreground">
+              {rating === 1 && "Очень плохо"}
+              {rating === 2 && "Плохо"}
+              {rating === 3 && "Нормально"}
+              {rating === 4 && "Хорошо"}
+              {rating === 5 && "Отлично"}
+            </p>
           </div>
           <div className="space-y-2">
             <p className="text-sm font-medium">Комментарий (необязательно)</p>
             <Textarea
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              placeholder="Расскажите о заказе..."
+              placeholder="Расскажите, как прошла доставка, качество букета..."
               data-testid="input-review-comment"
             />
           </div>
@@ -110,6 +122,13 @@ export default function Account() {
     queryKey: ["/api/orders/my"],
     enabled: !!user,
   });
+
+  const { data: myReviews } = useQuery<Review[]>({
+    queryKey: ["/api/reviews/my"],
+    enabled: !!user,
+  });
+
+  const reviewedOrderIds = new Set((myReviews || []).map((r) => r.orderId));
 
   if (authLoading) return null;
   if (!user) {
@@ -190,8 +209,21 @@ export default function Account() {
                         ))}
                       </div>
                     )}
+                    {order.status === "delivered" && reviewedOrderIds.has(order.id) && (() => {
+                      const rev = myReviews?.find((r) => r.orderId === order.id);
+                      return rev ? (
+                        <div className="flex items-center gap-2 text-sm p-2 bg-muted/50 rounded-md mb-2" data-testid={`review-done-${order.id}`}>
+                          <CheckCircle className="w-4 h-4 text-green-600 shrink-0" />
+                          <span className="text-muted-foreground">Ваш отзыв:</span>
+                          <StarRating rating={rev.rating} size="sm" />
+                          {rev.comment && <span className="text-xs text-muted-foreground truncate max-w-48">«{rev.comment}»</span>}
+                        </div>
+                      ) : null;
+                    })()}
                     <div className="flex gap-2 flex-wrap">
-                      {order.status === "completed" && <ReviewDialog order={order} />}
+                      {order.status === "delivered" && !reviewedOrderIds.has(order.id) && (
+                        <ReviewDialog order={order} />
+                      )}
                       <Link href="/chat">
                         <Button size="sm" variant="ghost" className="gap-1.5">
                           <MessageCircle className="w-3.5 h-3.5" /> Написать магазину

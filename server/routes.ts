@@ -330,8 +330,21 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   // ---- REVIEWS ----
+  app.get("/api/reviews/my", requireAuth, async (req, res) => {
+    const userId = (req.session as any).userId;
+    const revs = await storage.getReviewsByBuyer(userId);
+    res.json(revs);
+  });
+
   app.post("/api/reviews", requireAuth, async (req, res) => {
     const userId = (req.session as any).userId;
+    if (req.body.orderId) {
+      const existing = await storage.getReviewByOrder(req.body.orderId);
+      if (existing) return res.status(400).json({ error: "Вы уже оставили отзыв к этому заказу" });
+      const order = await storage.getOrder(req.body.orderId);
+      if (!order || order.buyerId !== userId) return res.status(403).json({ error: "Нет доступа" });
+      if (order.status !== "delivered") return res.status(400).json({ error: "Отзыв можно оставить только после доставки" });
+    }
     const review = await storage.createReview({ ...req.body, buyerId: userId });
     const revs = await storage.getReviewsByShop(review.shopId);
     if (revs.length > 0) {

@@ -56,6 +56,8 @@ export interface IStorage {
   // Reviews
   getReviewsByProduct(productId: string): Promise<Review[]>;
   getReviewsByShop(shopId: string): Promise<Review[]>;
+  getReviewByOrder(orderId: string): Promise<Review | undefined>;
+  getReviewsByBuyer(buyerId: string): Promise<Review[]>;
   createReview(review: InsertReview): Promise<Review>;
 
   // Messages
@@ -192,6 +194,13 @@ export class DbStorage implements IStorage {
   }
   async getReviewsByShop(shopId: string) {
     return db.select().from(reviews).where(eq(reviews.shopId, shopId)).orderBy(desc(reviews.createdAt));
+  }
+  async getReviewByOrder(orderId: string) {
+    const [r] = await db.select().from(reviews).where(eq(reviews.orderId, orderId));
+    return r;
+  }
+  async getReviewsByBuyer(buyerId: string) {
+    return db.select().from(reviews).where(eq(reviews.buyerId, buyerId)).orderBy(desc(reviews.createdAt));
   }
   async createReview(data: InsertReview) {
     const [r] = await db.insert(reviews).values(data).returning();
