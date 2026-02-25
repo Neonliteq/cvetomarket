@@ -339,17 +339,24 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/reviews", requireAuth, async (req, res) => {
     const userId = (req.session as any).userId;
     if (req.body.orderId) {
-      const existing = await storage.getReviewByOrder(req.body.orderId);
-      if (existing) return res.status(400).json({ error: "Вы уже оставили отзыв к этому заказу" });
       const order = await storage.getOrder(req.body.orderId);
       if (!order || order.buyerId !== userId) return res.status(403).json({ error: "Нет доступа" });
       if (order.status !== "delivered") return res.status(400).json({ error: "Отзыв можно оставить только после доставки" });
+      const existingReviews = await storage.getReviewsByOrder(req.body.orderId);
+      if (req.body.productId) {
+        const alreadyReviewed = existingReviews.find((r) => r.productId === req.body.productId);
+        if (alreadyReviewed) return res.status(400).json({ error: "Вы уже оценили этот товар" });
+      } else {
+        const shopReview = existingReviews.find((r) => !r.productId);
+        if (shopReview) return res.status(400).json({ error: "Вы уже оставили отзыв к этому заказу" });
+      }
     }
     const review = await storage.createReview({ ...req.body, buyerId: userId });
-    const revs = await storage.getReviewsByShop(review.shopId);
-    if (revs.length > 0) {
-      const avg = revs.reduce((sum, r) => sum + r.rating, 0) / revs.length;
-      await storage.updateShop(review.shopId, { rating: avg.toFixed(2), reviewCount: revs.length });
+    const shopRevs = await storage.getReviewsByShop(review.shopId);
+    const shopOnlyRevs = shopRevs.filter((r) => !r.productId);
+    if (shopOnlyRevs.length > 0) {
+      const avg = shopOnlyRevs.reduce((sum, r) => sum + r.rating, 0) / shopOnlyRevs.length;
+      await storage.updateShop(review.shopId, { rating: avg.toFixed(2), reviewCount: shopOnlyRevs.length });
     }
     if (review.productId) {
       const productRevs = await storage.getReviewsByProduct(review.productId);

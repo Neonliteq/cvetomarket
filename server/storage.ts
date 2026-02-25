@@ -12,7 +12,7 @@ import {
   users, shops, products, orders, orderItems, reviews, messages, categories, cities, platformSettings,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, or, inArray } from "drizzle-orm";
+import { eq, desc, and, or, inArray, sql } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -57,6 +57,7 @@ export interface IStorage {
   getReviewsByProduct(productId: string): Promise<Review[]>;
   getReviewsByShop(shopId: string): Promise<Review[]>;
   getReviewByOrder(orderId: string): Promise<Review | undefined>;
+  getReviewsByOrder(orderId: string): Promise<Review[]>;
   getReviewsByBuyer(buyerId: string): Promise<Review[]>;
   createReview(review: InsertReview): Promise<Review>;
 
@@ -196,8 +197,11 @@ export class DbStorage implements IStorage {
     return db.select().from(reviews).where(eq(reviews.shopId, shopId)).orderBy(desc(reviews.createdAt));
   }
   async getReviewByOrder(orderId: string) {
-    const [r] = await db.select().from(reviews).where(eq(reviews.orderId, orderId));
+    const [r] = await db.select().from(reviews).where(and(eq(reviews.orderId, orderId), sql`${reviews.productId} IS NULL`));
     return r;
+  }
+  async getReviewsByOrder(orderId: string) {
+    return db.select().from(reviews).where(eq(reviews.orderId, orderId)).orderBy(desc(reviews.createdAt));
   }
   async getReviewsByBuyer(buyerId: string) {
     return db.select().from(reviews).where(eq(reviews.buyerId, buyerId)).orderBy(desc(reviews.createdAt));

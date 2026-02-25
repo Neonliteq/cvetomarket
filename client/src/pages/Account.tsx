@@ -41,6 +41,94 @@ const STATUS_COLORS: Record<string, string> = {
   cancelled: "destructive",
 };
 
+function ProductReviewDialog({ order, item, alreadyReviewed }: { 
+  order: OrderWithItems; 
+  item: OrderItem & { productName?: string; productImage?: string };
+  alreadyReviewed?: Review;
+}) {
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState("");
+  const [open, setOpen] = useState(false);
+  const qc = useQueryClient();
+  const { toast } = useToast();
+
+  const mutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/reviews", {
+      orderId: order.id,
+      shopId: order.shopId,
+      productId: item.productId,
+      rating,
+      comment,
+    }),
+    onSuccess: () => {
+      toast({ title: "Оценка товара отправлена!" });
+      qc.invalidateQueries({ queryKey: ["/api/reviews/my"] });
+      qc.invalidateQueries({ queryKey: ["/api/products", item.productId, "reviews"] });
+      setOpen(false);
+    },
+    onError: (err: any) => toast({ title: err?.message || "Ошибка", variant: "destructive" }),
+  });
+
+  if (alreadyReviewed) {
+    return (
+      <div className="flex items-center gap-1 mt-0.5">
+        <StarRating rating={alreadyReviewed.rating} size="sm" />
+      </div>
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <button className="text-xs text-primary hover:underline mt-0.5 flex items-center gap-1" data-testid={`button-review-product-${item.productId}`}>
+          <Star className="w-3 h-3" /> Оценить
+        </button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Оценить товар</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 mt-2">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded bg-muted overflow-hidden shrink-0">
+              <img src={item.productImage || "/images/placeholder-bouquet.png"} alt={item.productName} className="w-full h-full object-cover" />
+            </div>
+            <p className="font-medium text-sm">{item.productName}</p>
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Ваша оценка</p>
+            <InteractiveStarRating value={rating} onChange={setRating} />
+            <p className="text-xs text-muted-foreground">
+              {rating === 1 && "Очень плохо"}
+              {rating === 2 && "Плохо"}
+              {rating === 3 && "Нормально"}
+              {rating === 4 && "Хорошо"}
+              {rating === 5 && "Отлично"}
+            </p>
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Комментарий (необязательно)</p>
+            <Textarea
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              placeholder="Что понравилось, качество букета..."
+              data-testid="input-product-review-comment"
+            />
+          </div>
+          <Button
+            className="w-full"
+            onClick={() => mutation.mutate()}
+            disabled={mutation.isPending}
+            data-testid="button-submit-product-review"
+          >
+            {mutation.isPending ? "Отправляем..." : "Отправить оценку"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function ReviewDialog({ order }: { order: OrderWithItems }) {
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
@@ -128,7 +216,11 @@ export default function Account() {
     enabled: !!user,
   });
 
-  const reviewedOrderIds = new Set((myReviews || []).map((r) => r.orderId));
+  const shopReviewedOrderIds = new Set((myReviews || []).filter((r) => !r.productId).map((r) => r.orderId));
+  const productReviewMap = new Map<string, Review>();
+  (myReviews || []).filter((r) => r.productId).forEach((r) => {
+    productReviewMap.set(`${r.orderId}_${r.productId}`, r);
+  });
 
   if (authLoading) return null;
   if (!user) {
@@ -191,37 +283,46 @@ export default function Account() {
                       </div>
                     </div>
                     {order.items && order.items.length > 0 && (
-                      <div className="flex gap-2 mb-3 overflow-x-auto pb-1">
+                      <div className="space-y-2 mb-3">
                         {order.items.map((item) => (
-                          <div key={item.id} className="shrink-0 flex items-center gap-2">
-                            <div className="w-10 h-10 rounded bg-muted overflow-hidden">
+                          <div key={item.id} className="flex items-center gap-2">
+                            <div className="w-10 h-10 rounded bg-muted overflow-hidden shrink-0">
                               <img
                                 src={item.productImage || "/images/placeholder-bouquet.png"}
                                 alt={item.productName}
                                 className="w-full h-full object-cover"
                               />
                             </div>
-                            <div>
-                              <p className="text-xs font-medium max-w-24 truncate">{item.productName}</p>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-medium truncate">{item.productName}</p>
                               <p className="text-xs text-muted-foreground">×{item.quantity}</p>
                             </div>
+                            {order.status === "delivered" && item.productId && (
+                              <div className="shrink-0">
+                                <ProductReviewDialog
+                                  order={order}
+                                  item={item}
+                                  alreadyReviewed={productReviewMap.get(`${order.id}_${item.productId}`)}
+                                />
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
                     )}
-                    {order.status === "delivered" && reviewedOrderIds.has(order.id) && (() => {
-                      const rev = myReviews?.find((r) => r.orderId === order.id);
+                    {order.status === "delivered" && shopReviewedOrderIds.has(order.id) && (() => {
+                      const rev = myReviews?.find((r) => r.orderId === order.id && !r.productId);
                       return rev ? (
                         <div className="flex items-center gap-2 text-sm p-2 bg-muted/50 rounded-md mb-2" data-testid={`review-done-${order.id}`}>
                           <CheckCircle className="w-4 h-4 text-green-600 shrink-0" />
-                          <span className="text-muted-foreground">Ваш отзыв:</span>
+                          <span className="text-muted-foreground">Отзыв о магазине:</span>
                           <StarRating rating={rev.rating} size="sm" />
                           {rev.comment && <span className="text-xs text-muted-foreground truncate max-w-48">«{rev.comment}»</span>}
                         </div>
                       ) : null;
                     })()}
                     <div className="flex gap-2 flex-wrap">
-                      {order.status === "delivered" && !reviewedOrderIds.has(order.id) && (
+                      {order.status === "delivered" && !shopReviewedOrderIds.has(order.id) && (
                         <ReviewDialog order={order} />
                       )}
                       <Link href="/chat">
