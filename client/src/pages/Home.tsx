@@ -31,6 +31,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen">
+      <NotificationPanel />
       <section className="relative overflow-hidden">
         <div
           className="min-h-[500px] md:min-h-[600px] flex items-center"
@@ -93,8 +94,6 @@ export default function Home() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-12 space-y-16">
-        <NotificationPanel />
-
         <section>
           <div className="flex items-center justify-between gap-4 mb-6">
             <div>

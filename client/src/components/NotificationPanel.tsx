@@ -1,10 +1,8 @@
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { Bell, MessageCircle, Package, Star, ChevronRight, X } from "lucide-react";
+import { Bell, MessageCircle, Package, Star, ChevronRight, ChevronDown } from "lucide-react";
 import { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
@@ -48,7 +46,7 @@ function timeAgo(dateStr: string) {
 
 export function NotificationPanel() {
   const { user } = useAuth();
-  const [dismissed, setDismissed] = useState(false);
+  const [open, setOpen] = useState(false);
 
   const { data } = useQuery<NotificationsData>({
     queryKey: ["/api/notifications"],
@@ -56,63 +54,59 @@ export function NotificationPanel() {
     refetchInterval: 30000,
   });
 
-  if (!user || dismissed) return null;
+  if (!user) return null;
 
   const notifications = data?.notifications || [];
   if (notifications.length === 0) return null;
 
   return (
-    <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-transparent" data-testid="panel-notifications">
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between mb-3">
+    <div className="bg-primary/5 border-b border-primary/10" data-testid="panel-notifications">
+      <div className="max-w-7xl mx-auto px-4">
+        <button
+          onClick={() => setOpen(!open)}
+          className="w-full flex items-center justify-between py-2.5 text-left"
+          data-testid="button-toggle-notifications"
+        >
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-              <Bell className="w-4 h-4 text-primary" />
-            </div>
-            <h3 className="font-semibold text-sm">Уведомления</h3>
+            <Bell className="w-4 h-4 text-primary" />
+            <span className="text-sm font-medium">Уведомления</span>
             <Badge variant="secondary" className="text-xs">{notifications.length}</Badge>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="w-7 h-7"
-            onClick={() => setDismissed(true)}
-            data-testid="button-dismiss-notifications"
-          >
-            <X className="w-4 h-4" />
-          </Button>
-        </div>
-        <div className="space-y-2">
-          {notifications.slice(0, 5).map((n) => {
-            const Icon = ICON_MAP[n.type] || Bell;
-            return (
-              <Link key={n.id} href={n.link}>
-                <div
-                  className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/60 transition-colors cursor-pointer group"
-                  data-testid={`notification-${n.id}`}
-                >
-                  <div className={cn("w-8 h-8 rounded-full flex items-center justify-center shrink-0", COLOR_MAP[n.type])}>
-                    <Icon className="w-4 h-4" />
+          <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform duration-200", open && "rotate-180")} />
+        </button>
+        {open && (
+          <div className="pb-3 space-y-1">
+            {notifications.slice(0, 5).map((n) => {
+              const Icon = ICON_MAP[n.type] || Bell;
+              return (
+                <Link key={n.id} href={n.link}>
+                  <div
+                    className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/60 transition-colors cursor-pointer group"
+                    data-testid={`notification-${n.id}`}
+                  >
+                    <div className={cn("w-8 h-8 rounded-full flex items-center justify-center shrink-0", COLOR_MAP[n.type])}>
+                      <Icon className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium line-clamp-1">{n.title}</p>
+                      <p className="text-xs text-muted-foreground line-clamp-1">{n.text}</p>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <span className="text-xs text-muted-foreground hidden sm:block">{timeAgo(n.time)}</span>
+                      <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium line-clamp-1">{n.title}</p>
-                    <p className="text-xs text-muted-foreground line-clamp-1">{n.text}</p>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <span className="text-xs text-muted-foreground hidden sm:block">{timeAgo(n.time)}</span>
-                    <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
-          {notifications.length > 5 && (
-            <p className="text-xs text-muted-foreground text-center pt-1">
-              и ещё {notifications.length - 5} уведомлений
-            </p>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+                </Link>
+              );
+            })}
+            {notifications.length > 5 && (
+              <p className="text-xs text-muted-foreground text-center pt-1">
+                и ещё {notifications.length - 5} уведомлений
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
