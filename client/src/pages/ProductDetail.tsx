@@ -100,11 +100,9 @@ export default function ProductDetail() {
           <div>
             {product.categoryName && <Badge variant="secondary" className="mb-2">{product.categoryName}</Badge>}
             <h1 className="text-2xl font-bold">{product.name}</h1>
-            {Number(product.rating) > 0 && (
-              <div className="mt-2">
-                <StarRating rating={Number(product.rating)} size="md" showValue count={product.reviewCount || 0} />
-              </div>
-            )}
+            <div className="mt-2">
+              <StarRating rating={Number(product.rating)} size="md" showValue count={product.reviewCount || 0} />
+            </div>
           </div>
 
           <div className="text-3xl font-bold text-primary">

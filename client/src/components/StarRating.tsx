@@ -25,7 +25,7 @@ export function StarRating({ rating, max = 5, size = "sm", className, showValue,
       </div>
       {showValue && (
         <span className={cn(textClass, "text-muted-foreground font-medium")}>
-          {Number(rating).toFixed(1)}{count !== undefined && <span className="ml-0.5">({count})</span>}
+          {count === 0 ? "Нет оценок" : <>{Number(rating).toFixed(1)}{count !== undefined && <span className="ml-0.5">({count})</span>}</>}
         </span>
       )}
     </div>

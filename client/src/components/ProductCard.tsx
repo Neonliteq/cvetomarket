@@ -65,9 +65,7 @@ export function ProductCard({ product, shopId, className }: ProductCardProps) {
               <p className="text-xs text-muted-foreground line-clamp-1">{product.shopName}</p>
             )}
           </div>
-          {Number(product.rating) > 0 && (
-            <StarRating rating={Number(product.rating)} showValue count={product.reviewCount || 0} />
-          )}
+          <StarRating rating={Number(product.rating)} showValue count={product.reviewCount || 0} />
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
             <Clock className="w-3 h-3" />
             <span>{product.assemblyTime} мин</span>
