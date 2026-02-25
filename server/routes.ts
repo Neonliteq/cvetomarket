@@ -205,7 +205,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   app.delete("/api/products/:id", requireRole("shop", "admin"), async (req, res) => {
-    await storage.deleteProduct(req.params.id);
+    try {
+      await storage.deleteProduct(req.params.id);
+    } catch (e: any) {
+      if (e.code === "23503") {
+        await storage.updateProduct(req.params.id, { isActive: false, inStock: false });
+      } else {
+        throw e;
+      }
+    }
     res.json({ ok: true });
   });
 

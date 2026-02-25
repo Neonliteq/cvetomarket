@@ -174,6 +174,8 @@ export default function ShopDashboard() {
     onSuccess: () => {
       toast({ title: "Товар удалён" });
       qc.invalidateQueries({ queryKey: [`/api/shops/${myShop?.id}/products`] });
+      qc.invalidateQueries({ queryKey: ["/api/products/featured"] });
+      qc.invalidateQueries({ queryKey: ["/api/products"] });
     },
   });
 
@@ -184,7 +186,11 @@ export default function ShopDashboard() {
 
   const toggleProductMutation = useMutation({
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) => apiRequest("PATCH", `/api/products/${id}`, { isActive }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: [`/api/shops/${myShop?.id}/products`] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [`/api/shops/${myShop?.id}/products`] });
+      qc.invalidateQueries({ queryKey: ["/api/products/featured"] });
+      qc.invalidateQueries({ queryKey: ["/api/products"] });
+    },
   });
 
   if (!user || user.role !== "shop") {
