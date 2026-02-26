@@ -45,7 +45,7 @@ const STATUS_COLORS: Record<string, string> = {
 type OrderItem = { productName: string; productImage?: string | null; quantity: number; price: string };
 type OrderWithItems = Order & { buyerName?: string; items?: OrderItem[] };
 
-const PRODUCT_TYPES = { bouquet: "Букет", gift: "Подарок" } as const;
+const PRODUCT_TYPES = { bouquet: "Букет", gift: "Подарок", tasty_gift: "Вкусный подарок" } as const;
 
 const productSchema = z.object({
   type: z.string().default("bouquet"),
@@ -139,6 +139,7 @@ function ProductForm({
               <SelectContent>
                 <SelectItem value="bouquet">Букет</SelectItem>
                 <SelectItem value="gift">Подарок</SelectItem>
+                <SelectItem value="tasty_gift">Вкусный подарок</SelectItem>
               </SelectContent>
             </Select>
           <FormMessage /></FormItem>

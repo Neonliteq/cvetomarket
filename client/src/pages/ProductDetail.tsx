@@ -100,6 +100,7 @@ export default function ProductDetail() {
           <div>
             <div className="flex gap-2 mb-2">
               {(product as any).type === "gift" && <Badge variant="default">Подарок</Badge>}
+              {(product as any).type === "tasty_gift" && <Badge variant="default">Вкусный подарок</Badge>}
               {product.categoryName && <Badge variant="secondary">{product.categoryName}</Badge>}
             </div>
             <h1 className="text-2xl font-bold">{product.name}</h1>

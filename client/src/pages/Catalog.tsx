@@ -45,7 +45,7 @@ export default function Catalog() {
     return Number(b.reviewCount) - Number(a.reviewCount);
   });
 
-  const typeLabels: Record<string, string> = { bouquet: "Букеты", gift: "Подарки" };
+  const typeLabels: Record<string, string> = { bouquet: "Букеты", gift: "Подарки", tasty_gift: "Вкусные подарки" };
   const activeFilters = [
     ...(selectedType ? [typeLabels[selectedType] || selectedType] : []),
     ...(selectedCategory && categories ? [categories.find((c) => c.id === selectedCategory)?.name] : []),
@@ -81,6 +81,14 @@ export default function Catalog() {
             data-testid="filter-type-gift"
           >
             Подарки
+          </Badge>
+          <Badge
+            variant={selectedType === "tasty_gift" ? "default" : "secondary"}
+            className="cursor-pointer"
+            onClick={() => setSelectedType(selectedType === "tasty_gift" ? null : "tasty_gift")}
+            data-testid="filter-type-tasty-gift"
+          >
+            Вкусные подарки
           </Badge>
         </div>
       </div>

@@ -56,6 +56,9 @@ export function ProductCard({ product, shopId, className }: ProductCardProps) {
             {(product as any).type === "gift" && (
               <Badge variant="default" data-testid={`badge-type-${product.id}`}>Подарок</Badge>
             )}
+            {(product as any).type === "tasty_gift" && (
+              <Badge variant="default" data-testid={`badge-type-${product.id}`}>Вкусный подарок</Badge>
+            )}
             {product.categoryName && (
               <Badge variant="secondary">{product.categoryName}</Badge>
             )}
