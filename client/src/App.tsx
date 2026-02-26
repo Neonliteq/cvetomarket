@@ -7,6 +7,7 @@ import { AuthProvider } from "@/lib/auth";
 import { CartProvider } from "@/lib/cart";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { FloatingCart } from "@/components/FloatingCart";
 import Home from "@/pages/Home";
 import Catalog from "@/pages/Catalog";
 import Shops from "@/pages/Shops";
@@ -43,6 +44,7 @@ function Router() {
         </Switch>
       </main>
       <Footer />
+      <FloatingCart />
     </div>
   );
 }
