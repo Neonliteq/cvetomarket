@@ -27,6 +27,7 @@ import { apiRequest } from "@/lib/queryClient";
 import type { Product, Order, Shop, Category, Review } from "@shared/schema";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
+import { DeliveryZonesMap, type DeliveryZone } from "@/components/DeliveryZonesMap";
 
 const STATUS_LABELS: Record<string, string> = {
   new: "Новый", confirmed: "Подтверждён", assembling: "Сборка",
@@ -844,7 +845,7 @@ export default function ShopDashboard() {
               <CardContent className="p-5 space-y-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Truck className="w-5 h-5 text-primary" />
-                  <h3 className="font-semibold">Доставка</h3>
+                  <h3 className="font-semibold">Доставка по умолчанию</h3>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Стоимость доставки (₽)</label>
@@ -874,9 +875,28 @@ export default function ShopDashboard() {
                     </Button>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Текущая стоимость: {Number(myShop?.deliveryPrice || 300).toLocaleString("ru-RU")} ₽. Установите 0 для бесплатной доставки.
+                    Используется, если адрес не попадает ни в одну зону. Текущая: {Number(myShop?.deliveryPrice || 300).toLocaleString("ru-RU")} ₽
                   </p>
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-5 space-y-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <MapPin className="w-5 h-5 text-primary" />
+                  <h3 className="font-semibold">Зоны доставки на карте</h3>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Нарисуйте зоны доставки на карте и укажите стоимость для каждой зоны.
+                </p>
+                <DeliveryZonesMap
+                  zones={((myShop as any)?.deliveryZones || []) as DeliveryZone[]}
+                  onSave={(zones) => {
+                    updateShopMutation.mutate({ deliveryZones: zones });
+                  }}
+                  saving={updateShopMutation.isPending}
+                />
               </CardContent>
             </Card>
 

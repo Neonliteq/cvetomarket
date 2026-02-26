@@ -3,10 +3,11 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { CheckCircle2 } from "lucide-react";
-import { useState } from "react";
+import { CheckCircle2, MapPin } from "lucide-react";
+import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -42,7 +43,39 @@ export default function Checkout() {
     queryKey: ["/api/shops", shopId],
     enabled: !!shopId,
   });
-  const DELIVERY = shop ? Number(shop.deliveryPrice) || 0 : 300;
+  const defaultDelivery = shop ? Number(shop.deliveryPrice) || 0 : 300;
+  const [deliveryCost, setDeliveryCost] = useState<number | null>(null);
+  const [deliveryZoneName, setDeliveryZoneName] = useState<string | null>(null);
+  const [geocoding, setGeocoding] = useState(false);
+  const DELIVERY = deliveryCost !== null ? deliveryCost : defaultDelivery;
+
+  const geocodeAddress = useCallback(async (address: string) => {
+    if (!address || address.length < 5 || !shopId) return;
+    setGeocoding(true);
+    try {
+      const apiKey = import.meta.env.VITE_YANDEX_MAPS_API_KEY;
+      if (!apiKey) { setDeliveryCost(null); setDeliveryZoneName(null); return; }
+      const geoRes = await fetch(`https://geocode-maps.yandex.ru/1.x/?apikey=${apiKey}&geocode=${encodeURIComponent(address)}&format=json`);
+      const geoData = await geoRes.json();
+      const pos = geoData?.response?.GeoObjectCollection?.featureMember?.[0]?.GeoObject?.Point?.pos;
+      if (!pos) { setDeliveryCost(null); setDeliveryZoneName(null); return; }
+      const [lng, lat] = pos.split(" ").map(Number);
+      const costRes = await fetch(`/api/shops/${shopId}/delivery-cost`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ lat, lng }),
+      });
+      const costData = await costRes.json();
+      setDeliveryCost(Number(costData.price));
+      setDeliveryZoneName(costData.zone || null);
+    } catch {
+      setDeliveryCost(null);
+      setDeliveryZoneName(null);
+    } finally {
+      setGeocoding(false);
+    }
+  }, [shopId]);
 
   const form = useForm<z.infer<typeof checkoutSchema>>({
     resolver: zodResolver(checkoutSchema),
@@ -147,7 +180,30 @@ export default function Checkout() {
                   <FormField control={form.control} name="deliveryAddress" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Адрес доставки</FormLabel>
-                      <FormControl><Input {...field} placeholder="Ул. Цветочная, д. 1, кв. 10" data-testid="input-address" /></FormControl>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="Ул. Цветочная, д. 1, кв. 10"
+                          data-testid="input-address"
+                          onBlur={(e) => {
+                            field.onBlur();
+                            geocodeAddress(e.target.value);
+                          }}
+                        />
+                      </FormControl>
+                      {geocoding && (
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <MapPin className="w-3 h-3 animate-pulse" /> Определяем зону доставки...
+                        </p>
+                      )}
+                      {deliveryZoneName && !geocoding && (
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant="secondary" className="text-xs" data-testid="badge-delivery-zone">
+                            <MapPin className="w-3 h-3 mr-1" />
+                            {deliveryZoneName}: {DELIVERY.toLocaleString("ru-RU")} ₽
+                          </Badge>
+                        </div>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )} />

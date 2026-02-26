@@ -11,6 +11,18 @@ import { storage } from "./storage";
 import { insertUserSchema, insertShopSchema, insertProductSchema, insertOrderSchema, insertReviewSchema, insertMessageSchema, insertCategorySchema, insertCitySchema } from "@shared/schema";
 import { z } from "zod";
 
+function isPointInPolygon(point: [number, number], polygon: number[][]): boolean {
+  const [x, y] = point;
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i][0], yi = polygon[i][1];
+    const xj = polygon[j][0], yj = polygon[j][1];
+    const intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
 const uploadsDir = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
@@ -216,6 +228,31 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     if (!shop) return res.status(404).json({ error: "Not found" });
     const [enriched] = await enrichShops([shop]);
     res.json(enriched);
+  });
+
+  app.get("/api/shops/:id/delivery-zones", async (req, res) => {
+    const shop = await storage.getShop(req.params.id);
+    if (!shop) return res.status(404).json({ error: "Not found" });
+    res.json({
+      zones: (shop as any).deliveryZones || [],
+      defaultPrice: shop.deliveryPrice || "300",
+    });
+  });
+
+  app.post("/api/shops/:id/delivery-cost", async (req, res) => {
+    const shop = await storage.getShop(req.params.id);
+    if (!shop) return res.status(404).json({ error: "Not found" });
+    const { lat, lng } = req.body;
+    if (typeof lat !== "number" || typeof lng !== "number") {
+      return res.json({ price: shop.deliveryPrice || "300", zone: null });
+    }
+    const zones: any[] = (shop as any).deliveryZones || [];
+    for (const zone of zones) {
+      if (zone.coordinates && isPointInPolygon([lat, lng], zone.coordinates)) {
+        return res.json({ price: String(zone.price), zone: zone.name });
+      }
+    }
+    res.json({ price: shop.deliveryPrice || "300", zone: null });
   });
 
   app.patch("/api/shops/:id", requireRole("admin", "shop"), async (req, res) => {

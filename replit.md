@@ -55,8 +55,17 @@ A full-featured flower marketplace (маркетплейс цветочных м
 - **Shop owners**: roses@cveto.ru, bloomy@cveto.ru, tulips@cveto.ru / password123
 - **Buyer**: buyer@cveto.ru / password123
 
+## Delivery Zones (Yandex Maps)
+- Shops can define delivery zones on Yandex Maps with polygon drawing
+- Each zone has a name, polygon coordinates, color, and price
+- Stored as JSONB `delivery_zones` column on shops table
+- Checkout geocodes delivery address via Yandex Geocoder API to determine zone
+- Server-side point-in-polygon check at `POST /api/shops/:id/delivery-cost`
+- Falls back to shop's default `deliveryPrice` if address is outside all zones
+- API key stored in `VITE_YANDEX_MAPS_API_KEY` secret
+
 ## Database Tables
-- users (with isBlocked, avatarUrl fields), shops (with logoUrl, coverUrl), products, orders, order_items, reviews, messages, categories, cities, platform_settings
+- users (with isBlocked, avatarUrl fields), shops (with logoUrl, coverUrl, deliveryZones jsonb), products, orders, order_items, reviews, messages, categories, cities, platform_settings
 
 ## Important Patterns
 - Auth-protected pages must check `isLoading` before redirecting: `if (isLoading) return null; if (!user) { navigate("/auth"); return null; }`
