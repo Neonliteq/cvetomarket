@@ -223,6 +223,8 @@ export default function ShopDashboard() {
   const qc = useQueryClient();
   const [productDialogOpen, setProductDialogOpen] = useState(false);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
+  const [orderStatusFilter, setOrderStatusFilter] = useState("all");
+  const [orderSort, setOrderSort] = useState<"date-desc" | "date-asc" | "time-asc" | "time-desc">("date-desc");
 
   const { data: myShop, isLoading: loadingShop } = useQuery<Shop & { cityName?: string }>({
     queryKey: ["/api/shops/my"],
@@ -457,7 +459,51 @@ export default function ShopDashboard() {
             </div>
           ) : orders?.length ? (
             <div className="space-y-4">
-              {orders.map((order) => (
+              <div className="flex flex-wrap items-center gap-3 p-3 rounded-lg bg-muted/40 border" data-testid="orders-sort-controls">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-muted-foreground">Статус:</span>
+                  <Select value={orderStatusFilter} onValueChange={setOrderStatusFilter}>
+                    <SelectTrigger className="w-36 h-8 text-xs" data-testid="select-order-filter-status">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Все</SelectItem>
+                      {Object.entries(STATUS_LABELS).map(([k, v]) => (
+                        <SelectItem key={k} value={k}>{v}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-muted-foreground">Сортировка:</span>
+                  <Select value={orderSort} onValueChange={(v: any) => setOrderSort(v)}>
+                    <SelectTrigger className="w-48 h-8 text-xs" data-testid="select-order-sort">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="date-desc">Дата (новые сверху)</SelectItem>
+                      <SelectItem value="date-asc">Дата (старые сверху)</SelectItem>
+                      <SelectItem value="time-asc">Время доставки (ранние)</SelectItem>
+                      <SelectItem value="time-desc">Время доставки (поздние)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              {(() => {
+                const filtered = (orders || []).filter((o) => orderStatusFilter === "all" || o.status === orderStatusFilter);
+                const sorted = [...filtered].sort((a, b) => {
+                  if (orderSort === "date-desc") return new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime();
+                  if (orderSort === "date-asc") return new Date(a.createdAt!).getTime() - new Date(b.createdAt!).getTime();
+                  if (orderSort === "time-asc") return (a.deliveryTime || "").localeCompare(b.deliveryTime || "");
+                  return (b.deliveryTime || "").localeCompare(a.deliveryTime || "");
+                });
+                if (sorted.length === 0) return (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Package className="w-10 h-10 mx-auto opacity-20 mb-3" />
+                    <p>Нет заказов с таким статусом</p>
+                  </div>
+                );
+                return sorted.map((order) => (
                 <Card key={order.id} data-testid={`card-order-${order.id}`}>
                   <CardContent className="p-5">
                     <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
@@ -597,7 +643,8 @@ export default function ShopDashboard() {
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+                ));
+              })()}
             </div>
           ) : (
             <div className="text-center py-12 text-muted-foreground">
