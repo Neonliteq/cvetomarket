@@ -65,6 +65,8 @@ export const products = pgTable("products", {
   assemblyTime: integer("assembly_time").default(60),
   inStock: boolean("in_stock").default(true),
   isActive: boolean("is_active").default(true),
+  discountPercent: integer("discount_percent").default(0),
+  isRecommended: boolean("is_recommended").default(false),
   rating: decimal("rating", { precision: 3, scale: 2 }).default("0"),
   reviewCount: integer("review_count").default(0),
   createdAt: timestamp("created_at").defaultNow(),

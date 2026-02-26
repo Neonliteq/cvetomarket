@@ -1,6 +1,6 @@
 import { useParams, Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, MapPin, Clock, Phone, Mail, MessageCircle } from "lucide-react";
+import { ArrowLeft, MapPin, Clock, Phone, Mail, MessageCircle, TrendingUp, Tag, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,20 @@ import { apiRequest } from "@/lib/queryClient";
 import type { Shop, Product } from "@shared/schema";
 
 type ProductWithMeta = Product & { shopName?: string; categoryName?: string };
+
+function SectionHeader({ icon, title, count }: { icon: React.ReactNode; title: string; count?: number }) {
+  return (
+    <div className="flex items-center gap-2 mb-5">
+      <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10 text-primary shrink-0">
+        {icon}
+      </div>
+      <h2 className="text-lg font-bold">{title}</h2>
+      {count !== undefined && (
+        <span className="text-muted-foreground font-normal text-sm">({count})</span>
+      )}
+    </div>
+  );
+}
 
 export default function ShopDetail() {
   const { id } = useParams<{ id: string }>();
@@ -46,6 +60,27 @@ export default function ShopDetail() {
   if (!shop) return <div className="text-center py-20">Магазин не найден</div>;
 
   const activeProducts = (products || []).filter((p) => p.isActive && p.inStock);
+
+  const popularProducts = [...activeProducts]
+    .filter((p) => Number(p.rating) >= 4 || (p.reviewCount || 0) > 0)
+    .sort((a, b) => Number(b.rating) - Number(a.rating))
+    .slice(0, 8);
+
+  const discountProducts = activeProducts
+    .filter((p) => ((p as any).discountPercent || 0) > 0)
+    .sort((a, b) => ((b as any).discountPercent || 0) - ((a as any).discountPercent || 0));
+
+  const recommendedProducts = activeProducts
+    .filter((p) => (p as any).isRecommended);
+
+  const otherProducts = activeProducts.filter((p) => {
+    const isPopular = popularProducts.some((pp) => pp.id === p.id);
+    const isDiscount = discountProducts.some((dp) => dp.id === p.id);
+    const isRecommended = recommendedProducts.some((rp) => rp.id === p.id);
+    return !isPopular && !isDiscount && !isRecommended;
+  });
+
+  const hasSections = popularProducts.length > 0 || discountProducts.length > 0 || recommendedProducts.length > 0;
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
@@ -136,28 +171,59 @@ export default function ShopDetail() {
 
       <Separator className="mb-8" />
 
-      <div>
-        <div className="flex items-center justify-between gap-4 mb-6">
-          <h2 className="text-xl font-bold">
-            Букеты магазина
-            {!loadingProducts && <span className="text-muted-foreground font-normal text-base ml-2">({activeProducts.length})</span>}
-          </h2>
+      {loadingProducts ? (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-60 rounded-lg" />)}
         </div>
+      ) : activeProducts.length === 0 ? (
+        <div className="text-center py-12 text-muted-foreground">
+          <p>В этом магазине пока нет товаров</p>
+        </div>
+      ) : (
+        <div className="space-y-12">
+          {recommendedProducts.length > 0 && (
+            <section data-testid="section-recommended">
+              <SectionHeader icon={<Star className="w-4 h-4" />} title="Магазин рекомендует" count={recommendedProducts.length} />
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {recommendedProducts.map((p) => <ProductCard key={p.id} product={p} shopId={id} />)}
+              </div>
+            </section>
+          )}
 
-        {loadingProducts ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-60 rounded-lg" />)}
-          </div>
-        ) : activeProducts.length ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {activeProducts.map((p) => <ProductCard key={p.id} product={p} shopId={id} />)}
-          </div>
-        ) : (
-          <div className="text-center py-12 text-muted-foreground">
-            <p>В этом магазине пока нет товаров</p>
-          </div>
-        )}
-      </div>
+          {discountProducts.length > 0 && (
+            <section data-testid="section-discounts">
+              <SectionHeader icon={<Tag className="w-4 h-4" />} title="Скидки" count={discountProducts.length} />
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {discountProducts.map((p) => <ProductCard key={p.id} product={p} shopId={id} />)}
+              </div>
+            </section>
+          )}
+
+          {popularProducts.length > 0 && (
+            <section data-testid="section-popular">
+              <SectionHeader icon={<TrendingUp className="w-4 h-4" />} title="Популярные" count={popularProducts.length} />
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {popularProducts.map((p) => <ProductCard key={p.id} product={p} shopId={id} />)}
+              </div>
+            </section>
+          )}
+
+          {(!hasSections || otherProducts.length > 0) && (
+            <section data-testid="section-all">
+              <SectionHeader
+                icon={<MapPin className="w-4 h-4" />}
+                title={hasSections ? "Все товары" : "Товары магазина"}
+                count={hasSections ? otherProducts.length : activeProducts.length}
+              />
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {(hasSections ? otherProducts : activeProducts).map((p) => (
+                  <ProductCard key={p.id} product={p} shopId={id} />
+                ))}
+              </div>
+            </section>
+          )}
+        </div>
+      )}
     </div>
   );
 }

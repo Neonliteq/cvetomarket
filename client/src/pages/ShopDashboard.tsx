@@ -57,6 +57,8 @@ const productSchema = z.object({
   assemblyTime: z.coerce.number().min(0).default(60),
   inStock: z.boolean().default(true),
   isActive: z.boolean().default(true),
+  discountPercent: z.coerce.number().min(0).max(99).default(0),
+  isRecommended: z.boolean().default(false),
   images: z.string().optional(),
 });
 
@@ -85,6 +87,8 @@ function ProductForm({
       assemblyTime: product?.assemblyTime || 60,
       inStock: product?.inStock ?? true,
       isActive: product?.isActive ?? true,
+      discountPercent: (product as any)?.discountPercent ?? 0,
+      isRecommended: (product as any)?.isRecommended ?? false,
       images: "",
     },
   });
@@ -211,7 +215,15 @@ function ProductForm({
           </FormItem>
         )} />
 
-        <div className="flex gap-6">
+        <FormField control={form.control} name="discountPercent" render={({ field }) => (
+          <FormItem>
+            <FormLabel>Скидка (%)</FormLabel>
+            <FormControl><Input {...field} type="number" min="0" max="99" placeholder="0" data-testid="input-discount" /></FormControl>
+            <FormMessage />
+          </FormItem>
+        )} />
+
+        <div className="flex flex-wrap gap-6">
           <FormField control={form.control} name="inStock" render={({ field }) => (
             <FormItem className="flex items-center gap-2">
               <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
@@ -222,6 +234,12 @@ function ProductForm({
             <FormItem className="flex items-center gap-2">
               <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
               <FormLabel className="!mt-0">Активен</FormLabel>
+            </FormItem>
+          )} />
+          <FormField control={form.control} name="isRecommended" render={({ field }) => (
+            <FormItem className="flex items-center gap-2">
+              <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} data-testid="switch-recommended" /></FormControl>
+              <FormLabel className="!mt-0">Рекомендуем</FormLabel>
             </FormItem>
           )} />
         </div>

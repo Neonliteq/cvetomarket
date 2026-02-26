@@ -20,6 +20,12 @@ export function ProductCard({ product, shopId, className }: ProductCardProps) {
   const { toast } = useToast();
   const inCart = items.some((i) => i.product.id === product.id);
 
+  const discountPercent = (product as any).discountPercent || 0;
+  const originalPrice = Number(product.price);
+  const discountedPrice = discountPercent > 0
+    ? Math.round(originalPrice * (1 - discountPercent / 100))
+    : originalPrice;
+
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -52,15 +58,24 @@ export function ProductCard({ product, shopId, className }: ProductCardProps) {
               <Badge variant="secondary">Нет в наличии</Badge>
             </div>
           )}
-          <div className="absolute top-2 left-2 flex gap-1">
+          <div className="absolute top-2 left-2 flex flex-wrap gap-1">
+            {discountPercent > 0 && (
+              <Badge className="bg-red-500 hover:bg-red-500 text-white" data-testid={`badge-discount-${product.id}`}>
+                -{discountPercent}%
+              </Badge>
+            )}
+            {(product as any).isRecommended && (
+              <Badge className="bg-amber-500 hover:bg-amber-500 text-white" data-testid={`badge-recommended-${product.id}`}>
+                ★ Выбор магазина
+              </Badge>
+            )}
+          </div>
+          <div className="absolute top-2 right-2 flex gap-1">
             {(product as any).type === "gift" && (
               <Badge variant="default" data-testid={`badge-type-${product.id}`}>Подарок</Badge>
             )}
             {(product as any).type === "tasty_gift" && (
               <Badge variant="default" data-testid={`badge-type-${product.id}`}>Вкусный подарок</Badge>
-            )}
-            {product.categoryName && (
-              <Badge variant="secondary">{product.categoryName}</Badge>
             )}
           </div>
         </div>
@@ -77,7 +92,14 @@ export function ProductCard({ product, shopId, className }: ProductCardProps) {
             <span>{product.assemblyTime} мин</span>
           </div>
           <div className="flex items-center justify-between gap-2">
-            <span className="font-bold text-lg">{Number(product.price).toLocaleString("ru-RU")} ₽</span>
+            <div className="flex flex-col">
+              <span className="font-bold text-lg leading-tight">{discountedPrice.toLocaleString("ru-RU")} ₽</span>
+              {discountPercent > 0 && (
+                <span className="text-xs text-muted-foreground line-through leading-tight">
+                  {originalPrice.toLocaleString("ru-RU")} ₽
+                </span>
+              )}
+            </div>
             <Button
               size="sm"
               variant={inCart ? "secondary" : "default"}
