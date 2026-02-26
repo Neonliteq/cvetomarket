@@ -243,16 +243,17 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const shop = await storage.getShop(req.params.id);
     if (!shop) return res.status(404).json({ error: "Not found" });
     const { lat, lng } = req.body;
-    if (typeof lat !== "number" || typeof lng !== "number") {
-      return res.json({ price: shop.deliveryPrice || "300", zone: null });
-    }
     const zones: any[] = (shop as any).deliveryZones || [];
+    const hasZones = zones.length > 0;
+    if (typeof lat !== "number" || typeof lng !== "number") {
+      return res.json({ price: shop.deliveryPrice || "300", zone: null, hasZones });
+    }
     for (const zone of zones) {
       if (zone.coordinates && isPointInPolygon([lat, lng], zone.coordinates)) {
-        return res.json({ price: String(zone.price), zone: zone.name });
+        return res.json({ price: String(zone.price), zone: zone.name, hasZones });
       }
     }
-    res.json({ price: shop.deliveryPrice || "300", zone: null });
+    res.json({ price: shop.deliveryPrice || "300", zone: null, hasZones });
   });
 
   app.patch("/api/shops/:id", requireRole("admin", "shop"), async (req, res) => {

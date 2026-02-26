@@ -48,6 +48,8 @@ export default function Checkout() {
   const [deliveryCost, setDeliveryCost] = useState<number | null>(null);
   const [deliveryZoneName, setDeliveryZoneName] = useState<string | null>(null);
   const [geocoding, setGeocoding] = useState(false);
+  const [outsideZone, setOutsideZone] = useState(false);
+  const [addressChecked, setAddressChecked] = useState(false);
   const DELIVERY = deliveryCost !== null ? deliveryCost : defaultDelivery;
 
   const fetchDeliveryCost = useCallback(async (lat: number, lng: number) => {
@@ -63,9 +65,17 @@ export default function Checkout() {
       const costData = await costRes.json();
       setDeliveryCost(Number(costData.price));
       setDeliveryZoneName(costData.zone || null);
+      setAddressChecked(true);
+      if (costData.hasZones && !costData.zone) {
+        setOutsideZone(true);
+      } else {
+        setOutsideZone(false);
+      }
     } catch {
       setDeliveryCost(null);
       setDeliveryZoneName(null);
+      setOutsideZone(false);
+      setAddressChecked(false);
     } finally {
       setGeocoding(false);
     }
@@ -222,6 +232,11 @@ export default function Checkout() {
                           </Badge>
                         </div>
                       )}
+                      {outsideZone && !geocoding && addressChecked && (
+                        <p className="text-xs text-destructive font-medium mt-1" data-testid="text-outside-zone">
+                          Этот адрес находится за пределами зон доставки магазина. Выберите адрес в зоне доставки.
+                        </p>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )} />
@@ -290,8 +305,8 @@ export default function Checkout() {
                 </CardContent>
               </Card>
 
-              <Button type="submit" size="lg" className="w-full" disabled={mutation.isPending} data-testid="button-place-order">
-                {mutation.isPending ? "Оформляем..." : `Оформить заказ на ${(total + DELIVERY).toLocaleString("ru-RU")} ₽`}
+              <Button type="submit" size="lg" className="w-full" disabled={mutation.isPending || outsideZone || geocoding} data-testid="button-place-order">
+                {mutation.isPending ? "Оформляем..." : outsideZone ? "Адрес за пределами зоны доставки" : `Оформить заказ на ${(total + DELIVERY).toLocaleString("ru-RU")} ₽`}
               </Button>
             </form>
           </Form>
