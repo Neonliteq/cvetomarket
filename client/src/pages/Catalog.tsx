@@ -18,6 +18,7 @@ export default function Catalog() {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
+  const [selectedType, setSelectedType] = useState<string | null>(null);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 50000]);
   const [sortBy, setSortBy] = useState("popular");
   const [inStockOnly, setInStockOnly] = useState(false);
@@ -31,6 +32,7 @@ export default function Catalog() {
     if (inStockOnly && !p.inStock) return false;
     if (search && !p.name.toLowerCase().includes(search.toLowerCase())) return false;
     if (selectedCategory && p.categoryId !== selectedCategory) return false;
+    if (selectedType && (p as any).type !== selectedType) return false;
     const price = Number(p.price);
     if (price < priceRange[0] || price > priceRange[1]) return false;
     return true;
@@ -43,7 +45,9 @@ export default function Catalog() {
     return Number(b.reviewCount) - Number(a.reviewCount);
   });
 
+  const typeLabels: Record<string, string> = { bouquet: "Букеты", gift: "Подарки" };
   const activeFilters = [
+    ...(selectedType ? [typeLabels[selectedType] || selectedType] : []),
     ...(selectedCategory && categories ? [categories.find((c) => c.id === selectedCategory)?.name] : []),
     ...(inStockOnly ? ["В наличии"] : []),
     ...(search ? [`Поиск: ${search}`] : []),
@@ -51,6 +55,36 @@ export default function Catalog() {
 
   const FilterPanel = () => (
     <div className="space-y-6">
+      <div className="space-y-2">
+        <Label className="font-semibold">Тип товара</Label>
+        <div className="flex flex-wrap gap-2">
+          <Badge
+            variant={selectedType === null ? "default" : "secondary"}
+            className="cursor-pointer"
+            onClick={() => setSelectedType(null)}
+            data-testid="filter-type-all"
+          >
+            Все
+          </Badge>
+          <Badge
+            variant={selectedType === "bouquet" ? "default" : "secondary"}
+            className="cursor-pointer"
+            onClick={() => setSelectedType(selectedType === "bouquet" ? null : "bouquet")}
+            data-testid="filter-type-bouquet"
+          >
+            Букеты
+          </Badge>
+          <Badge
+            variant={selectedType === "gift" ? "default" : "secondary"}
+            className="cursor-pointer"
+            onClick={() => setSelectedType(selectedType === "gift" ? null : "gift")}
+            data-testid="filter-type-gift"
+          >
+            Подарки
+          </Badge>
+        </div>
+      </div>
+
       <div className="space-y-2">
         <Label className="font-semibold">Категория</Label>
         <div className="flex flex-wrap gap-2">

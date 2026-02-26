@@ -45,7 +45,10 @@ const STATUS_COLORS: Record<string, string> = {
 type OrderItem = { productName: string; productImage?: string | null; quantity: number; price: string };
 type OrderWithItems = Order & { buyerName?: string; items?: OrderItem[] };
 
+const PRODUCT_TYPES = { bouquet: "Букет", gift: "Подарок" } as const;
+
 const productSchema = z.object({
+  type: z.string().default("bouquet"),
   name: z.string().min(2, "Минимум 2 символа"),
   description: z.string().optional(),
   price: z.string().min(1, "Введите цену"),
@@ -73,6 +76,7 @@ function ProductForm({
   const form = useForm<z.infer<typeof productSchema>>({
     resolver: zodResolver(productSchema),
     defaultValues: {
+      type: (product as any)?.type || "bouquet",
       name: product?.name || "",
       description: product?.description || "",
       price: product?.price?.toString() || "",
@@ -128,6 +132,17 @@ function ProductForm({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit((d) => mutation.mutate(d))} className="space-y-4">
+        <FormField control={form.control} name="type" render={({ field }) => (
+          <FormItem><FormLabel>Тип товара</FormLabel>
+            <Select value={field.value || "bouquet"} onValueChange={field.onChange}>
+              <FormControl><SelectTrigger data-testid="select-product-type"><SelectValue /></SelectTrigger></FormControl>
+              <SelectContent>
+                <SelectItem value="bouquet">Букет</SelectItem>
+                <SelectItem value="gift">Подарок</SelectItem>
+              </SelectContent>
+            </Select>
+          <FormMessage /></FormItem>
+        )} />
         <FormField control={form.control} name="name" render={({ field }) => (
           <FormItem><FormLabel>Название</FormLabel><FormControl><Input {...field} placeholder="Букет роз" /></FormControl><FormMessage /></FormItem>
         )} />

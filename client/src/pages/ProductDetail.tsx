@@ -98,7 +98,10 @@ export default function ProductDetail() {
 
         <div className="space-y-5">
           <div>
-            {product.categoryName && <Badge variant="secondary" className="mb-2">{product.categoryName}</Badge>}
+            <div className="flex gap-2 mb-2">
+              {(product as any).type === "gift" && <Badge variant="default">Подарок</Badge>}
+              {product.categoryName && <Badge variant="secondary">{product.categoryName}</Badge>}
+            </div>
             <h1 className="text-2xl font-bold">{product.name}</h1>
             <div className="mt-2">
               <StarRating rating={Number(product.rating)} size="md" showValue count={product.reviewCount || 0} />

@@ -52,11 +52,14 @@ export function ProductCard({ product, shopId, className }: ProductCardProps) {
               <Badge variant="secondary">Нет в наличии</Badge>
             </div>
           )}
-          {product.categoryName && (
-            <Badge className="absolute top-2 left-2" variant="secondary">
-              {product.categoryName}
-            </Badge>
-          )}
+          <div className="absolute top-2 left-2 flex gap-1">
+            {(product as any).type === "gift" && (
+              <Badge variant="default" data-testid={`badge-type-${product.id}`}>Подарок</Badge>
+            )}
+            {product.categoryName && (
+              <Badge variant="secondary">{product.categoryName}</Badge>
+            )}
+          </div>
         </div>
         <div className="p-3 space-y-2">
           <div>

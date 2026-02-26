@@ -119,12 +119,12 @@ export default function Home() {
         <section>
           <div className="flex items-center justify-between gap-4 mb-6">
             <div>
-              <h2 className="text-2xl font-bold">Популярные букеты</h2>
-              <p className="text-muted-foreground text-sm mt-1">Самые любимые букеты нашего маркетплейса</p>
+              <h2 className="text-2xl font-bold">Популярные товары</h2>
+              <p className="text-muted-foreground text-sm mt-1">Букеты и подарки нашего маркетплейса</p>
             </div>
             <Link href="/catalog">
               <Button variant="outline" size="sm">
-                Все букеты <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+                Весь каталог <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
               </Button>
             </Link>
           </div>
