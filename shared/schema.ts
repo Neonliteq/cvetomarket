@@ -12,6 +12,7 @@ export const users = pgTable("users", {
   role: text("role").notNull().default("buyer"),
   isBlocked: boolean("is_blocked").default(false),
   avatarUrl: text("avatar_url"),
+  reviewsSeenAt: timestamp("reviews_seen_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

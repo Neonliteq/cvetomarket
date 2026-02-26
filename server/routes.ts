@@ -395,6 +395,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.json(revs.map((r) => ({ ...r, buyerName: userMap[r.buyerId] })));
   });
 
+  app.post("/api/reviews/seen", requireAuth, async (req, res) => {
+    const userId = (req.session as any).userId;
+    await storage.updateUser(userId, { reviewsSeenAt: new Date() });
+    res.json({ ok: true });
+  });
+
   // ---- MESSAGES ----
   app.get("/api/messages/conversations", requireAuth, async (req, res) => {
     const userId = (req.session as any).userId;
@@ -496,15 +502,16 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           });
         }
         const revs = await storage.getReviewsByShop(shop.id);
-        const recentRevs = revs.filter((r) => r.createdAt && Date.now() - new Date(r.createdAt).getTime() < 7 * 24 * 60 * 60 * 1000);
-        if (recentRevs.length > 0) {
+        const seenAt = user.reviewsSeenAt ? new Date(user.reviewsSeenAt).getTime() : 0;
+        const unseenRevs = revs.filter((r) => r.createdAt && new Date(r.createdAt).getTime() > seenAt);
+        if (unseenRevs.length > 0) {
           notifications.push({
             id: "new-reviews",
             type: "review",
-            title: `${recentRevs.length} новых отзывов`,
-            text: `Средняя оценка: ${(recentRevs.reduce((s, r) => s + r.rating, 0) / recentRevs.length).toFixed(1)}`,
+            title: `${unseenRevs.length} новых отзывов`,
+            text: `Средняя оценка: ${(unseenRevs.reduce((s, r) => s + r.rating, 0) / unseenRevs.length).toFixed(1)}`,
             link: "/shop-dashboard",
-            time: recentRevs[0].createdAt ? new Date(recentRevs[0].createdAt).toISOString() : new Date().toISOString(),
+            time: unseenRevs[0].createdAt ? new Date(unseenRevs[0].createdAt).toISOString() : new Date().toISOString(),
           });
         }
       }

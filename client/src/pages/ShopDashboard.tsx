@@ -348,7 +348,13 @@ export default function ShopDashboard() {
         ))}
       </div>
 
-      <Tabs defaultValue="products">
+      <Tabs defaultValue="products" onValueChange={(tab) => {
+        if (tab === "reviews") {
+          fetch("/api/reviews/seen", { method: "POST", credentials: "include" }).then(() => {
+            qc.invalidateQueries({ queryKey: ["/api/notifications"] });
+          });
+        }
+      }}>
         <TabsList className="mb-6">
           <TabsTrigger value="products">Товары</TabsTrigger>
           <TabsTrigger value="orders">
