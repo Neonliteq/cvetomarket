@@ -28,9 +28,12 @@ export function FloatingCart() {
       <Button
         size="lg"
         className={cn(
-          "fixed bottom-6 right-6 z-50 rounded-full shadow-lg h-14 px-5 gap-3 transition-transform",
+          "fixed right-4 z-[100] rounded-full shadow-xl h-14 px-5 gap-3 transition-transform",
           bounce && "animate-bounce"
         )}
+        style={{
+          bottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))",
+        }}
         data-testid="floating-cart"
       >
         <div className="relative">
