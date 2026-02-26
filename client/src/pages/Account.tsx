@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Package, MessageCircle, User, LogOut, Star, CheckCircle } from "lucide-react";
+import { Package, MessageCircle, User, LogOut, Star, CheckCircle, Upload, Camera, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -234,9 +234,42 @@ export default function Account() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="flex items-start justify-between gap-4 mb-8">
-        <div>
-          <h1 className="text-2xl font-bold">Личный кабинет</h1>
-          <p className="text-muted-foreground">{user.name} · {user.email}</p>
+        <div className="flex items-center gap-4">
+          <div className="relative group">
+            {user.avatarUrl ? (
+              <img src={user.avatarUrl} alt="Аватар" className="w-14 h-14 rounded-full object-cover border-2 border-primary/20" />
+            ) : (
+              <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center border-2 border-primary/20">
+                <User className="w-6 h-6 text-primary" />
+              </div>
+            )}
+            <label className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
+              <Camera className="w-5 h-5 text-white" />
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                data-testid="input-upload-avatar"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const fd = new FormData();
+                  fd.append("images", file);
+                  const resp = await fetch("/api/upload", { method: "POST", body: fd, credentials: "include" });
+                  const data = await resp.json();
+                  if (data.urls?.[0]) {
+                    await apiRequest("PATCH", "/api/auth/profile", { avatarUrl: data.urls[0] });
+                    queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+                    toast({ title: "Аватар обновлён" });
+                  }
+                }}
+              />
+            </label>
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">Личный кабинет</h1>
+            <p className="text-muted-foreground">{user.name} · {user.email}</p>
+          </div>
         </div>
         <Button variant="outline" size="sm" onClick={logout} className="gap-1.5">
           <LogOut className="w-4 h-4" /> Выйти
@@ -352,6 +385,56 @@ export default function Account() {
         <TabsContent value="profile">
           <Card>
             <CardContent className="pt-5 space-y-4">
+              <div className="flex items-center gap-4 mb-2">
+                <div className="relative">
+                  {user.avatarUrl ? (
+                    <div className="relative">
+                      <img src={user.avatarUrl} alt="Аватар" className="w-20 h-20 rounded-full object-cover border-2 border-primary/20" />
+                      <button
+                        className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-destructive text-white flex items-center justify-center"
+                        onClick={async () => {
+                          await apiRequest("PATCH", "/api/auth/profile", { avatarUrl: null });
+                          queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+                          toast({ title: "Аватар удалён" });
+                        }}
+                        data-testid="button-remove-avatar"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center border-2 border-primary/20">
+                      <User className="w-8 h-8 text-primary" />
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <p className="font-semibold">{user.name}</p>
+                  <label className="cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      data-testid="input-upload-avatar-profile"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const fd = new FormData();
+                        fd.append("images", file);
+                        const resp = await fetch("/api/upload", { method: "POST", body: fd, credentials: "include" });
+                        const data = await resp.json();
+                        if (data.urls?.[0]) {
+                          await apiRequest("PATCH", "/api/auth/profile", { avatarUrl: data.urls[0] });
+                          queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+                          toast({ title: "Аватар обновлён" });
+                        }
+                      }}
+                    />
+                    <span className="text-sm text-primary hover:underline cursor-pointer">Изменить аватар</span>
+                  </label>
+                </div>
+              </div>
+              <Separator />
               <div className="grid grid-cols-2 gap-4">
                 {[
                   { label: "Имя", value: user.name },

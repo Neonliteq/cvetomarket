@@ -142,6 +142,19 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     req.session.destroy(() => res.json({ ok: true }));
   });
 
+  app.patch("/api/auth/profile", requireAuth, async (req, res) => {
+    const userId = (req.session as any).userId;
+    const { name, phone, avatarUrl } = req.body;
+    const updates: any = {};
+    if (name !== undefined) updates.name = name;
+    if (phone !== undefined) updates.phone = phone;
+    if (avatarUrl !== undefined) updates.avatarUrl = avatarUrl;
+    const updated = await storage.updateUser(userId, updates);
+    if (!updated) return res.status(500).json({ error: "Failed to update" });
+    const { password: _, ...safe } = updated;
+    res.json({ user: safe });
+  });
+
   // ---- CITIES ----
   app.get("/api/cities", async (_req, res) => {
     res.json(await storage.getCities());

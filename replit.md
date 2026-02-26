@@ -56,7 +56,7 @@ A full-featured flower marketplace (маркетплейс цветочных м
 - **Buyer**: buyer@cveto.ru / password123
 
 ## Database Tables
-- users (with isBlocked field), shops, products, orders, order_items, reviews, messages, categories, cities, platform_settings
+- users (with isBlocked, avatarUrl fields), shops (with logoUrl, coverUrl), products, orders, order_items, reviews, messages, categories, cities, platform_settings
 
 ## Important Patterns
 - Auth-protected pages must check `isLoading` before redirecting: `if (isLoading) return null; if (!user) { navigate("/auth"); return null; }`

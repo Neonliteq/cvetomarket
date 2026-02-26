@@ -55,6 +55,12 @@ export default function ShopDetail() {
         </Button>
       </Link>
 
+      {(shop as any).coverUrl && (
+        <div className="w-full h-48 md:h-64 rounded-lg overflow-hidden mb-6">
+          <img src={(shop as any).coverUrl} alt={`${shop.name} обложка`} className="w-full h-full object-cover" />
+        </div>
+      )}
+
       <div className="flex flex-col md:flex-row gap-6 mb-10">
         <Avatar className="w-24 h-24 rounded-lg shrink-0">
           <AvatarImage src={shop.logoUrl || undefined} alt={shop.name} className="object-cover" />

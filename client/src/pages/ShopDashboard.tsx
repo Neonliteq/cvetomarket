@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Plus, Edit, Trash2, Package, ShoppingBag, BarChart2, MessageCircle,
-  Eye, EyeOff, Star, MapPin, Phone, Calendar, Clock, User, FileText, Send, Settings, Truck
+  Eye, EyeOff, Star, MapPin, Phone, Calendar, Clock, User, FileText, Send, Settings, Truck,
+  Upload, Image, X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -640,6 +641,99 @@ export default function ShopDashboard() {
 
         <TabsContent value="settings">
           <div className="max-w-lg space-y-6">
+            <Card>
+              <CardContent className="p-5 space-y-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Image className="w-5 h-5 text-primary" />
+                  <h3 className="font-semibold">Фото магазина</h3>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Логотип</label>
+                    <div className="flex items-center gap-4">
+                      {myShop?.logoUrl ? (
+                        <div className="relative w-20 h-20 rounded-lg overflow-hidden border">
+                          <img src={myShop.logoUrl} alt="Логотип" className="w-full h-full object-cover" />
+                          <button
+                            className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center"
+                            onClick={() => updateShopMutation.mutate({ logoUrl: null })}
+                            data-testid="button-remove-logo"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="w-20 h-20 rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center">
+                          <Upload className="w-6 h-6 text-muted-foreground/40" />
+                        </div>
+                      )}
+                      <div>
+                        <label className="cursor-pointer">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            data-testid="input-upload-logo"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              const fd = new FormData();
+                              fd.append("images", file);
+                              const resp = await fetch("/api/upload", { method: "POST", body: fd, credentials: "include" });
+                              const data = await resp.json();
+                              if (data.urls?.[0]) updateShopMutation.mutate({ logoUrl: data.urls[0] });
+                            }}
+                          />
+                          <span className="text-sm text-primary hover:underline cursor-pointer">Загрузить логотип</span>
+                        </label>
+                        <p className="text-xs text-muted-foreground mt-1">Рекомендуется 200×200px</p>
+                      </div>
+                    </div>
+                  </div>
+                  <Separator />
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Обложка магазина</label>
+                    {myShop?.coverUrl ? (
+                      <div className="relative w-full h-36 rounded-lg overflow-hidden border">
+                        <img src={myShop.coverUrl} alt="Обложка" className="w-full h-full object-cover" />
+                        <button
+                          className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center"
+                          onClick={() => updateShopMutation.mutate({ coverUrl: null })}
+                          data-testid="button-remove-cover"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="w-full h-36 rounded-lg border-2 border-dashed border-muted-foreground/30 flex flex-col items-center justify-center gap-2">
+                        <Upload className="w-8 h-8 text-muted-foreground/40" />
+                        <span className="text-xs text-muted-foreground">Нет обложки</span>
+                      </div>
+                    )}
+                    <label className="cursor-pointer inline-block mt-2">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        data-testid="input-upload-cover"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          const fd = new FormData();
+                          fd.append("images", file);
+                          const resp = await fetch("/api/upload", { method: "POST", body: fd, credentials: "include" });
+                          const data = await resp.json();
+                          if (data.urls?.[0]) updateShopMutation.mutate({ coverUrl: data.urls[0] });
+                        }}
+                      />
+                      <span className="text-sm text-primary hover:underline cursor-pointer">Загрузить обложку</span>
+                    </label>
+                    <p className="text-xs text-muted-foreground mt-1">Рекомендуется 1200×400px</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             <Card>
               <CardContent className="p-5 space-y-4">
                 <div className="flex items-center gap-2 mb-2">

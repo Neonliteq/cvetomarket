@@ -11,6 +11,7 @@ export const users = pgTable("users", {
   phone: text("phone"),
   role: text("role").notNull().default("buyer"),
   isBlocked: boolean("is_blocked").default(false),
+  avatarUrl: text("avatar_url"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -46,6 +47,7 @@ export const shops = pgTable("shops", {
   rating: decimal("rating", { precision: 3, scale: 2 }).default("0"),
   reviewCount: integer("review_count").default(0),
   logoUrl: text("logo_url"),
+  coverUrl: text("cover_url"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
