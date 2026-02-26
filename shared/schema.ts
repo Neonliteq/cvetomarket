@@ -87,6 +87,7 @@ export const orders = pgTable("orders", {
   totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
   deliveryCost: decimal("delivery_cost", { precision: 10, scale: 2 }).default("300"),
   platformCommission: decimal("platform_commission", { precision: 10, scale: 2 }).default("0"),
+  assemblyPhotoUrl: text("assembly_photo_url"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

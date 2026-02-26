@@ -398,7 +398,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     if (existing.status === "delivered" && user?.role !== "admin") {
       return res.status(400).json({ error: "Нельзя изменить статус доставленного заказа" });
     }
-    const order = await storage.updateOrderStatus(req.params.id, req.body.status);
+    if (req.body.status === "assembling" && !req.body.assemblyPhotoUrl && !existing.assemblyPhotoUrl) {
+      return res.status(400).json({ error: "Загрузите фото готового букета перед тем как пометить заказ собранным" });
+    }
+    const order = await storage.updateOrderStatus(req.params.id, req.body.status, req.body.assemblyPhotoUrl);
     res.json(order);
   });
 

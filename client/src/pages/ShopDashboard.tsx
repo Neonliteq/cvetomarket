@@ -300,10 +300,29 @@ export default function ShopDashboard() {
     },
   });
 
+  const [assemblyPhotos, setAssemblyPhotos] = useState<Record<string, { url?: string; uploading: boolean }>>({});
+
   const updateOrderMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: string }) => apiRequest("PATCH", `/api/orders/${id}/status`, { status }),
+    mutationFn: ({ id, status, assemblyPhotoUrl }: { id: string; status: string; assemblyPhotoUrl?: string }) =>
+      apiRequest("PATCH", `/api/orders/${id}/status`, { status, assemblyPhotoUrl }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["/api/orders/shop"] }),
+    onError: (err: any) => toast({ title: "Ошибка", description: err.message, variant: "destructive" }),
   });
+
+  const uploadAssemblyPhoto = async (orderId: string, file: File) => {
+    setAssemblyPhotos(p => ({ ...p, [orderId]: { uploading: true } }));
+    try {
+      const fd = new FormData();
+      fd.append("images", file);
+      const res = await fetch("/api/upload", { method: "POST", body: fd, credentials: "include" });
+      const data = await res.json();
+      const url = data.urls?.[0] || data[0];
+      setAssemblyPhotos(p => ({ ...p, [orderId]: { url, uploading: false } }));
+    } catch {
+      setAssemblyPhotos(p => ({ ...p, [orderId]: { uploading: false } }));
+      toast({ title: "Ошибка загрузки фото", variant: "destructive" });
+    }
+  };
 
   const toggleProductMutation = useMutation({
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) => apiRequest("PATCH", `/api/products/${id}`, { isActive }),
@@ -667,20 +686,122 @@ export default function ShopDashboard() {
                       </div>
                     )}
 
-                    <div className="flex flex-wrap items-center gap-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">Статус:</span>
-                        <Select value={order.status} onValueChange={(s) => updateOrderMutation.mutate({ id: order.id, status: s })} disabled={order.status === "delivered"}>
-                          <SelectTrigger className="w-40 h-8 text-xs" data-testid={`select-status-${order.id}`}>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Object.entries(STATUS_LABELS).map(([k, v]) => (
-                              <SelectItem key={k} value={k}>{v}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                    {order.status === "confirmed" && (
+                      <div className="mb-4">
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                          Фото готового букета
+                        </p>
+                        {(assemblyPhotos[order.id]?.url || order.assemblyPhotoUrl) ? (
+                          <div className="relative inline-block">
+                            <img
+                              src={assemblyPhotos[order.id]?.url || order.assemblyPhotoUrl!}
+                              alt="Фото букета"
+                              className="h-32 w-32 object-cover rounded-lg border"
+                              data-testid={`img-assembly-photo-${order.id}`}
+                            />
+                            <button
+                              className="absolute -top-2 -right-2 bg-background border rounded-full p-0.5 shadow"
+                              onClick={() => setAssemblyPhotos(p => ({ ...p, [order.id]: { uploading: false, url: undefined } }))}
+                              data-testid={`button-remove-photo-${order.id}`}
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <label
+                            className="flex flex-col items-center justify-center gap-2 w-32 h-32 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary/60 hover:bg-muted/50 transition-colors"
+                            data-testid={`label-upload-photo-${order.id}`}
+                          >
+                            {assemblyPhotos[order.id]?.uploading ? (
+                              <span className="text-xs text-muted-foreground">Загрузка…</span>
+                            ) : (
+                              <>
+                                <Image className="w-6 h-6 text-muted-foreground" />
+                                <span className="text-xs text-muted-foreground text-center px-1">Загрузить фото</span>
+                              </>
+                            )}
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              disabled={assemblyPhotos[order.id]?.uploading}
+                              onChange={e => { const f = e.target.files?.[0]; if (f) uploadAssemblyPhoto(order.id, f); }}
+                              data-testid={`input-assembly-photo-${order.id}`}
+                            />
+                          </label>
+                        )}
                       </div>
+                    )}
+
+                    <div className="flex flex-wrap items-center gap-3">
+                      {order.status === "new" && (
+                        <>
+                          <Button
+                            size="sm"
+                            className="gap-1.5 bg-green-600 hover:bg-green-700 text-white"
+                            onClick={() => updateOrderMutation.mutate({ id: order.id, status: "confirmed" })}
+                            disabled={updateOrderMutation.isPending}
+                            data-testid={`button-accept-order-${order.id}`}
+                          >
+                            <Package className="w-3.5 h-3.5" />
+                            Принять заказ
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10"
+                            onClick={() => updateOrderMutation.mutate({ id: order.id, status: "cancelled" })}
+                            disabled={updateOrderMutation.isPending}
+                            data-testid={`button-cancel-order-${order.id}`}
+                          >
+                            <X className="w-3.5 h-3.5" />
+                            Отменить
+                          </Button>
+                        </>
+                      )}
+                      {order.status === "confirmed" && (
+                        <Button
+                          size="sm"
+                          className="gap-1.5"
+                          onClick={() => {
+                            const photoUrl = assemblyPhotos[order.id]?.url || order.assemblyPhotoUrl || undefined;
+                            if (!photoUrl) {
+                              toast({ title: "Загрузите фото готового букета", variant: "destructive" });
+                              return;
+                            }
+                            updateOrderMutation.mutate({ id: order.id, status: "assembling", assemblyPhotoUrl: photoUrl });
+                          }}
+                          disabled={updateOrderMutation.isPending || assemblyPhotos[order.id]?.uploading}
+                          data-testid={`button-assembled-order-${order.id}`}
+                        >
+                          <Package className="w-3.5 h-3.5" />
+                          Заказ собран
+                        </Button>
+                      )}
+                      {order.status === "assembling" && (
+                        <Button
+                          size="sm"
+                          className="gap-1.5"
+                          onClick={() => updateOrderMutation.mutate({ id: order.id, status: "delivering" })}
+                          disabled={updateOrderMutation.isPending}
+                          data-testid={`button-delivering-order-${order.id}`}
+                        >
+                          <Truck className="w-3.5 h-3.5" />
+                          Передать в доставку
+                        </Button>
+                      )}
+                      {order.status === "delivering" && (
+                        <Button
+                          size="sm"
+                          className="gap-1.5 bg-green-600 hover:bg-green-700 text-white"
+                          onClick={() => updateOrderMutation.mutate({ id: order.id, status: "delivered" })}
+                          disabled={updateOrderMutation.isPending}
+                          data-testid={`button-delivered-order-${order.id}`}
+                        >
+                          <Package className="w-3.5 h-3.5" />
+                          Заказ доставлен
+                        </Button>
+                      )}
                       <Button
                         size="sm"
                         variant="outline"

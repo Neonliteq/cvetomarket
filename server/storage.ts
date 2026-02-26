@@ -177,8 +177,10 @@ export class DbStorage implements IStorage {
     const [o] = await db.insert(orders).values(data).returning();
     return o;
   }
-  async updateOrderStatus(id: string, status: string) {
-    const [o] = await db.update(orders).set({ status }).where(eq(orders.id, id)).returning();
+  async updateOrderStatus(id: string, status: string, assemblyPhotoUrl?: string) {
+    const update: any = { status };
+    if (assemblyPhotoUrl !== undefined) update.assemblyPhotoUrl = assemblyPhotoUrl;
+    const [o] = await db.update(orders).set(update).where(eq(orders.id, id)).returning();
     return o;
   }
 
