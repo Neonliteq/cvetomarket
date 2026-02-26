@@ -527,6 +527,7 @@ export default function Admin() {
                         <Select
                           value={order.status}
                           onValueChange={(status) => updateOrderStatusMutation.mutate({ id: order.id, status })}
+                          disabled={order.status === "delivered"}
                         >
                           <SelectTrigger className="w-40 h-8 text-xs" data-testid={`select-order-status-${order.id}`}>
                             <SelectValue />

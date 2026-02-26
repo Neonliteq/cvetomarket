@@ -621,7 +621,7 @@ export default function ShopDashboard() {
                     <div className="flex flex-wrap items-center gap-3">
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-muted-foreground">Статус:</span>
-                        <Select value={order.status} onValueChange={(s) => updateOrderMutation.mutate({ id: order.id, status: s })}>
+                        <Select value={order.status} onValueChange={(s) => updateOrderMutation.mutate({ id: order.id, status: s })} disabled={order.status === "delivered"}>
                           <SelectTrigger className="w-40 h-8 text-xs" data-testid={`select-status-${order.id}`}>
                             <SelectValue />
                           </SelectTrigger>
