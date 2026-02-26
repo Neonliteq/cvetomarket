@@ -405,6 +405,18 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.json(order);
   });
 
+  app.patch("/api/orders/:id/photo-approval", requireAuth, async (req, res) => {
+    const existing = await storage.getOrder(req.params.id);
+    if (!existing) return res.status(404).json({ error: "Заказ не найден" });
+    const userId = (req.session as any).userId;
+    if (existing.buyerId !== userId) return res.status(403).json({ error: "Нет доступа" });
+    if (existing.status !== "assembling") return res.status(400).json({ error: "Заказ не в статусе сборки" });
+    const { approval } = req.body;
+    if (approval !== "approved" && approval !== "rejected") return res.status(400).json({ error: "Неверный статус" });
+    const order = await storage.updateOrderPhotoApproval(existing.id, approval);
+    res.json(order);
+  });
+
   // ---- REVIEWS ----
   app.get("/api/reviews/my", requireAuth, async (req, res) => {
     const userId = (req.session as any).userId;

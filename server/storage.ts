@@ -180,6 +180,14 @@ export class DbStorage implements IStorage {
   async updateOrderStatus(id: string, status: string, assemblyPhotoUrl?: string) {
     const update: any = { status };
     if (assemblyPhotoUrl !== undefined) update.assemblyPhotoUrl = assemblyPhotoUrl;
+    if (status === "assembling") update.buyerPhotoApproval = "pending";
+    if (status === "confirmed") { update.buyerPhotoApproval = null; update.assemblyPhotoUrl = null; }
+    const [o] = await db.update(orders).set(update).where(eq(orders.id, id)).returning();
+    return o;
+  }
+  async updateOrderPhotoApproval(id: string, approval: "approved" | "rejected") {
+    const update: any = { buyerPhotoApproval: approval };
+    if (approval === "rejected") { update.status = "confirmed"; update.assemblyPhotoUrl = null; update.buyerPhotoApproval = null; }
     const [o] = await db.update(orders).set(update).where(eq(orders.id, id)).returning();
     return o;
   }

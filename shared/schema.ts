@@ -88,6 +88,7 @@ export const orders = pgTable("orders", {
   deliveryCost: decimal("delivery_cost", { precision: 10, scale: 2 }).default("300"),
   platformCommission: decimal("platform_commission", { precision: 10, scale: 2 }).default("0"),
   assemblyPhotoUrl: text("assembly_photo_url"),
+  buyerPhotoApproval: text("buyer_photo_approval"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

@@ -205,6 +205,8 @@ function ReviewDialog({ order }: { order: OrderWithItems }) {
 export default function Account() {
   const { user, isLoading: authLoading, logout } = useAuth();
   const [, navigate] = useLocation();
+  const qc = useQueryClient();
+  const { toast } = useToast();
 
   const { data: orders, isLoading: ordersLoading } = useQuery<OrderWithItems[]>({
     queryKey: ["/api/orders/my"],
@@ -214,6 +216,13 @@ export default function Account() {
   const { data: myReviews } = useQuery<Review[]>({
     queryKey: ["/api/reviews/my"],
     enabled: !!user,
+  });
+
+  const photoApprovalMutation = useMutation({
+    mutationFn: ({ id, approval }: { id: string; approval: "approved" | "rejected" }) =>
+      apiRequest("PATCH", `/api/orders/${id}/photo-approval`, { approval }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["/api/orders/my"] }),
+    onError: (err: any) => toast({ title: "Ошибка", description: err.message, variant: "destructive" }),
   });
 
   const shopReviewedShopIds = new Set((myReviews || []).filter((r) => !r.productId).map((r) => r.shopId));
@@ -347,17 +356,57 @@ export default function Account() {
                       </div>
                     )}
                     {order.assemblyPhotoUrl && ["assembling", "delivering", "delivered"].includes(order.status) && (
-                      <div className="mb-3 p-3 rounded-lg bg-muted/50 border border-border">
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
-                          <Camera className="w-3.5 h-3.5" />
-                          Фото готового букета
-                        </p>
+                      <div className="mb-3 rounded-lg border border-border overflow-hidden">
+                        <div className="px-3 pt-3 pb-2 flex items-center justify-between">
+                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                            <Camera className="w-3.5 h-3.5" />
+                            Фото готового букета
+                          </p>
+                          {order.status === "assembling" && order.buyerPhotoApproval === "pending" && (
+                            <span className="text-xs text-amber-600 font-medium">Ожидает вашей оценки</span>
+                          )}
+                          {order.buyerPhotoApproval === "approved" && (
+                            <span className="text-xs text-green-600 font-medium flex items-center gap-1">
+                              <CheckCircle className="w-3.5 h-3.5" /> Одобрено вами
+                            </span>
+                          )}
+                        </div>
                         <img
                           src={order.assemblyPhotoUrl}
                           alt="Фото готового букета"
-                          className="rounded-lg max-h-64 object-cover w-full"
+                          className="w-full max-h-72 object-cover"
                           data-testid={`img-assembly-photo-${order.id}`}
                         />
+                        {order.status === "assembling" && order.buyerPhotoApproval === "pending" && (
+                          <div className="p-3 bg-muted/30 border-t border-border">
+                            <p className="text-sm text-muted-foreground mb-3">
+                              Магазин собрал ваш заказ. Посмотрите на фото и подтвердите или попросите переделать.
+                            </p>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                className="flex-1 bg-green-600 hover:bg-green-700 text-white gap-1.5"
+                                onClick={() => photoApprovalMutation.mutate({ id: order.id, approval: "approved" })}
+                                disabled={photoApprovalMutation.isPending}
+                                data-testid={`button-approve-photo-${order.id}`}
+                              >
+                                <CheckCircle className="w-3.5 h-3.5" />
+                                Одобрить, отправить
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="flex-1 gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10"
+                                onClick={() => photoApprovalMutation.mutate({ id: order.id, approval: "rejected" })}
+                                disabled={photoApprovalMutation.isPending}
+                                data-testid={`button-reject-photo-${order.id}`}
+                              >
+                                <X className="w-3.5 h-3.5" />
+                                Переделать
+                              </Button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                     {order.status === "delivered" && shopReviewedShopIds.has(order.shopId) && (() => {
