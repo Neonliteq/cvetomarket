@@ -757,7 +757,7 @@ export default function ShopDashboard() {
                   </div>
                   <Separator />
                   <div>
-                    <label className="text-sm font-medium mb-2 block">Обложка магазина</label>
+                    <span className="text-sm font-medium mb-2 block">Обложка магазина</span>
                     {myShop?.coverUrl ? (
                       <div className="relative w-full h-36 rounded-lg overflow-hidden border">
                         <img src={myShop.coverUrl} alt="Обложка" className="w-full h-full object-cover" />
@@ -769,13 +769,8 @@ export default function ShopDashboard() {
                           <X className="w-4 h-4" />
                         </button>
                       </div>
-                    ) : (
-                      <div className="w-full h-36 rounded-lg border-2 border-dashed border-muted-foreground/30 flex flex-col items-center justify-center gap-2">
-                        <Upload className="w-8 h-8 text-muted-foreground/40" />
-                        <span className="text-xs text-muted-foreground">Нет обложки</span>
-                      </div>
-                    )}
-                    <label className="cursor-pointer inline-block mt-2">
+                    ) : null}
+                    <label className="cursor-pointer block mt-2">
                       <input
                         type="file"
                         accept="image/*"
@@ -784,14 +779,36 @@ export default function ShopDashboard() {
                         onChange={async (e) => {
                           const file = e.target.files?.[0];
                           if (!file) return;
+                          if (file.size > 5 * 1024 * 1024) {
+                            toast({ title: "Файл слишком большой", description: "Максимум 5 МБ", variant: "destructive" });
+                            return;
+                          }
                           const fd = new FormData();
                           fd.append("images", file);
-                          const resp = await fetch("/api/upload", { method: "POST", body: fd, credentials: "include" });
-                          const data = await resp.json();
-                          if (data.urls?.[0]) updateShopMutation.mutate({ coverUrl: data.urls[0] });
+                          try {
+                            const resp = await fetch("/api/upload", { method: "POST", body: fd, credentials: "include" });
+                            if (!resp.ok) {
+                              toast({ title: "Ошибка загрузки", description: "Не удалось загрузить файл", variant: "destructive" });
+                              return;
+                            }
+                            const data = await resp.json();
+                            if (data.urls?.[0]) {
+                              updateShopMutation.mutate({ coverUrl: data.urls[0] });
+                            }
+                          } catch {
+                            toast({ title: "Ошибка загрузки", variant: "destructive" });
+                          }
                         }}
                       />
-                      <span className="text-sm text-primary hover:underline cursor-pointer">Загрузить обложку</span>
+                      {!myShop?.coverUrl && (
+                        <div className="w-full h-36 rounded-lg border-2 border-dashed border-muted-foreground/30 flex flex-col items-center justify-center gap-2 hover:border-primary/50 transition-colors">
+                          <Upload className="w-8 h-8 text-muted-foreground/40" />
+                          <span className="text-xs text-muted-foreground">Нажмите, чтобы загрузить обложку</span>
+                        </div>
+                      )}
+                      {myShop?.coverUrl && (
+                        <span className="text-sm text-primary hover:underline cursor-pointer inline-block mt-1">Заменить обложку</span>
+                      )}
                     </label>
                     <p className="text-xs text-muted-foreground mt-1">Рекомендуется 1200×400px</p>
                   </div>
