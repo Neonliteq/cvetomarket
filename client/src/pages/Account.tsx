@@ -346,6 +346,20 @@ export default function Account() {
                         ))}
                       </div>
                     )}
+                    {order.assemblyPhotoUrl && ["assembling", "delivering", "delivered"].includes(order.status) && (
+                      <div className="mb-3 p-3 rounded-lg bg-muted/50 border border-border">
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                          <Camera className="w-3.5 h-3.5" />
+                          Фото готового букета
+                        </p>
+                        <img
+                          src={order.assemblyPhotoUrl}
+                          alt="Фото готового букета"
+                          className="rounded-lg max-h-64 object-cover w-full"
+                          data-testid={`img-assembly-photo-${order.id}`}
+                        />
+                      </div>
+                    )}
                     {order.status === "delivered" && shopReviewedShopIds.has(order.shopId) && (() => {
                       const rev = myReviews?.find((r) => r.shopId === order.shopId && !r.productId);
                       return rev ? (
