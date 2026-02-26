@@ -340,7 +340,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.patch("/api/orders/:id/status", requireRole("shop", "admin"), async (req, res) => {
     const existing = await storage.getOrder(req.params.id);
     if (!existing) return res.status(404).json({ error: "Заказ не найден" });
-    if (existing.status === "delivered") return res.status(400).json({ error: "Нельзя изменить статус доставленного заказа" });
+    const user = await storage.getUser((req.session as any).userId);
+    if (existing.status === "delivered" && user?.role !== "admin") {
+      return res.status(400).json({ error: "Нельзя изменить статус доставленного заказа" });
+    }
     const order = await storage.updateOrderStatus(req.params.id, req.body.status);
     res.json(order);
   });
