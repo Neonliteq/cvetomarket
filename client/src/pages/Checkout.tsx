@@ -17,6 +17,7 @@ import { useCart } from "@/lib/cart";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { CheckoutMap } from "@/components/CheckoutMap";
 import type { Shop } from "@shared/schema";
 
 const checkoutSchema = z.object({
@@ -49,17 +50,10 @@ export default function Checkout() {
   const [geocoding, setGeocoding] = useState(false);
   const DELIVERY = deliveryCost !== null ? deliveryCost : defaultDelivery;
 
-  const geocodeAddress = useCallback(async (address: string) => {
-    if (!address || address.length < 5 || !shopId) return;
+  const fetchDeliveryCost = useCallback(async (lat: number, lng: number) => {
+    if (!shopId) return;
     setGeocoding(true);
     try {
-      const apiKey = import.meta.env.VITE_YANDEX_MAPS_API_KEY;
-      if (!apiKey) { setDeliveryCost(null); setDeliveryZoneName(null); return; }
-      const geoRes = await fetch(`https://geocode-maps.yandex.ru/1.x/?apikey=${apiKey}&geocode=${encodeURIComponent(address)}&format=json`);
-      const geoData = await geoRes.json();
-      const pos = geoData?.response?.GeoObjectCollection?.featureMember?.[0]?.GeoObject?.Point?.pos;
-      if (!pos) { setDeliveryCost(null); setDeliveryZoneName(null); return; }
-      const [lng, lat] = pos.split(" ").map(Number);
       const costRes = await fetch(`/api/shops/${shopId}/delivery-cost`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -77,6 +71,25 @@ export default function Checkout() {
     }
   }, [shopId]);
 
+  const geocodeAddress = useCallback(async (address: string) => {
+    if (!address || address.length < 5 || !shopId) return;
+    setGeocoding(true);
+    try {
+      const apiKey = import.meta.env.VITE_YANDEX_MAPS_API_KEY;
+      if (!apiKey) { setDeliveryCost(null); setDeliveryZoneName(null); return; }
+      const geoRes = await fetch(`https://geocode-maps.yandex.ru/1.x/?apikey=${apiKey}&geocode=${encodeURIComponent(address)}&format=json`);
+      const geoData = await geoRes.json();
+      const pos = geoData?.response?.GeoObjectCollection?.featureMember?.[0]?.GeoObject?.Point?.pos;
+      if (!pos) { setDeliveryCost(null); setDeliveryZoneName(null); setGeocoding(false); return; }
+      const [lng, lat] = pos.split(" ").map(Number);
+      await fetchDeliveryCost(lat, lng);
+    } catch {
+      setDeliveryCost(null);
+      setDeliveryZoneName(null);
+      setGeocoding(false);
+    }
+  }, [shopId, fetchDeliveryCost]);
+
   const form = useForm<z.infer<typeof checkoutSchema>>({
     resolver: zodResolver(checkoutSchema),
     defaultValues: {
@@ -89,6 +102,11 @@ export default function Checkout() {
       paymentMethod: "card",
     },
   });
+
+  const handleMapAddressSelect = useCallback((address: string, lat: number, lng: number) => {
+    form.setValue("deliveryAddress", address, { shouldValidate: true });
+    fetchDeliveryCost(lat, lng);
+  }, [form, fetchDeliveryCost]);
 
   const mutation = useMutation({
     mutationFn: async (data: z.infer<typeof checkoutSchema>) => {
@@ -207,6 +225,13 @@ export default function Checkout() {
                       <FormMessage />
                     </FormItem>
                   )} />
+                  {shopId && (
+                    <CheckoutMap
+                      shopId={shopId}
+                      onAddressSelect={handleMapAddressSelect}
+                      initialAddress={form.getValues("deliveryAddress")}
+                    />
+                  )}
                   <div className="grid grid-cols-2 gap-4">
                     <FormField control={form.control} name="deliveryDate" render={({ field }) => (
                       <FormItem>
