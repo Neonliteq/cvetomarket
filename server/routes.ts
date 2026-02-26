@@ -355,13 +355,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const order = await storage.getOrder(req.body.orderId);
       if (!order || order.buyerId !== userId) return res.status(403).json({ error: "Нет доступа" });
       if (order.status !== "delivered") return res.status(400).json({ error: "Отзыв можно оставить только после доставки" });
-      const existingReviews = await storage.getReviewsByOrder(req.body.orderId);
       if (req.body.productId) {
+        const existingReviews = await storage.getReviewsByOrder(req.body.orderId);
         const alreadyReviewed = existingReviews.find((r) => r.productId === req.body.productId);
-        if (alreadyReviewed) return res.status(400).json({ error: "Вы уже оценили этот товар" });
+        if (alreadyReviewed) return res.status(400).json({ error: "Вы уже оценили этот товар в этом заказе" });
       } else {
-        const shopReview = existingReviews.find((r) => !r.productId);
-        if (shopReview) return res.status(400).json({ error: "Вы уже оставили отзыв к этому заказу" });
+        const buyerReviews = await storage.getReviewsByBuyer(userId);
+        const shopReview = buyerReviews.find((r) => !r.productId && r.shopId === order.shopId);
+        if (shopReview) return res.status(400).json({ error: "Вы уже оставили отзыв об этом магазине" });
       }
     }
     const review = await storage.createReview({ ...req.body, buyerId: userId });

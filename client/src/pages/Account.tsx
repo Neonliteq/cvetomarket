@@ -216,7 +216,7 @@ export default function Account() {
     enabled: !!user,
   });
 
-  const shopReviewedOrderIds = new Set((myReviews || []).filter((r) => !r.productId).map((r) => r.orderId));
+  const shopReviewedShopIds = new Set((myReviews || []).filter((r) => !r.productId).map((r) => r.shopId));
   const productReviewMap = new Map<string, Review>();
   (myReviews || []).filter((r) => r.productId).forEach((r) => {
     productReviewMap.set(`${r.orderId}_${r.productId}`, r);
@@ -346,8 +346,8 @@ export default function Account() {
                         ))}
                       </div>
                     )}
-                    {order.status === "delivered" && shopReviewedOrderIds.has(order.id) && (() => {
-                      const rev = myReviews?.find((r) => r.orderId === order.id && !r.productId);
+                    {order.status === "delivered" && shopReviewedShopIds.has(order.shopId) && (() => {
+                      const rev = myReviews?.find((r) => r.shopId === order.shopId && !r.productId);
                       return rev ? (
                         <div className="flex items-center gap-2 text-sm p-2 bg-muted/50 rounded-md mb-2" data-testid={`review-done-${order.id}`}>
                           <CheckCircle className="w-4 h-4 text-green-600 shrink-0" />
@@ -358,7 +358,7 @@ export default function Account() {
                       ) : null;
                     })()}
                     <div className="flex gap-2 flex-wrap">
-                      {order.status === "delivered" && !shopReviewedOrderIds.has(order.id) && (
+                      {order.status === "delivered" && !shopReviewedShopIds.has(order.shopId) && (
                         <ReviewDialog order={order} />
                       )}
                       <Link href="/chat">
