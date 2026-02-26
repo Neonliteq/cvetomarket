@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProductCard } from "@/components/ProductCard";
 import { ShopCard } from "@/components/ShopCard";
-import { NotificationPanel } from "@/components/NotificationPanel";
 import type { Product, Shop, Category } from "@shared/schema";
 
 export default function Home() {
@@ -31,7 +30,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen">
-      <NotificationPanel />
       <section className="relative overflow-hidden">
         <div
           className="min-h-[500px] md:min-h-[600px] flex items-center"
