@@ -348,7 +348,23 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/orders", requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
-      const { items, shopId, totalAmount, deliveryCost, ...orderData } = req.body;
+      const { items, shopId, totalAmount, deliveryCost, deliveryLat, deliveryLng, ...orderData } = req.body;
+
+      const shop = await storage.getShop(shopId);
+      if (!shop) return res.status(404).json({ error: "Магазин не найден" });
+      const zones: any[] = (shop as any).deliveryZones || [];
+      if (zones.length > 0) {
+        if (typeof deliveryLat !== "number" || typeof deliveryLng !== "number") {
+          return res.status(400).json({ error: "Укажите адрес доставки на карте, чтобы мы могли проверить зону доставки" });
+        }
+        const inZone = zones.some((zone: any) =>
+          zone.coordinates && isPointInPolygon([deliveryLat, deliveryLng], zone.coordinates)
+        );
+        if (!inZone) {
+          return res.status(400).json({ error: "Адрес доставки находится за пределами зон доставки магазина" });
+        }
+      }
+
       const settings = await storage.getSettings();
       const commission = settings ? (totalAmount * Number(settings.commissionRate)) / 100 : 0;
       const order = await storage.createOrder({

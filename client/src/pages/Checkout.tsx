@@ -50,6 +50,8 @@ export default function Checkout() {
   const [geocoding, setGeocoding] = useState(false);
   const [outsideZone, setOutsideZone] = useState(false);
   const [addressChecked, setAddressChecked] = useState(false);
+  const [deliveryCoords, setDeliveryCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const shopHasZones = !!(shop as any)?.deliveryZones?.length;
   const DELIVERY = deliveryCost !== null ? deliveryCost : defaultDelivery;
 
   const fetchDeliveryCost = useCallback(async (lat: number, lng: number) => {
@@ -65,6 +67,7 @@ export default function Checkout() {
       const costData = await costRes.json();
       setDeliveryCost(Number(costData.price));
       setDeliveryZoneName(costData.zone || null);
+      setDeliveryCoords({ lat, lng });
       setAddressChecked(true);
       if (costData.hasZones && !costData.zone) {
         setOutsideZone(true);
@@ -74,6 +77,7 @@ export default function Checkout() {
     } catch {
       setDeliveryCost(null);
       setDeliveryZoneName(null);
+      setDeliveryCoords(null);
       setOutsideZone(false);
       setAddressChecked(false);
     } finally {
@@ -132,6 +136,8 @@ export default function Checkout() {
         })),
         totalAmount: total + DELIVERY,
         deliveryCost: DELIVERY,
+        deliveryLat: deliveryCoords?.lat ?? null,
+        deliveryLng: deliveryCoords?.lng ?? null,
       });
     },
     onSuccess: (data) => {
@@ -139,8 +145,17 @@ export default function Checkout() {
       setSuccess(true);
       clearCart();
     },
-    onError: () => {
-      toast({ title: "Ошибка оформления заказа", description: "Попробуйте ещё раз", variant: "destructive" });
+    onError: (error: any) => {
+      let msg = "Попробуйте ещё раз";
+      try {
+        const raw = error?.message || "";
+        const jsonPart = raw.includes("{") ? raw.slice(raw.indexOf("{")) : "";
+        if (jsonPart) {
+          const parsed = JSON.parse(jsonPart);
+          msg = parsed.error || msg;
+        }
+      } catch {}
+      toast({ title: "Ошибка оформления заказа", description: msg, variant: "destructive" });
     },
   });
 
@@ -305,8 +320,8 @@ export default function Checkout() {
                 </CardContent>
               </Card>
 
-              <Button type="submit" size="lg" className="w-full" disabled={mutation.isPending || outsideZone || geocoding} data-testid="button-place-order">
-                {mutation.isPending ? "Оформляем..." : outsideZone ? "Адрес за пределами зоны доставки" : `Оформить заказ на ${(total + DELIVERY).toLocaleString("ru-RU")} ₽`}
+              <Button type="submit" size="lg" className="w-full" disabled={mutation.isPending || outsideZone || geocoding || (shopHasZones && !addressChecked)} data-testid="button-place-order">
+                {mutation.isPending ? "Оформляем..." : outsideZone ? "Адрес за пределами зоны доставки" : (shopHasZones && !addressChecked) ? "Укажите адрес в зоне доставки" : `Оформить заказ на ${(total + DELIVERY).toLocaleString("ru-RU")} ₽`}
               </Button>
             </form>
           </Form>
