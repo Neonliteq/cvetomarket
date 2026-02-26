@@ -186,9 +186,14 @@ export function Header() {
                   </DropdownMenuItem>
                 )}
                 {user.role === "shop" && (
-                  <DropdownMenuItem asChild>
-                    <Link href="/shop-dashboard">Панель магазина</Link>
-                  </DropdownMenuItem>
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link href="/shop-dashboard">Панель магазина</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/shop-dashboard?tab=orders" data-testid="link-shop-orders">Заказы</Link>
+                    </DropdownMenuItem>
+                  </>
                 )}
                 {user.role === "admin" && (
                   <DropdownMenuItem asChild>

@@ -22,7 +22,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import type { Product, Order, Shop, Category, Review } from "@shared/schema";
 import { format } from "date-fns";
@@ -220,7 +220,14 @@ export default function ShopDashboard() {
   const { user, isLoading } = useAuth();
   const { toast } = useToast();
   const [, navigate] = useLocation();
+  const searchStr = useSearch();
   const qc = useQueryClient();
+  const tabParam = new URLSearchParams(searchStr).get("tab");
+  const validTabs = ["products", "orders", "reviews", "settings"];
+  const [activeTab, setActiveTab] = useState(validTabs.includes(tabParam || "") ? tabParam! : "products");
+  useEffect(() => {
+    if (tabParam && validTabs.includes(tabParam)) setActiveTab(tabParam);
+  }, [tabParam]);
   const [productDialogOpen, setProductDialogOpen] = useState(false);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [orderStatusFilter, setOrderStatusFilter] = useState("all");
@@ -348,7 +355,8 @@ export default function ShopDashboard() {
         ))}
       </div>
 
-      <Tabs defaultValue="products" onValueChange={(tab) => {
+      <Tabs value={activeTab} onValueChange={(tab) => {
+        setActiveTab(tab);
         if (tab === "reviews") {
           fetch("/api/reviews/seen", { method: "POST", credentials: "include" }).then(() => {
             qc.invalidateQueries({ queryKey: ["/api/notifications"] });
