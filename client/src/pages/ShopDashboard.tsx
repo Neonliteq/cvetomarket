@@ -459,20 +459,32 @@ export default function ShopDashboard() {
             </div>
           ) : orders?.length ? (
             <div className="space-y-4">
-              <div className="flex flex-wrap items-center gap-3 p-3 rounded-lg bg-muted/40 border" data-testid="orders-sort-controls">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-muted-foreground">Статус:</span>
-                  <Select value={orderStatusFilter} onValueChange={setOrderStatusFilter}>
-                    <SelectTrigger className="w-36 h-8 text-xs" data-testid="select-order-filter-status">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Все</SelectItem>
-                      {Object.entries(STATUS_LABELS).map(([k, v]) => (
-                        <SelectItem key={k} value={k}>{v}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              <div className="space-y-3" data-testid="orders-sort-controls">
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { value: "all", label: "Все" },
+                    { value: "new", label: "Новый" },
+                    { value: "confirmed", label: "Подтверждён" },
+                    { value: "assembling", label: "Собран" },
+                    { value: "delivering", label: "На доставке" },
+                    { value: "delivered", label: "Доставлен" },
+                    { value: "cancelled", label: "Отменён" },
+                  ].map((f) => (
+                    <Button
+                      key={f.value}
+                      size="sm"
+                      variant={orderStatusFilter === f.value ? "default" : "outline"}
+                      className="h-8 text-xs"
+                      onClick={() => setOrderStatusFilter(f.value)}
+                      data-testid={`button-filter-${f.value}`}
+                    >
+                      {f.label}
+                      {f.value !== "all" && (() => {
+                        const count = (orders || []).filter((o) => o.status === f.value).length;
+                        return count > 0 ? <Badge variant="secondary" className="ml-1.5 px-1.5 py-0 text-[10px] leading-4">{count}</Badge> : null;
+                      })()}
+                    </Button>
+                  ))}
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-medium text-muted-foreground">Сортировка:</span>
