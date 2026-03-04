@@ -208,15 +208,15 @@ export default function ShopDetail() {
             </section>
           )}
 
-          {(!hasSections || otherProducts.length > 0) && (
+          {activeProducts.length > 0 && (
             <section data-testid="section-all">
               <SectionHeader
                 icon={<MapPin className="w-4 h-4" />}
                 title={hasSections ? "Все товары" : "Товары магазина"}
-                count={hasSections ? otherProducts.length : activeProducts.length}
+                count={activeProducts.length}
               />
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {(hasSections ? otherProducts : activeProducts).map((p) => (
+                {activeProducts.map((p) => (
                   <ProductCard key={p.id} product={p} shopId={id} />
                 ))}
               </div>
