@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams, Link, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ShoppingCart, ArrowLeft, Clock, Store, Star, MessageCircle } from "lucide-react";
+import { ShoppingCart, ArrowLeft, Clock, Store, Star, MessageCircle, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -115,6 +115,18 @@ export default function ProductDetail() {
 
           {product.description && (
             <p className="text-muted-foreground text-sm leading-relaxed">{product.description}</p>
+          )}
+
+          {(product as any).composition && (
+            <div className="rounded-md border border-border bg-muted/30 p-3 space-y-1">
+              <div className="flex items-center gap-1.5 text-sm font-medium">
+                <List className="w-4 h-4 text-primary" />
+                <span>Состав</span>
+              </div>
+              <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line" data-testid="text-composition">
+                {(product as any).composition}
+              </p>
+            </div>
           )}
 
           <div className="flex items-center gap-2 text-sm text-muted-foreground">

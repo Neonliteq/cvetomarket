@@ -52,6 +52,7 @@ const productSchema = z.object({
   type: z.string().default("bouquet"),
   name: z.string().min(2, "Минимум 2 символа"),
   description: z.string().optional(),
+  composition: z.string().optional(),
   price: z.string().min(1, "Введите цену"),
   categoryId: z.string().optional(),
   assemblyTime: z.coerce.number().min(0).default(60),
@@ -82,6 +83,7 @@ function ProductForm({
       type: (product as any)?.type || "bouquet",
       name: product?.name || "",
       description: product?.description || "",
+      composition: (product as any)?.composition || "",
       price: product?.price?.toString() || "",
       categoryId: product?.categoryId || "",
       assemblyTime: product?.assemblyTime || 60,
@@ -153,7 +155,21 @@ function ProductForm({
           <FormItem><FormLabel>Название</FormLabel><FormControl><Input {...field} placeholder="Букет роз" /></FormControl><FormMessage /></FormItem>
         )} />
         <FormField control={form.control} name="description" render={({ field }) => (
-          <FormItem><FormLabel>Описание</FormLabel><FormControl><Textarea {...field} placeholder="Описание букета..." /></FormControl><FormMessage /></FormItem>
+          <FormItem><FormLabel>Описание</FormLabel><FormControl><Textarea {...field} placeholder="Описание букета..." rows={2} /></FormControl><FormMessage /></FormItem>
+        )} />
+        <FormField control={form.control} name="composition" render={({ field }) => (
+          <FormItem>
+            <FormLabel>Состав</FormLabel>
+            <FormControl>
+              <Textarea
+                {...field}
+                placeholder="Например: 15 красных роз, зелень эвкалипта, упаковка крафт..."
+                rows={3}
+                data-testid="input-composition"
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
         )} />
         <div className="grid grid-cols-2 gap-4">
           <FormField control={form.control} name="price" render={({ field }) => (
