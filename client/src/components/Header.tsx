@@ -243,7 +243,7 @@ export function Header() {
                 <div className="py-1">
                   {user.role === "buyer" && (
                     <DropdownMenuItem asChild>
-                      <Link href="/account" className="flex items-center gap-3 px-3 py-2 cursor-pointer" data-testid="link-account">
+                      <Link href="/account" className="flex items-center gap-3 px-3 py-2 cursor-pointer w-full rounded-sm hover:bg-accent transition-colors" data-testid="link-account">
                         <div className="w-7 h-7 rounded-md bg-muted flex items-center justify-center shrink-0">
                           <ShoppingBag className="w-3.5 h-3.5 text-muted-foreground" />
                         </div>
@@ -263,7 +263,7 @@ export function Header() {
                   {user.role === "shop" && (
                     <>
                       <DropdownMenuItem asChild>
-                        <Link href="/shop-dashboard" className="flex items-center gap-3 px-3 py-2 cursor-pointer">
+                        <Link href="/shop-dashboard" className="flex items-center gap-3 px-3 py-2 cursor-pointer w-full rounded-sm hover:bg-accent transition-colors">
                           <div className="w-7 h-7 rounded-md bg-muted flex items-center justify-center shrink-0">
                             <LayoutDashboard className="w-3.5 h-3.5 text-muted-foreground" />
                           </div>
@@ -274,7 +274,7 @@ export function Header() {
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
-                        <Link href="/shop-dashboard?tab=orders" className="flex items-center gap-3 px-3 py-2 cursor-pointer" data-testid="link-shop-orders">
+                        <Link href="/shop-dashboard?tab=orders" className="flex items-center gap-3 px-3 py-2 cursor-pointer w-full rounded-sm hover:bg-accent transition-colors" data-testid="link-shop-orders">
                           <div className="w-7 h-7 rounded-md bg-muted flex items-center justify-center shrink-0">
                             <Package className="w-3.5 h-3.5 text-muted-foreground" />
                           </div>
@@ -302,7 +302,7 @@ export function Header() {
 
                   {user.role === "admin" && (
                     <DropdownMenuItem asChild>
-                      <Link href="/admin" className="flex items-center gap-3 px-3 py-2 cursor-pointer">
+                      <Link href="/admin" className="flex items-center gap-3 px-3 py-2 cursor-pointer w-full rounded-sm hover:bg-accent transition-colors">
                         <div className="w-7 h-7 rounded-md bg-red-100 dark:bg-red-900 flex items-center justify-center shrink-0">
                           <Shield className="w-3.5 h-3.5 text-red-600 dark:text-red-300" />
                         </div>
@@ -315,7 +315,7 @@ export function Header() {
                   )}
 
                   <DropdownMenuItem asChild>
-                    <Link href="/chat" className="flex items-center gap-3 px-3 py-2 cursor-pointer">
+                    <Link href="/chat" className="flex items-center gap-3 px-3 py-2 cursor-pointer w-full rounded-sm hover:bg-accent transition-colors">
                       <div className="w-7 h-7 rounded-md bg-muted flex items-center justify-center shrink-0 relative">
                         <MessageCircle className="w-3.5 h-3.5 text-muted-foreground" />
                         {unreadMessages > 0 && (
