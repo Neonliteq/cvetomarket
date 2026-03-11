@@ -51,7 +51,10 @@ export default function Home() {
                 <span className="text-primary">прямо к вашей двери</span>
               </h1>
               <p className="text-lg text-muted-foreground">
-                Более 100 цветочных магазинов. Выберите идеальный букет и оформите доставку за несколько минут.
+                {shops && shops.length > 0
+                  ? `${shops.length} ${shops.length === 1 ? "цветочный магазин" : shops.length < 5 ? "цветочных магазина" : "цветочных магазинов"}.`
+                  : "Цветочные магазины."}{" "}
+                Выберите идеальный букет и оформите доставку за несколько минут.
               </p>
               <div className="flex flex-wrap gap-3">
                 <Link href="/catalog">
