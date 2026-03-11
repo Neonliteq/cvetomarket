@@ -37,6 +37,7 @@ export function Footer() {
             <Link href="/delivery-and-payment"><p className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer" data-testid="link-delivery-payment">Доставка и оплата</p></Link>
             <Link href="/terms-of-use"><p className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer" data-testid="link-terms">Условия использования</p></Link>
             <Link href="/privacy-policy"><p className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer" data-testid="link-privacy">Политика конфиденциальности</p></Link>
+            <Link href="/legal-info"><p className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer" data-testid="link-legal">Юридическая информация</p></Link>
           </div>
         </div>
       </div>

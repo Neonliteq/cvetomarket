@@ -23,6 +23,7 @@ import Chat from "@/pages/Chat";
 import DeliveryAndPayment from "@/pages/DeliveryAndPayment";
 import TermsOfUse from "@/pages/TermsOfUse";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
+import LegalInfo from "@/pages/LegalInfo";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -46,6 +47,7 @@ function Router() {
           <Route path="/delivery-and-payment" component={DeliveryAndPayment} />
           <Route path="/terms-of-use" component={TermsOfUse} />
           <Route path="/privacy-policy" component={PrivacyPolicy} />
+          <Route path="/legal-info" component={LegalInfo} />
           <Route component={NotFound} />
         </Switch>
       </main>
