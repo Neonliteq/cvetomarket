@@ -1,14 +1,26 @@
-import { Link } from "wouter";
+import { useState } from "react";
+import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, Truck, Shield, Clock, Star, Cake, Heart, Flower2, Gem, Leaf, Building2 } from "lucide-react";
+import { ArrowRight, Truck, Shield, Clock, Star, Cake, Heart, Flower2, Gem, Leaf, Building2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
 import { ProductCard } from "@/components/ProductCard";
 import { ShopCard } from "@/components/ShopCard";
 import type { Product, Shop, Category } from "@shared/schema";
 
 export default function Home() {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [, navigate] = useLocation();
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const q = searchQuery.trim();
+    if (q) navigate(`/catalog?q=${encodeURIComponent(q)}`);
+    else navigate("/catalog");
+  };
+
   const { data: featured, isLoading: loadingFeatured } = useQuery<(Product & { shopName?: string; categoryName?: string })[]>({
     queryKey: ["/api/products/featured"],
   });
@@ -56,15 +68,30 @@ export default function Home() {
                   : "Цветочные магазины."}{" "}
                 Выберите идеальный букет и оформите доставку за несколько минут.
               </p>
-              <div className="flex flex-wrap gap-3">
+              <form onSubmit={handleSearch} className="flex gap-2 max-w-md">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Розы, пионы, свадебный букет..."
+                    className="pl-9 h-11 bg-background/90 backdrop-blur"
+                    data-testid="input-home-search"
+                  />
+                </div>
+                <Button type="submit" size="lg" className="h-11 px-5" data-testid="button-home-search">
+                  Найти
+                </Button>
+              </form>
+              <div className="flex flex-wrap gap-3 pt-1">
                 <Link href="/catalog">
-                  <Button size="lg" data-testid="button-view-catalog">
-                    Смотреть каталог
-                    <ArrowRight className="w-4 h-4 ml-2" />
+                  <Button size="sm" variant="outline" data-testid="button-view-catalog">
+                    Весь каталог
+                    <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
                   </Button>
                 </Link>
                 <Link href="/shops">
-                  <Button size="lg" variant="outline" data-testid="button-view-shops">
+                  <Button size="sm" variant="ghost" data-testid="button-view-shops">
                     Все магазины
                   </Button>
                 </Link>

@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useSearch } from "wouter";
 import { Search, SlidersHorizontal, X, Tag } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -15,8 +16,14 @@ import type { Product, Category, City } from "@shared/schema";
 type ProductWithMeta = Product & { shopName?: string; categoryName?: string; cityName?: string; tags?: string[] };
 
 export default function Catalog() {
-  const [search, setSearch] = useState("");
+  const searchStr = useSearch();
+  const [search, setSearch] = useState(() => new URLSearchParams(searchStr).get("q") || "");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  useEffect(() => {
+    const q = new URLSearchParams(searchStr).get("q") || "";
+    setSearch(q);
+  }, [searchStr]);
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
