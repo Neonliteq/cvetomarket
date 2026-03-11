@@ -36,7 +36,7 @@ export function Footer() {
           <div className="space-y-1.5">
             <Link href="/delivery-and-payment"><p className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer" data-testid="link-delivery-payment">Доставка и оплата</p></Link>
             <Link href="/terms-of-use"><p className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer" data-testid="link-terms">Условия использования</p></Link>
-            <p className="text-sm text-muted-foreground">Политика конфиденциальности</p>
+            <Link href="/privacy-policy"><p className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer" data-testid="link-privacy">Политика конфиденциальности</p></Link>
           </div>
         </div>
       </div>
