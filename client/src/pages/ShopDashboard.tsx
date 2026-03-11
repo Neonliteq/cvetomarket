@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Plus, Edit, Trash2, Package, ShoppingBag, BarChart2, MessageCircle,
   Eye, EyeOff, Star, MapPin, Phone, Calendar, Clock, User, FileText, Send, Settings, Truck,
-  Upload, Image, X, Users, UserPlus, UserMinus, Crown
+  Upload, Image, X, Users, UserPlus, UserMinus, Crown, Tag
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -77,6 +77,8 @@ function ProductForm({
   const { toast } = useToast();
   const [uploadedImages, setUploadedImages] = useState<string[]>(product?.images || []);
   const [uploading, setUploading] = useState(false);
+  const [tags, setTags] = useState<string[]>((product as any)?.tags || []);
+  const [tagInput, setTagInput] = useState("");
   const form = useForm<z.infer<typeof productSchema>>({
     resolver: zodResolver(productSchema),
     defaultValues: {
@@ -124,7 +126,7 @@ function ProductForm({
     mutationFn: (data: z.infer<typeof productSchema>) => {
       const urlImages = data.images ? data.images.split(",").map((s) => s.trim()).filter(Boolean) : [];
       const allImages = [...uploadedImages, ...urlImages];
-      const payload = { ...data, shopId, price: data.price, images: allImages };
+      const payload = { ...data, shopId, price: data.price, images: allImages, tags };
       return product
         ? apiRequest("PATCH", `/api/products/${product.id}`, payload)
         : apiRequest("POST", "/api/products", payload);
@@ -171,6 +173,50 @@ function ProductForm({
             <FormMessage />
           </FormItem>
         )} />
+        {/* Tags */}
+        <div className="space-y-2">
+          <FormLabel className="flex items-center gap-1"><Tag className="w-3.5 h-3.5" /> Теги для поиска</FormLabel>
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {tags.map((tag) => (
+              <Badge key={tag} variant="secondary" className="gap-1 text-xs">
+                {tag}
+                <button type="button" onClick={() => setTags((prev) => prev.filter((t) => t !== tag))}>
+                  <X className="w-3 h-3" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <Input
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === ",") {
+                  e.preventDefault();
+                  const val = tagInput.trim().replace(/,/g, "").toLowerCase();
+                  if (val && !tags.includes(val)) setTags((prev) => [...prev, val]);
+                  setTagInput("");
+                }
+              }}
+              placeholder="Введите тег и нажмите Enter (роза, тюльпан, красный...)"
+              data-testid="input-tag"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const val = tagInput.trim().replace(/,/g, "").toLowerCase();
+                if (val && !tags.includes(val)) setTags((prev) => [...prev, val]);
+                setTagInput("");
+              }}
+            >
+              Добавить
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">Теги помогают покупателям находить товар по цветам и составу</p>
+        </div>
+
         <div className="grid grid-cols-2 gap-4">
           <FormField control={form.control} name="price" render={({ field }) => (
             <FormItem><FormLabel>Цена (₽)</FormLabel><FormControl><Input {...field} type="number" placeholder="2500" /></FormControl><FormMessage /></FormItem>

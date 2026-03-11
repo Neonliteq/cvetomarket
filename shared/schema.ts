@@ -69,6 +69,7 @@ export const products = pgTable("products", {
   composition: text("composition"),
   discountPercent: integer("discount_percent").default(0),
   isRecommended: boolean("is_recommended").default(false),
+  tags: text("tags").array().default(sql`'{}'::text[]`),
   rating: decimal("rating", { precision: 3, scale: 2 }).default("0"),
   reviewCount: integer("review_count").default(0),
   createdAt: timestamp("created_at").defaultNow(),

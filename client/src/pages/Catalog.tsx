@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, SlidersHorizontal, X } from "lucide-react";
+import { Search, SlidersHorizontal, X, Tag } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,13 +12,14 @@ import { Label } from "@/components/ui/label";
 import { ProductCard } from "@/components/ProductCard";
 import type { Product, Category, City } from "@shared/schema";
 
-type ProductWithMeta = Product & { shopName?: string; categoryName?: string; cityName?: string };
+type ProductWithMeta = Product & { shopName?: string; categoryName?: string; cityName?: string; tags?: string[] };
 
 export default function Catalog() {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 50000]);
   const [sortBy, setSortBy] = useState("popular");
   const [inStockOnly, setInStockOnly] = useState(false);
@@ -27,10 +28,19 @@ export default function Catalog() {
   const { data: categories } = useQuery<Category[]>({ queryKey: ["/api/categories"] });
   const { data: cities } = useQuery<City[]>({ queryKey: ["/api/cities"] });
 
+  const searchLower = search.toLowerCase();
+
   const filtered = (products || []).filter((p) => {
-    if (!p.isActive || !p.inStock && inStockOnly) return false;
+    if (!p.isActive) return false;
     if (inStockOnly && !p.inStock) return false;
-    if (search && !p.name.toLowerCase().includes(search.toLowerCase())) return false;
+    if (search) {
+      const inName = p.name.toLowerCase().includes(searchLower);
+      const inComposition = p.composition ? p.composition.toLowerCase().includes(searchLower) : false;
+      const inTags = (p.tags || []).some((t) => t.toLowerCase().includes(searchLower));
+      const inDescription = p.description ? p.description.toLowerCase().includes(searchLower) : false;
+      if (!inName && !inComposition && !inTags && !inDescription) return false;
+    }
+    if (selectedTag && !(p.tags || []).includes(selectedTag)) return false;
     if (selectedCategory && p.categoryId !== selectedCategory) return false;
     if (selectedType && (p as any).type !== selectedType) return false;
     const price = Number(p.price);
@@ -45,10 +55,15 @@ export default function Catalog() {
     return Number(b.reviewCount) - Number(a.reviewCount);
   });
 
+  const allTags = Array.from(
+    new Set((products || []).flatMap((p) => p.tags || []))
+  ).sort();
+
   const typeLabels: Record<string, string> = { bouquet: "Букеты", gift: "Подарки", tasty_gift: "Вкусные подарки" };
   const activeFilters = [
     ...(selectedType ? [typeLabels[selectedType] || selectedType] : []),
     ...(selectedCategory && categories ? [categories.find((c) => c.id === selectedCategory)?.name] : []),
+    ...(selectedTag ? [`#${selectedTag}`] : []),
     ...(inStockOnly ? ["В наличии"] : []),
     ...(search ? [`Поиск: ${search}`] : []),
   ].filter(Boolean) as string[];
@@ -116,6 +131,27 @@ export default function Catalog() {
         </div>
       </div>
 
+      {allTags.length > 0 && (
+        <div className="space-y-2">
+          <Label className="font-semibold flex items-center gap-1.5">
+            <Tag className="w-3.5 h-3.5" /> По цветам и тегам
+          </Label>
+          <div className="flex flex-wrap gap-2">
+            {allTags.map((tag) => (
+              <Badge
+                key={tag}
+                variant={selectedTag === tag ? "default" : "outline"}
+                className="cursor-pointer capitalize"
+                onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
+                data-testid={`filter-tag-${tag}`}
+              >
+                #{tag}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="space-y-3">
         <Label className="font-semibold">Цена: {priceRange[0].toLocaleString("ru")} — {priceRange[1].toLocaleString("ru")} ₽</Label>
         <Slider
@@ -145,6 +181,8 @@ export default function Catalog() {
         onClick={() => {
           setSelectedCategory(null);
           setSelectedCity(null);
+          setSelectedType(null);
+          setSelectedTag(null);
           setPriceRange([0, 50000]);
           setInStockOnly(false);
           setSearch("");
@@ -160,7 +198,7 @@ export default function Catalog() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold">Каталог букетов</h1>
         <p className="text-muted-foreground mt-1">
-          {isLoading ? "Загружаем..." : `${sorted.length} букетов`}
+          {isLoading ? "Загружаем..." : `${sorted.length} ${sorted.length === 1 ? "товар" : "товаров"}`}
         </p>
       </div>
 
@@ -177,7 +215,7 @@ export default function Catalog() {
             <div className="relative flex-1 min-w-48">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
-                placeholder="Поиск букетов..."
+                placeholder="Поиск по названию, цветам, составу..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-9"
@@ -224,8 +262,27 @@ export default function Catalog() {
                   <X className="w-3 h-3 cursor-pointer" onClick={() => {
                     if (f.startsWith("Поиск:")) setSearch("");
                     else if (f === "В наличии") setInStockOnly(false);
+                    else if (f.startsWith("#")) setSelectedTag(null);
+                    else if (selectedType && typeLabels[selectedType] === f) setSelectedType(null);
                     else setSelectedCategory(null);
                   }} />
+                </Badge>
+              ))}
+            </div>
+          )}
+
+          {!isLoading && allTags.length > 0 && !selectedTag && !search && (
+            <div className="flex flex-wrap gap-2 pb-2 border-b border-border">
+              <span className="text-xs text-muted-foreground self-center">Популярные теги:</span>
+              {allTags.slice(0, 12).map((tag) => (
+                <Badge
+                  key={tag}
+                  variant="outline"
+                  className="cursor-pointer text-xs capitalize hover:bg-primary/10 transition-colors"
+                  onClick={() => setSelectedTag(tag)}
+                  data-testid={`tag-chip-${tag}`}
+                >
+                  #{tag}
                 </Badge>
               ))}
             </div>
