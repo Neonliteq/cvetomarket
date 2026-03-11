@@ -9,7 +9,8 @@ import {
   type Category, type InsertCategory,
   type City, type InsertCity,
   type PlatformSettings,
-  users, shops, products, orders, orderItems, reviews, messages, categories, cities, platformSettings,
+  type ShopWorker,
+  users, shops, products, orders, orderItems, reviews, messages, categories, cities, platformSettings, shopWorkers,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, inArray, sql } from "drizzle-orm";
@@ -25,11 +26,18 @@ export interface IStorage {
   // Shops
   getShop(id: string): Promise<Shop | undefined>;
   getShopByOwnerId(ownerId: string): Promise<Shop | undefined>;
+  getShopForUser(userId: string): Promise<Shop | undefined>;
   getShops(): Promise<Shop[]>;
   getApprovedShops(): Promise<Shop[]>;
   createShop(shop: InsertShop): Promise<Shop>;
   updateShop(id: string, data: Partial<Shop>): Promise<Shop | undefined>;
   deleteShop(id: string): Promise<void>;
+
+  // Shop Workers
+  getShopWorkers(shopId: string): Promise<(ShopWorker & { user?: User })[]>;
+  addShopWorker(shopId: string, userId: string): Promise<ShopWorker>;
+  removeShopWorker(shopId: string, userId: string): Promise<void>;
+  isShopWorker(shopId: string, userId: string): Promise<boolean>;
 
   // Products
   getProduct(id: string): Promise<Product | undefined>;
@@ -111,6 +119,13 @@ export class DbStorage implements IStorage {
     const [s] = await db.select().from(shops).where(eq(shops.ownerId, ownerId));
     return s;
   }
+  async getShopForUser(userId: string) {
+    const owned = await this.getShopByOwnerId(userId);
+    if (owned) return owned;
+    const [worker] = await db.select().from(shopWorkers).where(eq(shopWorkers.userId, userId));
+    if (!worker) return undefined;
+    return this.getShop(worker.shopId);
+  }
   async getShops() {
     return db.select().from(shops).orderBy(desc(shops.createdAt));
   }
@@ -127,6 +142,24 @@ export class DbStorage implements IStorage {
   }
   async deleteShop(id: string) {
     await db.delete(shops).where(eq(shops.id, id));
+  }
+
+  async getShopWorkers(shopId: string) {
+    const workers = await db.select().from(shopWorkers).where(eq(shopWorkers.shopId, shopId)).orderBy(shopWorkers.createdAt);
+    const allUsers = await this.getAllUsers();
+    const userMap = Object.fromEntries(allUsers.map((u) => [u.id, u]));
+    return workers.map((w) => ({ ...w, user: userMap[w.userId] }));
+  }
+  async addShopWorker(shopId: string, userId: string) {
+    const [w] = await db.insert(shopWorkers).values({ shopId, userId }).returning();
+    return w;
+  }
+  async removeShopWorker(shopId: string, userId: string) {
+    await db.delete(shopWorkers).where(and(eq(shopWorkers.shopId, shopId), eq(shopWorkers.userId, userId)));
+  }
+  async isShopWorker(shopId: string, userId: string) {
+    const [w] = await db.select().from(shopWorkers).where(and(eq(shopWorkers.shopId, shopId), eq(shopWorkers.userId, userId)));
+    return !!w;
   }
 
   async getProduct(id: string) {

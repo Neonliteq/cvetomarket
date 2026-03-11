@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Plus, Edit, Trash2, Package, ShoppingBag, BarChart2, MessageCircle,
   Eye, EyeOff, Star, MapPin, Phone, Calendar, Clock, User, FileText, Send, Settings, Truck,
-  Upload, Image, X
+  Upload, Image, X, Users, UserPlus, UserMinus, Crown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -274,11 +274,13 @@ export default function ShopDashboard() {
   const searchStr = useSearch();
   const qc = useQueryClient();
   const tabParam = new URLSearchParams(searchStr).get("tab");
-  const validTabs = ["products", "orders", "reviews", "settings"];
+  const validTabs = ["products", "orders", "reviews", "settings", "workers"];
   const [activeTab, setActiveTab] = useState(validTabs.includes(tabParam || "") ? tabParam! : "products");
   useEffect(() => {
     if (tabParam && validTabs.includes(tabParam)) setActiveTab(tabParam);
   }, [tabParam]);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteName, setInviteName] = useState("");
   const [productDialogOpen, setProductDialogOpen] = useState(false);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [orderStatusFilter, setOrderStatusFilter] = useState("all");
@@ -305,6 +307,43 @@ export default function ShopDashboard() {
   });
 
   const { data: categories } = useQuery<Category[]>({ queryKey: ["/api/categories"] });
+
+  type WorkerUser = { id: string; name: string; email: string; avatarUrl?: string | null };
+  type ShopWorkerWithUser = { id: string; shopId: string; userId: string; createdAt?: string; user?: WorkerUser };
+  const { data: workersData } = useQuery<{ workers: ShopWorkerWithUser[]; isOwner: boolean }>({
+    queryKey: ["/api/shops/my/workers"],
+    enabled: !!myShop?.id,
+  });
+  const isOwner = myShop ? (myShop.ownerId === user?.id) : (workersData?.isOwner ?? true);
+  const workers = workersData?.workers ?? [];
+
+  const inviteWorkerMutation = useMutation({
+    mutationFn: ({ email, name }: { email: string; name?: string }) =>
+      apiRequest("POST", "/api/shops/my/workers/invite", { email, name }),
+    onSuccess: (data: any) => {
+      const msg = data.isNew
+        ? `Создан аккаунт для ${data.user?.email}. Сообщите сотруднику его email и попросите использовать «Забыл пароль» для входа.`
+        : `${data.user?.name} добавлен в магазин`;
+      toast({ title: "Сотрудник добавлен", description: msg });
+      setInviteEmail("");
+      setInviteName("");
+      qc.invalidateQueries({ queryKey: ["/api/shops/my/workers"] });
+    },
+    onError: (err: any) => {
+      let msg = "Ошибка";
+      try { msg = JSON.parse(err.message.slice(err.message.indexOf("{"))).error; } catch {}
+      toast({ title: "Ошибка", description: msg, variant: "destructive" });
+    },
+  });
+
+  const removeWorkerMutation = useMutation({
+    mutationFn: (userId: string) => apiRequest("DELETE", `/api/shops/my/workers/${userId}`, {}),
+    onSuccess: () => {
+      toast({ title: "Сотрудник удалён" });
+      qc.invalidateQueries({ queryKey: ["/api/shops/my/workers"] });
+    },
+    onError: () => toast({ title: "Ошибка удаления", variant: "destructive" }),
+  });
 
   const deleteProductMutation = useMutation({
     mutationFn: (id: string) => apiRequest("DELETE", `/api/products/${id}`, {}),
@@ -433,13 +472,17 @@ export default function ShopDashboard() {
           });
         }
       }}>
-        <TabsList className="mb-6">
+        <TabsList className="mb-6 flex-wrap h-auto">
           <TabsTrigger value="products">Товары</TabsTrigger>
           <TabsTrigger value="orders">
             Заказы {pendingOrders > 0 && <Badge className="ml-1.5">{pendingOrders}</Badge>}
           </TabsTrigger>
           <TabsTrigger value="reviews">Отзывы</TabsTrigger>
-          <TabsTrigger value="settings">Настройки</TabsTrigger>
+          {isOwner && <TabsTrigger value="workers" data-testid="tab-workers">
+            <Users className="w-4 h-4 mr-1.5" />
+            Сотрудники {workers.length > 0 && <Badge variant="secondary" className="ml-1.5">{workers.length}</Badge>}
+          </TabsTrigger>}
+          {isOwner && <TabsTrigger value="settings">Настройки</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="products">
@@ -896,6 +939,101 @@ export default function ShopDashboard() {
               <p>Отзывов пока нет</p>
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="workers">
+          <div className="space-y-6">
+            <div>
+              <h3 className="font-semibold text-lg mb-1">Сотрудники магазина</h3>
+              <p className="text-sm text-muted-foreground">Добавьте сотрудников, которые смогут управлять товарами и заказами вашего магазина</p>
+            </div>
+
+            <Card>
+              <CardContent className="pt-5 space-y-3">
+                <h4 className="font-medium flex items-center gap-2"><UserPlus className="w-4 h-4 text-primary" /> Добавить сотрудника</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Input
+                    placeholder="Email сотрудника *"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    type="email"
+                    data-testid="input-worker-email"
+                  />
+                  <Input
+                    placeholder="Имя (если нет аккаунта)"
+                    value={inviteName}
+                    onChange={(e) => setInviteName(e.target.value)}
+                    data-testid="input-worker-name"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Если пользователь с таким email уже зарегистрирован — он будет добавлен в магазин. Если нет — создадим аккаунт автоматически.
+                </p>
+                <Button
+                  onClick={() => {
+                    if (!inviteEmail.trim()) return;
+                    inviteWorkerMutation.mutate({ email: inviteEmail.trim(), name: inviteName.trim() || undefined });
+                  }}
+                  disabled={inviteWorkerMutation.isPending || !inviteEmail.trim()}
+                  data-testid="button-invite-worker"
+                >
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  {inviteWorkerMutation.isPending ? "Добавляем..." : "Добавить сотрудника"}
+                </Button>
+              </CardContent>
+            </Card>
+
+            <div className="space-y-3">
+              <h4 className="font-medium">Текущие сотрудники ({workers.length})</h4>
+              {workers.length === 0 ? (
+                <div className="text-center py-10 text-muted-foreground">
+                  <Users className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                  <p className="text-sm">Сотрудников пока нет</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {workers.map((w) => (
+                    <Card key={w.id} className="overflow-hidden" data-testid={`card-worker-${w.userId}`}>
+                      <CardContent className="p-4 flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-primary font-semibold text-sm">
+                          {w.user?.name?.[0]?.toUpperCase() || "?"}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm">{w.user?.name || "Неизвестный"}</p>
+                          <p className="text-xs text-muted-foreground">{w.user?.email}</p>
+                        </div>
+                        <Badge variant="secondary" className="text-xs shrink-0">Сотрудник</Badge>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive shrink-0"
+                          onClick={() => removeWorkerMutation.mutate(w.userId)}
+                          disabled={removeWorkerMutation.isPending}
+                          data-testid={`button-remove-worker-${w.userId}`}
+                        >
+                          <UserMinus className="w-4 h-4" />
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <Card className="border-primary/20 bg-primary/5">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <Crown className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium">Права сотрудников</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Сотрудники могут управлять товарами и заказами. Настройки магазина, зоны доставки и управление сотрудниками доступны только владельцу.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="settings">

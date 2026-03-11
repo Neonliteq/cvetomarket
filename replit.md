@@ -26,6 +26,7 @@ A full-featured flower marketplace (маркетплейс цветочных м
 - Platform commission calculation (configurable via admin panel)
 - Test payment mode (card/cash)
 - User blocking (blocked users cannot log in)
+- Shop workers: owners can add/remove workers by email; workers access products/orders but not settings or worker management
 
 ## Admin Panel Features
 1. **Shop Moderation** - Approve/reject shops, filter by status (all/pending/approved/rejected)
@@ -65,7 +66,7 @@ A full-featured flower marketplace (маркетплейс цветочных м
 - API key stored in `VITE_YANDEX_MAPS_API_KEY` secret
 
 ## Database Tables
-- users (with isBlocked, avatarUrl fields), shops (with logoUrl, coverUrl, deliveryZones jsonb), products, orders, order_items, reviews, messages, categories, cities, platform_settings
+- users (with isBlocked, avatarUrl fields), shops (with logoUrl, coverUrl, deliveryZones jsonb), products, orders, order_items, reviews, messages, categories, cities, platform_settings, shop_workers (shopId + userId junction table for worker access)
 
 ## Important Patterns
 - Auth-protected pages must check `isLoading` before redirecting: `if (isLoading) return null; if (!user) { navigate("/auth"); return null; }`

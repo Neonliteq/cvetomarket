@@ -217,7 +217,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.get("/api/shops/my", requireRole("shop"), async (req, res) => {
     const user = (req as any).user;
-    const shop = await storage.getShopByOwnerId(user.id);
+    const shop = await storage.getShopForUser(user.id);
     if (!shop) return res.status(404).json({ error: "Shop not found" });
     const [enriched] = await enrichShops([shop]);
     res.json(enriched);
@@ -261,6 +261,59 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.json(shop);
   });
 
+  // ---- SHOP WORKERS ----
+  app.get("/api/shops/my/workers", requireRole("shop"), async (req, res) => {
+    const user = (req as any).user;
+    const shop = await storage.getShopForUser(user.id);
+    if (!shop) return res.status(404).json({ error: "Shop not found" });
+    const workers = await storage.getShopWorkers(shop.id);
+    res.json({ workers, isOwner: shop.ownerId === user.id });
+  });
+
+  app.post("/api/shops/my/workers/invite", requireRole("shop"), async (req, res) => {
+    const user = (req as any).user;
+    const shop = await storage.getShopForUser(user.id);
+    if (!shop) return res.status(404).json({ error: "Shop not found" });
+    if (shop.ownerId !== user.id) return res.status(403).json({ error: "Только владелец может добавлять сотрудников" });
+
+    const { email, name } = req.body;
+    if (!email) return res.status(400).json({ error: "Email обязателен" });
+
+    let target = await storage.getUserByEmail(email);
+    let isNew = false;
+    if (!target) {
+      const tempPassword = Math.random().toString(36).slice(-10);
+      const bcrypt = await import("bcrypt");
+      const hash = await bcrypt.hash(tempPassword, 10);
+      target = await storage.createUser({ email, password: hash, name: name || email.split("@")[0], role: "shop" });
+      isNew = true;
+    } else if (target.role !== "shop") {
+      return res.status(400).json({ error: "Пользователь с таким email не является продавцом" });
+    }
+
+    if (target.id === shop.ownerId) return res.status(400).json({ error: "Это владелец магазина" });
+
+    const alreadyWorker = await storage.isShopWorker(shop.id, target.id);
+    if (alreadyWorker) return res.status(400).json({ error: "Пользователь уже является сотрудником" });
+
+    const alreadyInOtherShop = await storage.getShopForUser(target.id);
+    if (alreadyInOtherShop && alreadyInOtherShop.id !== shop.id) {
+      return res.status(400).json({ error: "Пользователь уже работает в другом магазине" });
+    }
+
+    await storage.addShopWorker(shop.id, target.id);
+    res.json({ ok: true, isNew, user: { id: target.id, name: target.name, email: target.email } });
+  });
+
+  app.delete("/api/shops/my/workers/:userId", requireRole("shop"), async (req, res) => {
+    const user = (req as any).user;
+    const shop = await storage.getShopForUser(user.id);
+    if (!shop) return res.status(404).json({ error: "Shop not found" });
+    if (shop.ownerId !== user.id) return res.status(403).json({ error: "Только владелец может удалять сотрудников" });
+    await storage.removeShopWorker(shop.id, req.params.userId);
+    res.json({ ok: true });
+  });
+
   // ---- PRODUCTS ----
   app.get("/api/products", async (_req, res) => {
     const list = await storage.getProducts();
@@ -286,7 +339,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.post("/api/products", requireRole("shop"), async (req, res) => {
     const user = (req as any).user;
-    const shop = await storage.getShopByOwnerId(user.id);
+    const shop = await storage.getShopForUser(user.id);
     if (!shop) return res.status(403).json({ error: "No shop" });
     const p = await storage.createProduct({ ...req.body, shopId: shop.id });
     res.json(p);
@@ -333,7 +386,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.get("/api/orders/shop", requireRole("shop"), async (req, res) => {
     const user = (req as any).user;
-    const shop = await storage.getShopByOwnerId(user.id);
+    const shop = await storage.getShopForUser(user.id);
     if (!shop) return res.json([]);
     const ordersList = await storage.getOrdersByShop(shop.id);
     const allUsers = await storage.getAllUsers();
@@ -556,7 +609,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
 
     if (user.role === "shop") {
-      const shop = await storage.getShopByOwnerId(userId);
+      const shop = await storage.getShopForUser(userId);
       if (shop) {
         const orders = await storage.getOrdersByShop(shop.id);
         const newOrders = orders.filter((o) => o.status === "new");

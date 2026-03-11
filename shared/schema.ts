@@ -124,6 +124,13 @@ export const messages = pgTable("messages", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const shopWorkers = pgTable("shop_workers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  shopId: varchar("shop_id").notNull().references(() => shops.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const platformSettings = pgTable("platform_settings", {
   id: varchar("id").primaryKey().default("global"),
   commissionRate: decimal("commission_rate", { precision: 5, scale: 2 }).default("10"),
@@ -139,6 +146,7 @@ export const insertReviewSchema = createInsertSchema(reviews).omit({ id: true, c
 export const insertMessageSchema = createInsertSchema(messages).omit({ id: true, createdAt: true });
 export const insertCategorySchema = createInsertSchema(categories).omit({ id: true });
 export const insertCitySchema = createInsertSchema(cities).omit({ id: true });
+export const insertShopWorkerSchema = createInsertSchema(shopWorkers).omit({ id: true, createdAt: true });
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -159,3 +167,5 @@ export type InsertCategory = z.infer<typeof insertCategorySchema>;
 export type City = typeof cities.$inferSelect;
 export type InsertCity = z.infer<typeof insertCitySchema>;
 export type PlatformSettings = typeof platformSettings.$inferSelect;
+export type ShopWorker = typeof shopWorkers.$inferSelect;
+export type InsertShopWorker = z.infer<typeof insertShopWorkerSchema>;
