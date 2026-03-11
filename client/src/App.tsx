@@ -21,6 +21,7 @@ import ShopDashboard from "@/pages/ShopDashboard";
 import Admin from "@/pages/Admin";
 import Chat from "@/pages/Chat";
 import DeliveryAndPayment from "@/pages/DeliveryAndPayment";
+import TermsOfUse from "@/pages/TermsOfUse";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -42,6 +43,7 @@ function Router() {
           <Route path="/admin" component={Admin} />
           <Route path="/chat" component={Chat} />
           <Route path="/delivery-and-payment" component={DeliveryAndPayment} />
+          <Route path="/terms-of-use" component={TermsOfUse} />
           <Route component={NotFound} />
         </Switch>
       </main>
