@@ -45,6 +45,7 @@ export const shops = pgTable("shops", {
   deliveryZone: text("delivery_zone"),
   deliveryZones: jsonb("delivery_zones").default([]),
   workingHours: text("working_hours"),
+  commissionRate: decimal("commission_rate", { precision: 5, scale: 2 }),
   status: text("status").notNull().default("pending"),
   rating: decimal("rating", { precision: 3, scale: 2 }).default("0"),
   reviewCount: integer("review_count").default(0),

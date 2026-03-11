@@ -419,7 +419,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
 
       const settings = await storage.getSettings();
-      const commission = settings ? (totalAmount * Number(settings.commissionRate)) / 100 : 0;
+      const shopForCommission = await storage.getShop(shopId);
+      const effectiveRate = shopForCommission?.commissionRate != null
+        ? Number(shopForCommission.commissionRate)
+        : (settings ? Number(settings.commissionRate) : 10);
+      const commission = (totalAmount * effectiveRate) / 100;
       const order = await storage.createOrder({
         ...orderData,
         shopId,
@@ -796,6 +800,112 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
     }
     res.json({ ok: true });
+  });
+
+  // Per-shop commission override (admin)
+  app.patch("/api/admin/shops/:id/commission", requireRole("admin"), async (req, res) => {
+    const { commissionRate } = req.body;
+    const val = commissionRate === "" || commissionRate === null ? null : Number(commissionRate);
+    const shop = await storage.updateShop(req.params.id, { commissionRate: val as any });
+    res.json(shop);
+  });
+
+  // Payouts: per-shop financial summary
+  app.get("/api/admin/payouts", requireRole("admin"), async (req, res) => {
+    const allOrders = await storage.getAllOrders();
+    const allShops = await storage.getShops();
+    const settings = await storage.getSettings();
+    const globalRate = settings ? Number(settings.commissionRate) : 10;
+
+    const shopMap = Object.fromEntries(allShops.map((s) => [s.id, s]));
+
+    const byShop: Record<string, { shopId: string; shopName: string; commissionRate: number; orderCount: number; revenue: number; commission: number; payout: number }> = {};
+
+    for (const o of allOrders) {
+      if (o.status === "cancelled") continue;
+      const shop = shopMap[o.shopId];
+      if (!shop) continue;
+      const rate = shop.commissionRate != null ? Number(shop.commissionRate) : globalRate;
+      if (!byShop[o.shopId]) {
+        byShop[o.shopId] = { shopId: o.shopId, shopName: shop.name, commissionRate: rate, orderCount: 0, revenue: 0, commission: 0, payout: 0 };
+      }
+      const entry = byShop[o.shopId];
+      const amount = Number(o.totalAmount) - Number(o.deliveryCost || 0);
+      entry.orderCount++;
+      entry.revenue += Number(o.totalAmount);
+      entry.commission += Number(o.platformCommission || 0);
+    }
+
+    for (const entry of Object.values(byShop)) {
+      entry.payout = Math.round((entry.revenue - entry.commission) * 100) / 100;
+      entry.revenue = Math.round(entry.revenue * 100) / 100;
+      entry.commission = Math.round(entry.commission * 100) / 100;
+    }
+
+    res.json(Object.values(byShop).sort((a, b) => b.revenue - a.revenue));
+  });
+
+  // Financial analytics with filters
+  app.get("/api/admin/financial-analytics", requireRole("admin"), async (req, res) => {
+    const { shopId, period } = req.query as { shopId?: string; period?: string };
+    const allOrders = await storage.getAllOrders();
+    const allShops = await storage.getShops();
+    const shopMap = Object.fromEntries(allShops.map((s) => [s.id, s.name]));
+
+    const now = new Date();
+    let since: Date | null = null;
+    if (period === "week") since = new Date(now.getTime() - 7 * 86400000);
+    else if (period === "month") since = new Date(now.getTime() - 30 * 86400000);
+    else if (period === "quarter") since = new Date(now.getTime() - 90 * 86400000);
+    else if (period === "year") since = new Date(now.getTime() - 365 * 86400000);
+
+    let filtered = allOrders.filter((o) => o.status !== "cancelled");
+    if (shopId && shopId !== "all") filtered = filtered.filter((o) => o.shopId === shopId);
+    if (since) filtered = filtered.filter((o) => o.createdAt && new Date(o.createdAt) >= since!);
+
+    const totalRevenue = filtered.reduce((s, o) => s + Number(o.totalAmount), 0);
+    const totalCommission = filtered.reduce((s, o) => s + Number(o.platformCommission || 0), 0);
+    const totalPayout = totalRevenue - totalCommission;
+
+    // Daily breakdown
+    const dailyMap: Record<string, { date: string; revenue: number; commission: number; payout: number; orders: number }> = {};
+    for (const o of filtered) {
+      if (!o.createdAt) continue;
+      const day = new Date(o.createdAt).toISOString().slice(0, 10);
+      if (!dailyMap[day]) dailyMap[day] = { date: day, revenue: 0, commission: 0, payout: 0, orders: 0 };
+      dailyMap[day].revenue += Number(o.totalAmount);
+      dailyMap[day].commission += Number(o.platformCommission || 0);
+      dailyMap[day].orders++;
+    }
+    const daily = Object.values(dailyMap).sort((a, b) => a.date.localeCompare(b.date)).map((d) => ({
+      ...d,
+      revenue: Math.round(d.revenue),
+      commission: Math.round(d.commission),
+      payout: Math.round(d.revenue - d.commission),
+    }));
+
+    // Per-shop breakdown (for "all shops" view)
+    const perShop: Record<string, { shopId: string; shopName: string; revenue: number; commission: number; payout: number; orders: number }> = {};
+    for (const o of filtered) {
+      if (!perShop[o.shopId]) perShop[o.shopId] = { shopId: o.shopId, shopName: shopMap[o.shopId] || "Неизвестный", revenue: 0, commission: 0, payout: 0, orders: 0 };
+      perShop[o.shopId].revenue += Number(o.totalAmount);
+      perShop[o.shopId].commission += Number(o.platformCommission || 0);
+      perShop[o.shopId].orders++;
+    }
+    for (const e of Object.values(perShop)) {
+      e.payout = Math.round((e.revenue - e.commission) * 100) / 100;
+      e.revenue = Math.round(e.revenue * 100) / 100;
+      e.commission = Math.round(e.commission * 100) / 100;
+    }
+
+    res.json({
+      totalRevenue: Math.round(totalRevenue),
+      totalCommission: Math.round(totalCommission),
+      totalPayout: Math.round(totalPayout),
+      orderCount: filtered.length,
+      daily,
+      perShop: Object.values(perShop).sort((a, b) => b.revenue - a.revenue),
+    });
   });
 
   app.get("/api/shops/:id/owner", requireAuth, async (req, res) => {

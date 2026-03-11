@@ -29,13 +29,15 @@ A full-featured flower marketplace (маркетплейс цветочных м
 - Shop workers: owners can add/remove workers by email; workers access products/orders but not settings or worker management
 
 ## Admin Panel Features
-1. **Shop Moderation** - Approve/reject shops, filter by status (all/pending/approved/rejected)
+1. **Shop Moderation** - Approve/reject shops, filter by status (all/pending/approved/rejected), set per-shop commission rate inline
 2. **User Management** - Block/unblock users (toggle), view registration date and role
 3. **Order Management** - View all orders, change order status via dropdown, filter by status
 4. **Category Management** - Add/delete categories (with FK constraint protection)
 5. **City Management** - Add/delete cities (with FK constraint protection)
-6. **Analytics Dashboard** - Revenue stats (total/monthly/weekly), commission earned, avg order value, order status breakdown, top shops by revenue, daily revenue chart, user/shop counts
-7. **Platform Settings** - Configure commission rate (%) and delivery cost (₽)
+6. **Выплаты (Payouts)** - Per-shop payout table: revenue, platform commission, amount owed to each shop (all-time)
+7. **Финансы (Financial Analytics)** - Revenue/commission breakdown filtered by shop + time period (week/month/quarter/year/all); daily bar chart + per-shop table
+8. **Analytics Dashboard** - Revenue stats (total/monthly/weekly), commission earned, avg order value, order status breakdown, top shops by revenue, daily revenue chart, user/shop counts
+9. **Platform Settings** - Configure global commission rate (%) and delivery cost (₽)
 
 ## Pages
 - `/` - Home (hero, featured products, shops)

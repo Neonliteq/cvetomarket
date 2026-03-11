@@ -4,7 +4,8 @@ import { useLocation } from "wouter";
 import {
   CheckCircle, XCircle, Users, Store, Package, Settings, Plus, Trash2,
   BarChart3, MapPin, Tag, ShieldAlert, ShieldCheck, TrendingUp, DollarSign,
-  Ban, UserCheck, Eye, ChevronDown, Edit, ShoppingBag, EyeOff, FileText
+  Ban, UserCheck, Eye, ChevronDown, Edit, ShoppingBag, EyeOff, FileText,
+  Wallet, Receipt, Percent, ArrowDownRight, Filter, ChevronsUpDown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -50,6 +51,25 @@ type Analytics = {
   avgOrderValue: number;
 };
 
+type PayoutRow = {
+  shopId: string;
+  shopName: string;
+  commissionRate: number;
+  orderCount: number;
+  revenue: number;
+  commission: number;
+  payout: number;
+};
+
+type FinancialAnalytics = {
+  totalRevenue: number;
+  totalCommission: number;
+  totalPayout: number;
+  orderCount: number;
+  daily: { date: string; revenue: number; commission: number; payout: number; orders: number }[];
+  perShop: { shopId: string; shopName: string; revenue: number; commission: number; payout: number; orders: number }[];
+};
+
 const ORDER_STATUSES = [
   { value: "new", label: "Новый", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" },
   { value: "confirmed", label: "Подтверждён", color: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200" },
@@ -82,6 +102,10 @@ export default function Admin() {
   const [editShopData, setEditShopData] = useState<Record<string, string>>({});
   const [editProductId, setEditProductId] = useState<string | null>(null);
   const [editProductData, setEditProductData] = useState<Record<string, string>>({});
+  const [editCommissionShopId, setEditCommissionShopId] = useState<string | null>(null);
+  const [editCommissionValue, setEditCommissionValue] = useState("");
+  const [financeShopFilter, setFinanceShopFilter] = useState("all");
+  const [financePeriod, setFinancePeriod] = useState("month");
 
   const isAdmin = !!user && user.role === "admin";
 
@@ -109,6 +133,16 @@ export default function Admin() {
   });
   const { data: analytics, isLoading: loadingAnalytics } = useQuery<Analytics>({
     queryKey: ["/api/admin/analytics"],
+    enabled: isAdmin,
+  });
+  const { data: payouts, isLoading: loadingPayouts } = useQuery<PayoutRow[]>({
+    queryKey: ["/api/admin/payouts"],
+    enabled: isAdmin,
+  });
+  const finQueryKey = ["/api/admin/financial-analytics", financeShopFilter, financePeriod];
+  const { data: finAnalytics, isLoading: loadingFin } = useQuery<FinancialAnalytics>({
+    queryKey: finQueryKey,
+    queryFn: () => fetch(`/api/admin/financial-analytics?shopId=${financeShopFilter}&period=${financePeriod}`, { credentials: "include" }).then((r) => r.json()),
     enabled: isAdmin,
   });
 
@@ -211,6 +245,19 @@ export default function Admin() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["/api/admin/products"] }),
   });
 
+  const setShopCommissionMutation = useMutation({
+    mutationFn: ({ id, commissionRate }: { id: string; commissionRate: string }) =>
+      apiRequest("PATCH", `/api/admin/shops/${id}/commission`, { commissionRate: commissionRate === "" ? null : commissionRate }),
+    onSuccess: () => {
+      toast({ title: "Комиссия магазина обновлена" });
+      setEditCommissionShopId(null);
+      setEditCommissionValue("");
+      qc.invalidateQueries({ queryKey: ["/api/admin/shops"] });
+      qc.invalidateQueries({ queryKey: ["/api/admin/payouts"] });
+    },
+    onError: () => toast({ title: "Ошибка", variant: "destructive" }),
+  });
+
   const updateSettingsMutation = useMutation({
     mutationFn: () => {
       const payload: any = {};
@@ -291,8 +338,16 @@ export default function Admin() {
             <MapPin className="w-4 h-4 mr-1.5" />
             Города
           </TabsTrigger>
-          <TabsTrigger value="analytics" data-testid="tab-analytics">
+          <TabsTrigger value="payouts" data-testid="tab-payouts">
+            <Wallet className="w-4 h-4 mr-1.5" />
+            Выплаты
+          </TabsTrigger>
+          <TabsTrigger value="finances" data-testid="tab-finances">
             <BarChart3 className="w-4 h-4 mr-1.5" />
+            Финансы
+          </TabsTrigger>
+          <TabsTrigger value="analytics" data-testid="tab-analytics">
+            <TrendingUp className="w-4 h-4 mr-1.5" />
             Аналитика
           </TabsTrigger>
           <TabsTrigger value="settings" data-testid="tab-settings">
@@ -356,6 +411,40 @@ export default function Admin() {
                         {shop.address && (
                           <p className="text-xs text-muted-foreground mt-1">{shop.address}</p>
                         )}
+                        <div className="flex items-center gap-2 mt-2">
+                          {editCommissionShopId === shop.id ? (
+                            <div className="flex items-center gap-1.5">
+                              <Input
+                                type="number"
+                                min="0" max="100" step="0.5"
+                                value={editCommissionValue}
+                                onChange={(e) => setEditCommissionValue(e.target.value)}
+                                placeholder="% (пусто = глобальная)"
+                                className="h-7 w-36 text-xs"
+                                data-testid={`input-commission-shop-${shop.id}`}
+                              />
+                              <Button size="sm" className="h-7 px-2 text-xs" onClick={() => setShopCommissionMutation.mutate({ id: shop.id, commissionRate: editCommissionValue })} disabled={setShopCommissionMutation.isPending}>
+                                Сохранить
+                              </Button>
+                              <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => { setEditCommissionShopId(null); setEditCommissionValue(""); }}>
+                                Отмена
+                              </Button>
+                            </div>
+                          ) : (
+                            <button
+                              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                              onClick={() => { setEditCommissionShopId(shop.id); setEditCommissionValue(shop.commissionRate?.toString() || ""); }}
+                              data-testid={`button-commission-shop-${shop.id}`}
+                            >
+                              <Percent className="w-3 h-3" />
+                              {shop.commissionRate != null
+                                ? <span className="font-medium text-primary">Комиссия: {shop.commissionRate}% (индивидуальная)</span>
+                                : <span>Комиссия: глобальная ({settings?.commissionRate || "10"}%)</span>
+                              }
+                              <Edit className="w-3 h-3 ml-0.5" />
+                            </button>
+                          )}
+                        </div>
                       </div>
                       <div className="flex flex-col gap-2 shrink-0">
                         <div className="flex gap-2">
@@ -680,6 +769,229 @@ export default function Admin() {
               ))}
               {!cities?.length && <p className="text-center text-sm text-muted-foreground py-8">Нет городов</p>}
             </div>
+          </div>
+        </TabsContent>
+
+        {/* ==================== PAYOUTS ==================== */}
+        <TabsContent value="payouts">
+          <div className="space-y-6">
+            <div>
+              <h3 className="font-semibold text-lg mb-1">Выплаты магазинам</h3>
+              <p className="text-sm text-muted-foreground">Сводка по каждому магазину: оборот, комиссия платформы и сумма к выплате</p>
+            </div>
+
+            {loadingPayouts ? (
+              <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-lg" />)}</div>
+            ) : payouts && payouts.length > 0 ? (
+              <>
+                {/* Totals summary bar */}
+                <div className="grid grid-cols-3 gap-4">
+                  {[
+                    { label: "Общий оборот", value: payouts.reduce((s, p) => s + p.revenue, 0), color: "text-foreground" },
+                    { label: "Комиссия платформы", value: payouts.reduce((s, p) => s + p.commission, 0), color: "text-green-600 dark:text-green-400" },
+                    { label: "К выплате магазинам", value: payouts.reduce((s, p) => s + p.payout, 0), color: "text-primary" },
+                  ].map((item) => (
+                    <Card key={item.label}>
+                      <CardContent className="p-4">
+                        <p className="text-xs text-muted-foreground mb-1">{item.label}</p>
+                        <p className={`text-xl font-bold ${item.color}`} data-testid={`text-payout-total-${item.label}`}>
+                          {item.value.toLocaleString("ru-RU")} ₽
+                        </p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+
+                {/* Per-shop table */}
+                <Card>
+                  <CardContent className="p-0 overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b bg-muted/50">
+                          <th className="text-left px-4 py-3 font-medium text-muted-foreground">Магазин</th>
+                          <th className="text-right px-4 py-3 font-medium text-muted-foreground">Заказов</th>
+                          <th className="text-right px-4 py-3 font-medium text-muted-foreground">Ставка</th>
+                          <th className="text-right px-4 py-3 font-medium text-muted-foreground">Оборот</th>
+                          <th className="text-right px-4 py-3 font-medium text-muted-foreground text-green-600">Комиссия</th>
+                          <th className="text-right px-4 py-3 font-medium text-primary">К выплате</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {payouts.map((row) => (
+                          <tr key={row.shopId} className="border-b last:border-0 hover:bg-muted/30 transition-colors" data-testid={`row-payout-${row.shopId}`}>
+                            <td className="px-4 py-3 font-medium">{row.shopName}</td>
+                            <td className="px-4 py-3 text-right text-muted-foreground">{row.orderCount}</td>
+                            <td className="px-4 py-3 text-right">
+                              <Badge variant="outline" className="text-xs font-mono">{row.commissionRate}%</Badge>
+                            </td>
+                            <td className="px-4 py-3 text-right font-medium">{row.revenue.toLocaleString("ru-RU")} ₽</td>
+                            <td className="px-4 py-3 text-right font-medium text-green-600 dark:text-green-400">{row.commission.toLocaleString("ru-RU")} ₽</td>
+                            <td className="px-4 py-3 text-right font-bold text-primary">{row.payout.toLocaleString("ru-RU")} ₽</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </CardContent>
+                </Card>
+                <p className="text-xs text-muted-foreground">* Данные по всем заказам кроме отменённых. Для изменения ставки комиссии магазина перейдите во вкладку «Магазины».</p>
+              </>
+            ) : (
+              <div className="text-center py-16 text-muted-foreground">
+                <Wallet className="w-12 h-12 mx-auto mb-3 opacity-25" />
+                <p>Нет данных для выплат</p>
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
+        {/* ==================== FINANCES ==================== */}
+        <TabsContent value="finances">
+          <div className="space-y-6">
+            {/* Filters */}
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-muted-foreground" />
+                <Select value={financeShopFilter} onValueChange={setFinanceShopFilter}>
+                  <SelectTrigger className="w-48" data-testid="select-finance-shop">
+                    <SelectValue placeholder="Все магазины" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Все магазины</SelectItem>
+                    {shops?.filter((s) => s.status === "approved").map((s) => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Select value={financePeriod} onValueChange={setFinancePeriod}>
+                <SelectTrigger className="w-40" data-testid="select-finance-period">
+                  <SelectValue placeholder="Период" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="week">Неделя</SelectItem>
+                  <SelectItem value="month">Месяц</SelectItem>
+                  <SelectItem value="quarter">Квартал</SelectItem>
+                  <SelectItem value="year">Год</SelectItem>
+                  <SelectItem value="all">Всё время</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {loadingFin ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-3 gap-4">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-lg" />)}</div>
+                <Skeleton className="h-40 rounded-lg" />
+              </div>
+            ) : finAnalytics ? (
+              <div className="space-y-6">
+                {/* Summary cards */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  {[
+                    { label: "Оборот", value: finAnalytics.totalRevenue, color: "text-foreground", icon: TrendingUp },
+                    { label: "Комиссия платформы", value: finAnalytics.totalCommission, color: "text-green-600 dark:text-green-400", icon: Receipt },
+                    { label: "К выплате", value: finAnalytics.totalPayout, color: "text-primary", icon: Wallet },
+                    { label: "Заказов", value: finAnalytics.orderCount, color: "text-foreground", icon: Package, isCount: true },
+                  ].map((item) => (
+                    <Card key={item.label}>
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-2 mb-1">
+                          <item.icon className="w-4 h-4 text-muted-foreground" />
+                          <p className="text-xs text-muted-foreground">{item.label}</p>
+                        </div>
+                        <p className={`text-xl font-bold ${item.color}`} data-testid={`text-fin-${item.label}`}>
+                          {(item as any).isCount ? item.value : `${item.value.toLocaleString("ru-RU")} ₽`}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+
+                {/* Daily chart */}
+                {finAnalytics.daily.length > 0 ? (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base">Оборот / комиссия по дням</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-1">
+                        {(() => {
+                          const maxVal = Math.max(...finAnalytics.daily.map((d) => d.revenue), 1);
+                          return finAnalytics.daily.map((d) => (
+                            <div key={d.date} className="flex items-center gap-2 group" data-testid={`bar-fin-${d.date}`}>
+                              <span className="text-xs text-muted-foreground w-24 shrink-0">
+                                {format(new Date(d.date), "d MMM", { locale: ru })}
+                              </span>
+                              <div className="flex-1 relative h-6 bg-muted rounded overflow-hidden">
+                                <div
+                                  className="absolute inset-y-0 left-0 bg-primary/20 rounded"
+                                  style={{ width: `${(d.revenue / maxVal) * 100}%` }}
+                                />
+                                <div
+                                  className="absolute inset-y-0 left-0 bg-green-500/40 rounded"
+                                  style={{ width: `${(d.commission / maxVal) * 100}%` }}
+                                />
+                              </div>
+                              <div className="text-xs text-right shrink-0 w-32 hidden group-hover:flex gap-2 absolute right-4 bg-popover border rounded px-2 py-1 shadow-sm z-10">
+                                <span>{d.revenue.toLocaleString("ru-RU")} ₽</span>
+                              </div>
+                              <span className="text-xs font-medium w-28 text-right shrink-0">
+                                {d.revenue.toLocaleString("ru-RU")} ₽
+                              </span>
+                            </div>
+                          ));
+                        })()}
+                      </div>
+                      <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-primary/20 inline-block" />Оборот</span>
+                        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-green-500/40 inline-block" />Комиссия</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <Card>
+                    <CardContent className="py-8 text-center text-muted-foreground text-sm">Нет данных за выбранный период</CardContent>
+                  </Card>
+                )}
+
+                {/* Per-shop breakdown (only when "all shops" selected) */}
+                {financeShopFilter === "all" && finAnalytics.perShop.length > 0 && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base">По магазинам</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0 overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b bg-muted/50">
+                            <th className="text-left px-4 py-2 font-medium text-muted-foreground">Магазин</th>
+                            <th className="text-right px-4 py-2 font-medium text-muted-foreground">Заказов</th>
+                            <th className="text-right px-4 py-2 font-medium text-muted-foreground">Оборот</th>
+                            <th className="text-right px-4 py-2 font-medium text-green-600">Комиссия</th>
+                            <th className="text-right px-4 py-2 font-medium text-primary">К выплате</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {finAnalytics.perShop.map((row) => (
+                            <tr key={row.shopId} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                              <td className="px-4 py-2 font-medium">{row.shopName}</td>
+                              <td className="px-4 py-2 text-right text-muted-foreground">{row.orders}</td>
+                              <td className="px-4 py-2 text-right">{row.revenue.toLocaleString("ru-RU")} ₽</td>
+                              <td className="px-4 py-2 text-right text-green-600 dark:text-green-400">{row.commission.toLocaleString("ru-RU")} ₽</td>
+                              <td className="px-4 py-2 text-right font-bold text-primary">{row.payout.toLocaleString("ru-RU")} ₽</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-16 text-muted-foreground">
+                <BarChart3 className="w-12 h-12 mx-auto mb-3 opacity-25" />
+                <p>Нет данных</p>
+              </div>
+            )}
           </div>
         </TabsContent>
 
