@@ -20,6 +20,7 @@ import Account from "@/pages/Account";
 import ShopDashboard from "@/pages/ShopDashboard";
 import Admin from "@/pages/Admin";
 import Chat from "@/pages/Chat";
+import DeliveryAndPayment from "@/pages/DeliveryAndPayment";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -40,6 +41,7 @@ function Router() {
           <Route path="/shop-dashboard" component={ShopDashboard} />
           <Route path="/admin" component={Admin} />
           <Route path="/chat" component={Chat} />
+          <Route path="/delivery-and-payment" component={DeliveryAndPayment} />
           <Route component={NotFound} />
         </Switch>
       </main>

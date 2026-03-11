@@ -135,6 +135,11 @@ export default function Cart() {
               <Link href="/catalog">
                 <Button variant="ghost" className="w-full" size="sm">Продолжить покупки</Button>
               </Link>
+              <Link href="/delivery-and-payment">
+                <p className="text-xs text-center text-muted-foreground hover:text-foreground transition-colors cursor-pointer" data-testid="link-delivery-info-cart">
+                  Условия доставки и оплаты
+                </p>
+              </Link>
             </CardContent>
           </Card>
         </div>

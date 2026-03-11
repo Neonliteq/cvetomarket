@@ -34,7 +34,7 @@ export function Footer() {
         <div className="space-y-2">
           <p className="font-semibold text-sm">Информация</p>
           <div className="space-y-1.5">
-            <p className="text-sm text-muted-foreground">Доставка и оплата</p>
+            <Link href="/delivery-and-payment"><p className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer" data-testid="link-delivery-payment">Доставка и оплата</p></Link>
             <p className="text-sm text-muted-foreground">Условия использования</p>
             <p className="text-sm text-muted-foreground">Политика конфиденциальности</p>
           </div>
