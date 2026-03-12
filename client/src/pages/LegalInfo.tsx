@@ -77,7 +77,11 @@ export default function LegalInfo() {
           <h2 className="text-lg font-bold">Порядок направления претензий</h2>
         </div>
         <div className="pl-12 space-y-2 text-sm text-muted-foreground leading-relaxed">
-          <p>Претензии в адрес ИП Аршинский А.А. принимаются в письменном виде через встроенную систему обратной связи на платформе.</p>
+          <p>Претензии в адрес ИП Аршинский А.А. принимаются в письменном виде:</p>
+          <ul className="list-disc ml-5 space-y-1 mt-1">
+            <li>По электронной почте: <span className="text-foreground font-medium">neonliteq@ya.ru</span></li>
+            <li>Через встроенную систему обратной связи на платформе</li>
+          </ul>
           <p className="mt-2">Срок рассмотрения претензии — 30 календарных дней с момента её получения. По результатам рассмотрения заявителю направляется мотивированный ответ.</p>
         </div>
       </div>
