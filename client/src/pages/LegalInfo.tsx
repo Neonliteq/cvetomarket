@@ -1,7 +1,6 @@
-import { Building2, FileText, Scale, MapPin, Phone, Mail, CreditCard, Shield } from "lucide-react";
+import { Building2, FileText, Scale, Mail } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 
@@ -35,86 +34,13 @@ export default function LegalInfo() {
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
-          <InfoRow label="Полное наименование" value='Общество с ограниченной ответственностью «ЦветоМаркет»' />
-          <InfoRow label="Краткое наименование" value='ООО «ЦветоМаркет»' />
-          <InfoRow label="ОГРН" value="1237700000001" />
-          <InfoRow label="ИНН" value="7700000001" />
-          <InfoRow label="КПП" value="770001001" />
-          <InfoRow label="ОКПО" value="12345678" />
+          <InfoRow label="Полное наименование" value="ИП Аршинский Анатолий Александрович" />
+          <InfoRow label="Организационно-правовая форма" value="Индивидуальный предприниматель" />
+          <InfoRow label="ОГРНИП" value="325390000000813" />
+          <InfoRow label="ИНН" value="672705982625" />
           <InfoRow label="ОКВЭД" value="47.76 — Торговля розничная цветами и другими растениями" />
-          <InfoRow label="Дата регистрации" value="15 марта 2024 г." />
-          <InfoRow label="Регистрирующий орган" value="МИФНС России № 46 по г. Москве" />
         </CardContent>
       </Card>
-
-      {/* Адреса */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
-            <MapPin className="w-4 h-4 text-primary" />
-            Адреса
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <InfoRow label="Юридический адрес" value="125009, г. Москва, ул. Тверская, д. 1, офис 100" />
-          <InfoRow label="Фактический адрес" value="125009, г. Москва, ул. Тверская, д. 1, офис 100" />
-          <InfoRow label="Почтовый адрес" value="125009, г. Москва, ул. Тверская, д. 1" />
-        </CardContent>
-      </Card>
-
-      {/* Банковские реквизиты */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
-            <CreditCard className="w-4 h-4 text-primary" />
-            Банковские реквизиты
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <InfoRow label="Банк" value="ПАО «Сбербанк России»" />
-          <InfoRow label="БИК" value="044525225" />
-          <InfoRow label="Расчётный счёт" value="40702810000000000001" />
-          <InfoRow label="Корреспондентский счёт" value="30101810400000000225" />
-        </CardContent>
-      </Card>
-
-      {/* Контакты */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Phone className="w-4 h-4 text-primary" />
-            Контактные данные
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <InfoRow label="Телефон" value="+7 (495) 000-00-00" />
-          <InfoRow label="Электронная почта" value="legal@tsvetomarket.ru" />
-          <InfoRow label="Сайт" value="tsvetomarket.ru" />
-          <InfoRow label="Режим работы" value="Пн–Пт с 9:00 до 18:00 (МСК)" />
-        </CardContent>
-      </Card>
-
-      <Separator />
-
-      {/* Лицензии и сертификаты */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-            <Shield className="w-4 h-4 text-primary" />
-          </div>
-          <h2 className="text-lg font-bold">Разрешительные документы</h2>
-        </div>
-        <div className="pl-12 space-y-3 text-sm text-muted-foreground">
-          <div className="flex items-start gap-3">
-            <Badge variant="outline" className="mt-0.5 shrink-0">Роскомнадзор</Badge>
-            <p>ООО «ЦветоМаркет» зарегистрировано в реестре операторов персональных данных Роскомнадзора. Регистрационный номер: <span className="font-medium text-foreground">77-0000001</span></p>
-          </div>
-          <div className="flex items-start gap-3">
-            <Badge variant="outline" className="mt-0.5 shrink-0">ОФД</Badge>
-            <p>Передача фискальных данных осуществляется через аккредитованного оператора фискальных данных в соответствии с требованиями Федерального закона № 54-ФЗ.</p>
-          </div>
-        </div>
-      </div>
 
       <Separator />
 
@@ -127,7 +53,7 @@ export default function LegalInfo() {
           <h2 className="text-lg font-bold">Правовой статус платформы</h2>
         </div>
         <div className="pl-12 space-y-2 text-sm text-muted-foreground leading-relaxed">
-          <p>ООО «ЦветоМаркет» осуществляет деятельность в качестве информационного посредника, обеспечивающего взаимодействие между продавцами (цветочными магазинами) и покупателями посредством маркетплейса.</p>
+          <p>ИП Аршинский Анатолий Александрович осуществляет деятельность в качестве информационного посредника, обеспечивающего взаимодействие между продавцами (цветочными магазинами) и покупателями посредством маркетплейса ЦветоМаркет.</p>
           <p>Платформа не является стороной договора купли-продажи, заключаемого между покупателем и продавцом. Ответственность за качество товаров, своевременность доставки и исполнение обязательств по договору несёт продавец.</p>
           <p>Деятельность платформы осуществляется в соответствии с:</p>
           <ul className="list-disc ml-5 space-y-1 mt-1">
@@ -151,12 +77,7 @@ export default function LegalInfo() {
           <h2 className="text-lg font-bold">Порядок направления претензий</h2>
         </div>
         <div className="pl-12 space-y-2 text-sm text-muted-foreground leading-relaxed">
-          <p>Претензии в адрес ООО «ЦветоМаркет» принимаются в письменном виде:</p>
-          <ul className="list-disc ml-5 space-y-1 mt-1">
-            <li>По электронной почте: <span className="text-foreground font-medium">legal@tsvetomarket.ru</span></li>
-            <li>По почтовому адресу: 125009, г. Москва, ул. Тверская, д. 1</li>
-            <li>Через встроенную систему обратной связи на платформе</li>
-          </ul>
+          <p>Претензии в адрес ИП Аршинский А.А. принимаются в письменном виде через встроенную систему обратной связи на платформе.</p>
           <p className="mt-2">Срок рассмотрения претензии — 30 календарных дней с момента её получения. По результатам рассмотрения заявителю направляется мотивированный ответ.</p>
         </div>
       </div>
