@@ -1261,6 +1261,16 @@ export default function ShopDashboard() {
                 </div>
                 <div className="space-y-3">
                   <div>
+                    <label className="text-sm font-medium">Название магазина</label>
+                    <Input
+                      defaultValue={myShop?.name || ""}
+                      key={`name-${myShop?.name}`}
+                      id="shop-name-input"
+                      placeholder="Название вашего магазина"
+                      data-testid="input-shop-name"
+                    />
+                  </div>
+                  <div>
                     <label className="text-sm font-medium">Описание</label>
                     <Textarea
                       defaultValue={myShop?.description || ""}
@@ -1313,12 +1323,17 @@ export default function ShopDashboard() {
                   <Button
                     className="w-full"
                     onClick={() => {
+                      const name = (document.getElementById("shop-name-input") as HTMLInputElement)?.value?.trim();
                       const desc = (document.getElementById("shop-description-input") as HTMLTextAreaElement)?.value;
                       const phone = (document.getElementById("shop-phone-input") as HTMLInputElement)?.value;
                       const address = (document.getElementById("shop-address-input") as HTMLInputElement)?.value;
                       const workingHours = (document.getElementById("shop-hours-input") as HTMLInputElement)?.value;
                       const deliveryZone = (document.getElementById("shop-zone-input") as HTMLInputElement)?.value;
-                      updateShopMutation.mutate({ description: desc, phone, address, workingHours, deliveryZone });
+                      if (!name) {
+                        toast({ title: "Ошибка", description: "Название магазина не может быть пустым", variant: "destructive" });
+                        return;
+                      }
+                      updateShopMutation.mutate({ name, description: desc, phone, address, workingHours, deliveryZone });
                     }}
                     disabled={updateShopMutation.isPending}
                     data-testid="button-save-shop-info"
