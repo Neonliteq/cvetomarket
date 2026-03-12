@@ -327,48 +327,51 @@ export default function Admin() {
       </div>
 
       <Tabs defaultValue="shops">
-        <TabsList className="mb-6 flex-wrap">
-          <TabsTrigger value="shops" data-testid="tab-shops">
-            <Store className="w-4 h-4 mr-1.5" />
-            Магазины {pendingShops.length > 0 && <Badge className="ml-1.5">{pendingShops.length}</Badge>}
+        <div className="overflow-x-auto -mx-4 px-4 mb-6">
+        <TabsList className="h-auto flex-wrap min-w-max gap-1 p-1">
+          <TabsTrigger value="shops" className="gap-1 text-xs sm:text-sm" data-testid="tab-shops">
+            <Store className="w-4 h-4 shrink-0" />
+            <span>Магазины</span>
+            {pendingShops.length > 0 && <Badge className="ml-0.5 h-4 px-1 text-[10px]">{pendingShops.length}</Badge>}
           </TabsTrigger>
-          <TabsTrigger value="users" data-testid="tab-users">
-            <Users className="w-4 h-4 mr-1.5" />
-            Пользователи
+          <TabsTrigger value="users" className="gap-1 text-xs sm:text-sm" data-testid="tab-users">
+            <Users className="w-4 h-4 shrink-0" />
+            <span>Пользователи</span>
           </TabsTrigger>
-          <TabsTrigger value="orders" data-testid="tab-orders">
-            <Package className="w-4 h-4 mr-1.5" />
-            Заказы
+          <TabsTrigger value="orders" className="gap-1 text-xs sm:text-sm" data-testid="tab-orders">
+            <Package className="w-4 h-4 shrink-0" />
+            <span>Заказы</span>
           </TabsTrigger>
-          <TabsTrigger value="products" data-testid="tab-products">
-            <ShoppingBag className="w-4 h-4 mr-1.5" />
-            Товары
+          <TabsTrigger value="products" className="gap-1 text-xs sm:text-sm" data-testid="tab-products">
+            <ShoppingBag className="w-4 h-4 shrink-0" />
+            <span>Товары</span>
           </TabsTrigger>
-          <TabsTrigger value="categories" data-testid="tab-categories">
-            <Tag className="w-4 h-4 mr-1.5" />
-            Категории
+          <TabsTrigger value="categories" className="gap-1 text-xs sm:text-sm" data-testid="tab-categories">
+            <Tag className="w-4 h-4 shrink-0" />
+            <span>Категории</span>
           </TabsTrigger>
-          <TabsTrigger value="cities" data-testid="tab-cities">
-            <MapPin className="w-4 h-4 mr-1.5" />
-            Города
+          <TabsTrigger value="cities" className="gap-1 text-xs sm:text-sm" data-testid="tab-cities">
+            <MapPin className="w-4 h-4 shrink-0" />
+            <span>Города</span>
           </TabsTrigger>
-          <TabsTrigger value="payouts" data-testid="tab-payouts">
-            <Wallet className="w-4 h-4 mr-1.5" />
-            Выплаты
+          <TabsTrigger value="payouts" className="gap-1 text-xs sm:text-sm" data-testid="tab-payouts">
+            <Wallet className="w-4 h-4 shrink-0" />
+            <span>Выплаты</span>
           </TabsTrigger>
-          <TabsTrigger value="finances" data-testid="tab-finances">
-            <BarChart3 className="w-4 h-4 mr-1.5" />
-            Финансы
+          <TabsTrigger value="finances" className="gap-1 text-xs sm:text-sm" data-testid="tab-finances">
+            <BarChart3 className="w-4 h-4 shrink-0" />
+            <span>Финансы</span>
           </TabsTrigger>
-          <TabsTrigger value="analytics" data-testid="tab-analytics">
-            <TrendingUp className="w-4 h-4 mr-1.5" />
-            Аналитика
+          <TabsTrigger value="analytics" className="gap-1 text-xs sm:text-sm" data-testid="tab-analytics">
+            <TrendingUp className="w-4 h-4 shrink-0" />
+            <span>Аналитика</span>
           </TabsTrigger>
-          <TabsTrigger value="settings" data-testid="tab-settings">
-            <Settings className="w-4 h-4 mr-1.5" />
-            Настройки
+          <TabsTrigger value="settings" className="gap-1 text-xs sm:text-sm" data-testid="tab-settings">
+            <Settings className="w-4 h-4 shrink-0" />
+            <span>Настройки</span>
           </TabsTrigger>
         </TabsList>
+        </div>
 
         {/* ==================== SHOPS ==================== */}
         <TabsContent value="shops">
@@ -603,57 +606,59 @@ export default function Admin() {
             <div className="space-y-2">
               {users?.map((u) => (
                 <Card key={u.id} data-testid={`card-user-${u.id}`}>
-                  <CardContent className="p-4 flex items-center gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium text-sm">{u.name}</p>
-                        {u.isBlocked && (
-                          <Badge variant="destructive" className="text-xs gap-1">
-                            <Ban className="w-3 h-3" /> Заблокирован
+                  <CardContent className="p-4">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-medium text-sm">{u.name}</p>
+                          <Badge variant="outline" className="text-xs">
+                            {u.role === "admin" ? "Админ" : u.role === "shop" ? "Продавец" : "Покупатель"}
                           </Badge>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap gap-x-3 text-xs text-muted-foreground mt-0.5">
-                        <span>{u.email}</span>
-                        {u.phone && <span>{u.phone}</span>}
-                        {u.createdAt && <span>Регистрация: {format(new Date(u.createdAt), "d MMM yyyy", { locale: ru })}</span>}
-                      </div>
-                    </div>
-                    <Badge variant="outline">
-                      {u.role === "admin" ? "Админ" : u.role === "shop" ? "Продавец" : "Покупатель"}
-                    </Badge>
-                    {u.role !== "admin" && (
-                      <>
-                        <Button
-                          size="sm"
-                          variant={u.isBlocked ? "default" : "destructive"}
-                          onClick={() => blockUserMutation.mutate(u.id)}
-                          disabled={blockUserMutation.isPending}
-                          className="gap-1.5"
-                          data-testid={`button-block-${u.id}`}
-                        >
-                          {u.isBlocked ? (
-                            <><UserCheck className="w-3.5 h-3.5" /> Разблокировать</>
-                          ) : (
-                            <><Ban className="w-3.5 h-3.5" /> Заблокировать</>
+                          {u.isBlocked && (
+                            <Badge variant="destructive" className="text-xs gap-1">
+                              <Ban className="w-3 h-3" /> Заблокирован
+                            </Badge>
                           )}
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="text-destructive hover:text-destructive shrink-0"
-                          onClick={() => {
-                            if (confirm(`Удалить пользователя «${u.name}»? Это действие необратимо.`)) {
-                              deleteUserMutation.mutate(u.id);
-                            }
-                          }}
-                          disabled={deleteUserMutation.isPending}
-                          data-testid={`button-delete-user-${u.id}`}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </>
-                    )}
+                        </div>
+                        <div className="flex flex-wrap gap-x-3 text-xs text-muted-foreground mt-0.5">
+                          <span>{u.email}</span>
+                          {u.phone && <span>{u.phone}</span>}
+                          {u.createdAt && <span>Рег: {format(new Date(u.createdAt), "d MMM yyyy", { locale: ru })}</span>}
+                        </div>
+                      </div>
+                      {u.role !== "admin" && (
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Button
+                            size="sm"
+                            variant={u.isBlocked ? "default" : "destructive"}
+                            onClick={() => blockUserMutation.mutate(u.id)}
+                            disabled={blockUserMutation.isPending}
+                            className="gap-1.5 text-xs"
+                            data-testid={`button-block-${u.id}`}
+                          >
+                            {u.isBlocked ? (
+                              <><UserCheck className="w-3.5 h-3.5" /> Разблокировать</>
+                            ) : (
+                              <><Ban className="w-3.5 h-3.5" /> Заблокировать</>
+                            )}
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="text-destructive hover:text-destructive shrink-0"
+                            onClick={() => {
+                              if (confirm(`Удалить пользователя «${u.name}»? Это действие необратимо.`)) {
+                                deleteUserMutation.mutate(u.id);
+                              }
+                            }}
+                            disabled={deleteUserMutation.isPending}
+                            data-testid={`button-delete-user-${u.id}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
               ))}

@@ -115,7 +115,7 @@ export class DbStorage implements IStorage {
       await db.delete(messages).where(inArray(messages.orderId, orderIds));
       await db.delete(orderItems).where(inArray(orderItems.orderId, orderIds));
     }
-    await db.delete(messages).where(eq(messages.senderId, id));
+    await db.delete(messages).where(or(eq(messages.senderId, id), eq(messages.receiverId, id)));
     await db.delete(reviews).where(eq(reviews.buyerId, id));
     await db.delete(orders).where(eq(orders.buyerId, id));
     await db.delete(shopWorkers).where(eq(shopWorkers.userId, id));
