@@ -156,11 +156,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.patch("/api/auth/profile", requireAuth, async (req, res) => {
     const userId = (req.session as any).userId;
-    const { name, phone, avatarUrl } = req.body;
+    const { name, phone, avatarUrl, buyerCity } = req.body;
     const updates: any = {};
     if (name !== undefined) updates.name = name;
     if (phone !== undefined) updates.phone = phone;
     if (avatarUrl !== undefined) updates.avatarUrl = avatarUrl;
+    if (buyerCity !== undefined) updates.buyerCity = buyerCity;
     const updated = await storage.updateUser(userId, updates);
     if (!updated) return res.status(500).json({ error: "Failed to update" });
     const { password: _, ...safe } = updated;

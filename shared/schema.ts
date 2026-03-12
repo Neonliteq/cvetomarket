@@ -13,6 +13,7 @@ export const users = pgTable("users", {
   isBlocked: boolean("is_blocked").default(false),
   avatarUrl: text("avatar_url"),
   reviewsSeenAt: timestamp("reviews_seen_at"),
+  buyerCity: text("buyer_city"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

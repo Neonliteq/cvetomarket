@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Package, MessageCircle, User, LogOut, Star, CheckCircle, Upload, Camera, X } from "lucide-react";
+import { Package, MessageCircle, User, LogOut, Star, CheckCircle, Upload, Camera, X, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +10,9 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { InteractiveStarRating, StarRating } from "@/components/StarRating";
+import { RUSSIAN_CITIES } from "@/lib/russianCities";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -511,6 +513,53 @@ export default function Account() {
                   </div>
                 ))}
               </div>
+              {user.role === "buyer" && (
+                <>
+                  <Separator />
+                  <div>
+                    <p className="text-sm font-medium mb-1.5 flex items-center gap-1.5">
+                      <MapPin className="w-4 h-4 text-primary" /> Ваш город
+                    </p>
+                    <p className="text-xs text-muted-foreground mb-2">Используется для удобства при оформлении заказов</p>
+                    <div className="flex gap-2 items-center">
+                      <Select
+                        value={(user as any).buyerCity || ""}
+                        onValueChange={async (v) => {
+                          await apiRequest("PATCH", "/api/auth/profile", { buyerCity: v });
+                          queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+                          toast({ title: "Город сохранён" });
+                        }}
+                      >
+                        <SelectTrigger className="w-64" data-testid="select-buyer-city">
+                          <SelectValue placeholder="Выберите город" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-64">
+                          {RUSSIAN_CITIES.map((city) => (
+                            <SelectItem key={city} value={city}>{city}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {(user as any).buyerCity && (
+                        <Button
+                          size="sm" variant="ghost"
+                          onClick={async () => {
+                            await apiRequest("PATCH", "/api/auth/profile", { buyerCity: null });
+                            queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+                          }}
+                          data-testid="button-clear-city"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+                    {(user as any).buyerCity && (
+                      <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">
+                        <MapPin className="w-3 h-3" /> {(user as any).buyerCity}
+                      </p>
+                    )}
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
