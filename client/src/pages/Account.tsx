@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ComponentType } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Package, MessageCircle, User, LogOut, Star, CheckCircle, Upload, Camera, X, MapPin, ShoppingBag, TrendingUp, Heart, Store, Flower2, Activity } from "lucide-react";
+import { Package, MessageCircle, User, LogOut, Star, CheckCircle, Upload, Camera, X, MapPin, ShoppingBag, TrendingUp, Store, Flower2, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -43,6 +43,8 @@ const STATUS_COLORS: Record<string, string> = {
   cancelled: "destructive",
 };
 
+type StatItem = { label: string; value: string; icon: ComponentType<{ className?: string }>; color: string; truncate?: boolean };
+
 function BuyerStats({ orders }: { orders: OrderWithItems[] }) {
   const totalOrders = orders.length;
   const deliveredOrders = orders.filter(o => o.status === "delivered");
@@ -66,14 +68,14 @@ function BuyerStats({ orders }: { orders: OrderWithItems[] }) {
   });
   const favoriteProduct = Object.entries(productCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "—";
 
-  const stats = [
+  const stats: StatItem[] = [
     { label: "Всего заказов", value: totalOrders.toString(), icon: ShoppingBag, color: "text-primary" },
     { label: "Завершённых", value: deliveredOrders.length.toString(), icon: CheckCircle, color: "text-green-600" },
     { label: "Активных", value: activeOrders.length.toString(), icon: Activity, color: "text-blue-600" },
     { label: "Потрачено", value: `${totalSpent.toLocaleString("ru-RU")} ₽`, icon: TrendingUp, color: "text-amber-600" },
     { label: "Средний чек", value: avgCheck > 0 ? `${Math.round(avgCheck).toLocaleString("ru-RU")} ₽` : "—", icon: TrendingUp, color: "text-orange-600" },
     { label: "Любимый магазин", value: favoriteShop, icon: Store, color: "text-violet-600", truncate: true },
-    { label: "Любимый букет", value: favoriteProduct, icon: Flower2, color: "text-pink-600", truncate: true },
+    { label: "Любимый товар", value: favoriteProduct, icon: Flower2, color: "text-pink-600", truncate: true },
   ];
 
   return (
@@ -85,7 +87,7 @@ function BuyerStats({ orders }: { orders: OrderWithItems[] }) {
               <s.icon className={`w-4 h-4 ${s.color} shrink-0`} />
               <span className="text-xs text-muted-foreground">{s.label}</span>
             </div>
-            <p className={`text-lg font-bold ${(s as any).truncate ? "truncate" : ""}`} title={s.value} data-testid={`stat-${s.label}`}>
+            <p className={`text-lg font-bold ${s.truncate ? "truncate" : ""}`} title={s.value} data-testid={`stat-${s.label}`}>
               {s.value}
             </p>
           </CardContent>
