@@ -6,10 +6,17 @@ import { Pool } from "pg";
 import bcrypt from "bcrypt";
 import multer from "multer";
 import path from "path";
-import fs from "fs";
 import { storage } from "./storage";
 import { insertUserSchema, insertShopSchema, insertProductSchema, insertOrderSchema, insertReviewSchema, insertMessageSchema, insertCategorySchema, insertCitySchema } from "@shared/schema";
 import { z } from "zod";
+import { objectStorageClient, ObjectStorageService } from "./replit_integrations/object_storage";
+import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
+
+function parseObjPath(p: string): { bucketName: string; objectName: string } {
+  if (!p.startsWith("/")) p = `/${p}`;
+  const parts = p.split("/");
+  return { bucketName: parts[1], objectName: parts.slice(2).join("/") };
+}
 
 function isPointInPolygon(point: [number, number], polygon: number[][]): boolean {
   const [x, y] = point;
@@ -23,17 +30,8 @@ function isPointInPolygon(point: [number, number], polygon: number[][]): boolean
   return inside;
 }
 
-const uploadsDir = path.join(process.cwd(), "uploads");
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-
 const upload = multer({
-  storage: multer.diskStorage({
-    destination: (_req, _file, cb) => cb(null, uploadsDir),
-    filename: (_req, file, cb) => {
-      const ext = path.extname(file.originalname);
-      cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
-    },
-  }),
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const allowed = /\.(jpg|jpeg|png|gif|webp)$/i;
@@ -91,13 +89,39 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     cookie: { secure: false, maxAge: 30 * 24 * 60 * 60 * 1000 },
   }));
 
-  app.use("/uploads", (await import("express")).default.static(uploadsDir));
+  registerObjectStorageRoutes(app);
 
-  app.post("/api/upload", requireAuth, upload.array("images", 10), (req, res) => {
+  const objStorageService = new ObjectStorageService();
+
+  app.post("/api/upload", requireAuth, upload.array("images", 10), async (req, res) => {
     const files = req.files as Express.Multer.File[];
     if (!files || files.length === 0) return res.status(400).json({ error: "No files uploaded" });
-    const urls = files.map((f) => `/uploads/${f.filename}`);
-    res.json({ urls });
+
+    try {
+      const privateDir = objStorageService.getPrivateObjectDir();
+      const { bucketName, objectName: basePath } = parseObjPath(privateDir);
+      const bucket = objectStorageClient.bucket(bucketName);
+
+      const urls: string[] = [];
+      for (const file of files) {
+        const ext = path.extname(file.originalname);
+        const uniqueName = `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
+        const objectName = `${basePath}/uploads/${uniqueName}`;
+        const gcsFile = bucket.file(objectName);
+
+        await gcsFile.save(file.buffer, {
+          contentType: file.mimetype,
+          resumable: false,
+        });
+
+        urls.push(`/objects/uploads/${uniqueName}`);
+      }
+
+      res.json({ urls });
+    } catch (error) {
+      console.error("Upload error:", error);
+      res.status(500).json({ error: "Upload failed" });
+    }
   });
 
   // ---- AUTH ----

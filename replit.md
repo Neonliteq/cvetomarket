@@ -75,8 +75,12 @@ A full-featured flower marketplace (маркетплейс цветочных м
 - All fetch calls must include `credentials: "include"` for session cookies
 - Shopping cart can only contain items from one shop at a time
 
-## Images
-All product and shop images generated with AI, stored in `client/public/images/`
+## Images / File Uploads
+- **Cloud storage**: All user-uploaded images (products, shop logos/covers, avatars, order assembly photos) are stored in Replit Object Storage (Google Cloud Storage via `@google-cloud/storage`)
+- Backend uses multer memoryStorage → uploads buffer to GCS bucket → returns `/objects/uploads/{filename}` URL
+- Object storage integration files: `server/replit_integrations/object_storage/`
+- Frontend upload code unchanged — still posts FormData to `POST /api/upload`, gets `{ urls: ["/objects/..."] }` response
+- Static product images in `client/public/images/` (AI-generated seed data)
 
 ## Running
 - Development: `npm run dev` (starts Express + Vite on port 5000)
