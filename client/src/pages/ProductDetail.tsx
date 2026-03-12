@@ -23,7 +23,7 @@ type ReviewWithUser = Review & { buyerName?: string };
 
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
-  const { addItem } = useCart();
+  const { addItem, triggerAddonSuggestion } = useCart();
   const { user } = useAuth();
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -46,6 +46,9 @@ export default function ProductDetail() {
       toast({ title: "Товар из другого магазина", description: "Сначала очистите корзину", variant: "destructive" });
     } else {
       toast({ title: "Добавлено в корзину", description: product.name });
+      if ((product as any).type !== "addon") {
+        triggerAddonSuggestion(product.shopId);
+      }
     }
   };
 

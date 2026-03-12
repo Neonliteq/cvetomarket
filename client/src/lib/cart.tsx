@@ -15,6 +15,9 @@ interface CartContextType {
   clearCart: () => void;
   total: number;
   itemCount: number;
+  addonShopId: string | null;
+  triggerAddonSuggestion: (shopId: string) => void;
+  clearAddonSuggestion: () => void;
 }
 
 const CartContext = createContext<CartContextType | null>(null);
@@ -22,6 +25,10 @@ const CartContext = createContext<CartContextType | null>(null);
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [shopId, setShopId] = useState<string | null>(null);
+  const [addonShopId, setAddonShopId] = useState<string | null>(null);
+
+  const triggerAddonSuggestion = (sid: string) => setAddonShopId(sid);
+  const clearAddonSuggestion = () => setAddonShopId(null);
 
   useEffect(() => {
     const saved = localStorage.getItem("cart");
@@ -71,7 +78,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const itemCount = items.reduce((sum, i) => sum + i.quantity, 0);
 
   return (
-    <CartContext.Provider value={{ items, shopId, addItem, removeItem, updateQuantity, clearCart, total, itemCount }}>
+    <CartContext.Provider value={{ items, shopId, addItem, removeItem, updateQuantity, clearCart, total, itemCount, addonShopId, triggerAddonSuggestion, clearAddonSuggestion }}>
       {children}
     </CartContext.Provider>
   );

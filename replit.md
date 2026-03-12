@@ -16,7 +16,7 @@ A full-featured flower marketplace (маркетплейс цветочных м
 
 ## Key Features
 - Multi-role authentication (email/password with bcrypt, express-session)
-- Product catalog with filters (price, category, availability)
+- Product catalog with filters (price, category, availability, type including add-ons)
 - Shopping cart with shop constraint (one shop per cart)
 - Per-shop delivery pricing (shops set their own delivery cost; displayed in cart, checkout, shop detail page)
 - Order lifecycle: New → Confirmed → Assembling → Delivering → Delivered → Cancelled
@@ -66,6 +66,15 @@ A full-featured flower marketplace (маркетплейс цветочных м
 - Server-side point-in-polygon check at `POST /api/shops/:id/delivery-cost`
 - Falls back to shop's default `deliveryPrice` if address is outside all zones
 - API key stored in `VITE_YANDEX_MAPS_API_KEY` secret
+
+## Product Types
+- `bouquet` — Букет (default)
+- `gift` — Подарок
+- `tasty_gift` — Вкусный подарок
+- `addon` — Доп. товар (открытки, удобрения и т.д.); shown as suggestions when adding to cart
+
+## Add-on Suggestion Flow
+When a buyer adds a non-addon product to cart, `AddonSuggestionDialog` pops up showing addon products from the same shop. Buyer can select addons with quantity controls and add them in one click. If the shop has no addons, dialog auto-closes. Implemented via CartContext.triggerAddonSuggestion / clearAddonSuggestion + AddonModalMount in App.tsx.
 
 ## Database Tables
 - users (with isBlocked, avatarUrl fields), shops (with logoUrl, coverUrl, deliveryZones jsonb), products, orders, order_items, reviews, messages, categories, cities, platform_settings, shop_workers (shopId + userId junction table for worker access)

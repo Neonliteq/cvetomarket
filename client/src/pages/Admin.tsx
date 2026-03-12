@@ -782,6 +782,7 @@ export default function Admin() {
                                     <SelectItem value="bouquet">Букет</SelectItem>
                                     <SelectItem value="gift">Подарок</SelectItem>
                                     <SelectItem value="tasty_gift">Вкусный подарок</SelectItem>
+                                    <SelectItem value="addon">Доп. товар</SelectItem>
                                   </SelectContent>
                                 </Select>
                               </div>

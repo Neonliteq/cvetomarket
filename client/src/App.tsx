@@ -4,7 +4,8 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/lib/auth";
-import { CartProvider } from "@/lib/cart";
+import { CartProvider, useCart } from "@/lib/cart";
+import { AddonSuggestionDialog } from "@/components/AddonSuggestionDialog";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { FloatingCart } from "@/components/FloatingCart";
@@ -25,6 +26,11 @@ import TermsOfUse from "@/pages/TermsOfUse";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import LegalInfo from "@/pages/LegalInfo";
 import NotFound from "@/pages/not-found";
+
+function AddonModalMount() {
+  const { addonShopId, clearAddonSuggestion } = useCart();
+  return <AddonSuggestionDialog shopId={addonShopId} onClose={clearAddonSuggestion} />;
+}
 
 function Router() {
   return (
@@ -65,6 +71,7 @@ function App() {
           <TooltipProvider>
             <Toaster />
             <Router />
+            <AddonModalMount />
           </TooltipProvider>
         </CartProvider>
       </AuthProvider>

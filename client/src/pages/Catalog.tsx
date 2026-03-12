@@ -66,7 +66,7 @@ export default function Catalog() {
     new Set((products || []).flatMap((p) => p.tags || []))
   ).sort();
 
-  const typeLabels: Record<string, string> = { bouquet: "Букеты", gift: "Подарки", tasty_gift: "Вкусные подарки" };
+  const typeLabels: Record<string, string> = { bouquet: "Букеты", gift: "Подарки", tasty_gift: "Вкусные подарки", addon: "Доп. товары" };
   const activeFilters = [
     ...(selectedType ? [typeLabels[selectedType] || selectedType] : []),
     ...(selectedCategory && categories ? [categories.find((c) => c.id === selectedCategory)?.name] : []),
@@ -111,6 +111,14 @@ export default function Catalog() {
             data-testid="filter-type-tasty-gift"
           >
             Вкусные подарки
+          </Badge>
+          <Badge
+            variant={selectedType === "addon" ? "default" : "secondary"}
+            className="cursor-pointer"
+            onClick={() => setSelectedType(selectedType === "addon" ? null : "addon")}
+            data-testid="filter-type-addon"
+          >
+            Доп. товары
           </Badge>
         </div>
       </div>

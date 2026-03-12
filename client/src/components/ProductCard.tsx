@@ -16,7 +16,7 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product, shopId, className }: ProductCardProps) {
-  const { addItem, items } = useCart();
+  const { addItem, items, triggerAddonSuggestion } = useCart();
   const { toast } = useToast();
   const inCart = items.some((i) => i.product.id === product.id);
 
@@ -39,6 +39,9 @@ export function ProductCard({ product, shopId, className }: ProductCardProps) {
       });
     } else {
       toast({ title: "Добавлено в корзину", description: product.name });
+      if ((product as any).type !== "addon") {
+        triggerAddonSuggestion(sid);
+      }
     }
   };
 
@@ -76,6 +79,9 @@ export function ProductCard({ product, shopId, className }: ProductCardProps) {
             )}
             {(product as any).type === "tasty_gift" && (
               <Badge variant="default" data-testid={`badge-type-${product.id}`}>Вкусный подарок</Badge>
+            )}
+            {(product as any).type === "addon" && (
+              <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white" data-testid={`badge-type-${product.id}`}>Доп. товар</Badge>
             )}
           </div>
         </div>

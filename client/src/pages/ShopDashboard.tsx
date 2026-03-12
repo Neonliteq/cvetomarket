@@ -149,6 +149,7 @@ function ProductForm({
                 <SelectItem value="bouquet">Букет</SelectItem>
                 <SelectItem value="gift">Подарок</SelectItem>
                 <SelectItem value="tasty_gift">Вкусный подарок</SelectItem>
+                <SelectItem value="addon">Доп. товар (открытка, удобрение и т.д.)</SelectItem>
               </SelectContent>
             </Select>
           <FormMessage /></FormItem>
