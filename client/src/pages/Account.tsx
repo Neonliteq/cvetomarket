@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Package, MessageCircle, User, LogOut, Star, CheckCircle, Upload, Camera, X, MapPin } from "lucide-react";
+import { Package, MessageCircle, User, LogOut, Star, CheckCircle, Upload, Camera, X, MapPin, ShoppingBag, TrendingUp, Heart, Store, Flower2, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +42,58 @@ const STATUS_COLORS: Record<string, string> = {
   delivered: "default",
   cancelled: "destructive",
 };
+
+function BuyerStats({ orders }: { orders: OrderWithItems[] }) {
+  const totalOrders = orders.length;
+  const deliveredOrders = orders.filter(o => o.status === "delivered");
+  const activeOrders = orders.filter(o => !["delivered", "cancelled"].includes(o.status));
+  const totalSpent = deliveredOrders.reduce((sum, o) => sum + Number(o.totalAmount), 0);
+  const avgCheck = deliveredOrders.length > 0 ? totalSpent / deliveredOrders.length : 0;
+
+  const shopCounts: Record<string, number> = {};
+  orders.forEach(o => {
+    const name = o.shopName || "—";
+    shopCounts[name] = (shopCounts[name] || 0) + 1;
+  });
+  const favoriteShop = Object.entries(shopCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "—";
+
+  const productCounts: Record<string, number> = {};
+  orders.forEach(o => {
+    o.items?.forEach(item => {
+      const name = item.productName || "—";
+      productCounts[name] = (productCounts[name] || 0) + (item.quantity || 1);
+    });
+  });
+  const favoriteProduct = Object.entries(productCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "—";
+
+  const stats = [
+    { label: "Всего заказов", value: totalOrders.toString(), icon: ShoppingBag, color: "text-primary" },
+    { label: "Завершённых", value: deliveredOrders.length.toString(), icon: CheckCircle, color: "text-green-600" },
+    { label: "Активных", value: activeOrders.length.toString(), icon: Activity, color: "text-blue-600" },
+    { label: "Потрачено", value: `${totalSpent.toLocaleString("ru-RU")} ₽`, icon: TrendingUp, color: "text-amber-600" },
+    { label: "Средний чек", value: avgCheck > 0 ? `${Math.round(avgCheck).toLocaleString("ru-RU")} ₽` : "—", icon: TrendingUp, color: "text-orange-600" },
+    { label: "Любимый магазин", value: favoriteShop, icon: Store, color: "text-violet-600", truncate: true },
+    { label: "Любимый букет", value: favoriteProduct, icon: Flower2, color: "text-pink-600", truncate: true },
+  ];
+
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-6" data-testid="buyer-stats">
+      {stats.map((s) => (
+        <Card key={s.label} className="relative overflow-hidden">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <s.icon className={`w-4 h-4 ${s.color} shrink-0`} />
+              <span className="text-xs text-muted-foreground">{s.label}</span>
+            </div>
+            <p className={`text-lg font-bold ${(s as any).truncate ? "truncate" : ""}`} title={s.value} data-testid={`stat-${s.label}`}>
+              {s.value}
+            </p>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
 
 function ProductReviewDialog({ order, item, alreadyReviewed }: { 
   order: OrderWithItems; 
@@ -300,10 +352,14 @@ export default function Account() {
         <TabsContent value="orders">
           {ordersLoading ? (
             <div className="space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                {Array.from({ length: 7 }).map((_, i) => <Skeleton key={`stat-${i}`} className="h-20 rounded-lg" />)}
+              </div>
               {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-32 rounded-lg" />)}
             </div>
           ) : orders?.length ? (
             <div className="space-y-4">
+              <BuyerStats orders={orders} />
               {orders.map((order) => (
                 <Card key={order.id} data-testid={`card-order-${order.id}`}>
                   <CardContent className="p-5">
