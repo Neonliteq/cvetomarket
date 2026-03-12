@@ -332,11 +332,11 @@ function ProductFormModal({
   if (isMobile) {
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent className="max-h-[90vh]">
-          <DrawerHeader className="text-left">
+        <DrawerContent className="max-h-[85vh] flex flex-col">
+          <DrawerHeader className="text-left shrink-0">
             <DrawerTitle>{title}</DrawerTitle>
           </DrawerHeader>
-          <div className="overflow-y-auto px-4 pb-6">
+          <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-6">
             {children}
           </div>
         </DrawerContent>
