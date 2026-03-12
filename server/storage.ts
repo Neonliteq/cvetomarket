@@ -141,6 +141,19 @@ export class DbStorage implements IStorage {
     return s;
   }
   async deleteShop(id: string) {
+    // Get all order IDs for this shop to cascade through related tables
+    const shopOrders = await db.select({ id: orders.id }).from(orders).where(eq(orders.shopId, id));
+    const orderIds = shopOrders.map((o) => o.id);
+
+    if (orderIds.length > 0) {
+      await db.delete(messages).where(inArray(messages.orderId, orderIds));
+      await db.delete(orderItems).where(inArray(orderItems.orderId, orderIds));
+    }
+
+    await db.delete(reviews).where(eq(reviews.shopId, id));
+    await db.delete(orders).where(eq(orders.shopId, id));
+    await db.delete(products).where(eq(products.shopId, id));
+    await db.delete(shopWorkers).where(eq(shopWorkers.shopId, id));
     await db.delete(shops).where(eq(shops.id, id));
   }
 
