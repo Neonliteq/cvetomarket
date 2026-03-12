@@ -10,7 +10,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -314,6 +316,46 @@ function ProductForm({
   );
 }
 
+function ProductFormModal({
+  open,
+  onOpenChange,
+  title,
+  children,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  children: React.ReactNode;
+}) {
+  const isMobile = useIsMobile();
+
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        <DrawerContent className="max-h-[90vh]">
+          <DrawerHeader className="text-left">
+            <DrawerTitle>{title}</DrawerTitle>
+          </DrawerHeader>
+          <div className="overflow-y-auto px-4 pb-6">
+            {children}
+          </div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        {children}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function ShopDashboard() {
   const { user, isLoading } = useAuth();
   const { toast } = useToast();
@@ -535,28 +577,25 @@ export default function ShopDashboard() {
         <TabsContent value="products">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold">Товары ({products?.length || 0})</h3>
-            <Dialog open={productDialogOpen} onOpenChange={(o) => { setProductDialogOpen(o); if (!o) setEditProduct(null); }}>
-              <DialogTrigger asChild>
-                <Button size="sm" className="gap-1.5" data-testid="button-add-product">
-                  <Plus className="w-4 h-4" /> Добавить товар
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-lg">
-                <DialogHeader>
-                  <DialogTitle>{editProduct ? "Редактировать товар" : "Новый товар"}</DialogTitle>
-                </DialogHeader>
-                <ProductForm
-                  shopId={myShop.id}
-                  categories={categories || []}
-                  product={editProduct || undefined}
-                  onSuccess={() => {
-                    setProductDialogOpen(false);
-                    setEditProduct(null);
-                    qc.invalidateQueries({ queryKey: [`/api/shops/${myShop.id}/products`] });
-                  }}
-                />
-              </DialogContent>
-            </Dialog>
+            <Button size="sm" className="gap-1.5" data-testid="button-add-product" onClick={() => setProductDialogOpen(true)}>
+              <Plus className="w-4 h-4" /> Добавить товар
+            </Button>
+            <ProductFormModal
+              open={productDialogOpen}
+              onOpenChange={(o) => { setProductDialogOpen(o); if (!o) setEditProduct(null); }}
+              title={editProduct ? "Редактировать товар" : "Новый товар"}
+            >
+              <ProductForm
+                shopId={myShop.id}
+                categories={categories || []}
+                product={editProduct || undefined}
+                onSuccess={() => {
+                  setProductDialogOpen(false);
+                  setEditProduct(null);
+                  qc.invalidateQueries({ queryKey: [`/api/shops/${myShop.id}/products`] });
+                }}
+              />
+            </ProductFormModal>
           </div>
 
           {loadingProducts ? (
