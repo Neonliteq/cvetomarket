@@ -476,7 +476,23 @@ export default function Admin() {
                           <Dialog open={editShopId === shop.id} onOpenChange={(o) => {
                             if (o) {
                               setEditShopId(shop.id);
-                              setEditShopData({ name: shop.name, description: shop.description || "", phone: shop.phone || "", address: shop.address || "" });
+                              setEditShopData({
+                                name: shop.name,
+                                description: shop.description || "",
+                                phone: shop.phone || "",
+                                email: shop.email || "",
+                                address: shop.address || "",
+                                workingHours: shop.workingHours || "",
+                                deliveryPrice: shop.deliveryPrice?.toString() || "",
+                                inn: shop.inn || "",
+                                ogrn: shop.ogrn || "",
+                                legalName: shop.legalName || "",
+                                legalAddress: shop.legalAddress || "",
+                                legalType: shop.legalType || "",
+                                logoUrl: shop.logoUrl || "",
+                                coverUrl: shop.coverUrl || "",
+                                status: shop.status || "",
+                              });
                             } else setEditShopId(null);
                           }}>
                             <DialogTrigger asChild>
@@ -484,15 +500,61 @@ export default function Admin() {
                                 <Edit className="w-3.5 h-3.5" /> Изменить
                               </Button>
                             </DialogTrigger>
-                            <DialogContent>
+                            <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
                               <DialogHeader><DialogTitle>Редактировать магазин</DialogTitle></DialogHeader>
                               <div className="space-y-3">
-                                <div><Label>Название</Label><Input value={editShopData.name || ""} onChange={(e) => setEditShopData({ ...editShopData, name: e.target.value })} /></div>
-                                <div><Label>Описание</Label><Textarea value={editShopData.description || ""} onChange={(e) => setEditShopData({ ...editShopData, description: e.target.value })} /></div>
-                                <div><Label>Телефон</Label><Input value={editShopData.phone || ""} onChange={(e) => setEditShopData({ ...editShopData, phone: e.target.value })} /></div>
+                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Основное</p>
+                                <div><Label>Название</Label><Input value={editShopData.name || ""} onChange={(e) => setEditShopData({ ...editShopData, name: e.target.value })} data-testid="input-admin-shop-name" /></div>
+                                <div><Label>Описание</Label><Textarea rows={2} value={editShopData.description || ""} onChange={(e) => setEditShopData({ ...editShopData, description: e.target.value })} /></div>
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div><Label>Телефон</Label><Input value={editShopData.phone || ""} onChange={(e) => setEditShopData({ ...editShopData, phone: e.target.value })} /></div>
+                                  <div><Label>Email</Label><Input value={editShopData.email || ""} onChange={(e) => setEditShopData({ ...editShopData, email: e.target.value })} /></div>
+                                </div>
                                 <div><Label>Адрес</Label><Input value={editShopData.address || ""} onChange={(e) => setEditShopData({ ...editShopData, address: e.target.value })} /></div>
-                                <Button onClick={() => editShopMutation.mutate({ id: shop.id, data: editShopData })} disabled={editShopMutation.isPending} className="w-full">
-                                  Сохранить
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div><Label>Режим работы</Label><Input placeholder="09:00-20:00" value={editShopData.workingHours || ""} onChange={(e) => setEditShopData({ ...editShopData, workingHours: e.target.value })} /></div>
+                                  <div><Label>Стоимость доставки (₽)</Label><Input type="number" value={editShopData.deliveryPrice || ""} onChange={(e) => setEditShopData({ ...editShopData, deliveryPrice: e.target.value })} /></div>
+                                </div>
+                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pt-1">Юридические данные</p>
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div><Label>ИНН</Label><Input value={editShopData.inn || ""} onChange={(e) => setEditShopData({ ...editShopData, inn: e.target.value })} /></div>
+                                  <div><Label>ОГРН / ОГРНИП</Label><Input value={editShopData.ogrn || ""} onChange={(e) => setEditShopData({ ...editShopData, ogrn: e.target.value })} /></div>
+                                </div>
+                                <div><Label>Юр. наименование</Label><Input value={editShopData.legalName || ""} onChange={(e) => setEditShopData({ ...editShopData, legalName: e.target.value })} /></div>
+                                <div><Label>Юр. адрес</Label><Input value={editShopData.legalAddress || ""} onChange={(e) => setEditShopData({ ...editShopData, legalAddress: e.target.value })} /></div>
+                                <div>
+                                  <Label>Организационная форма</Label>
+                                  <Select value={editShopData.legalType || ""} onValueChange={(v) => setEditShopData({ ...editShopData, legalType: v })}>
+                                    <SelectTrigger><SelectValue placeholder="Выбрать" /></SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="ip">ИП</SelectItem>
+                                      <SelectItem value="ooo">ООО</SelectItem>
+                                      <SelectItem value="self">Самозанятый</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pt-1">Медиа</p>
+                                <div><Label>URL логотипа</Label><Input placeholder="https://..." value={editShopData.logoUrl || ""} onChange={(e) => setEditShopData({ ...editShopData, logoUrl: e.target.value })} /></div>
+                                <div><Label>URL обложки</Label><Input placeholder="https://..." value={editShopData.coverUrl || ""} onChange={(e) => setEditShopData({ ...editShopData, coverUrl: e.target.value })} /></div>
+                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pt-1">Статус</p>
+                                <div>
+                                  <Select value={editShopData.status || ""} onValueChange={(v) => setEditShopData({ ...editShopData, status: v })}>
+                                    <SelectTrigger><SelectValue placeholder="Статус" /></SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="approved">Одобрен</SelectItem>
+                                      <SelectItem value="pending">На модерации</SelectItem>
+                                      <SelectItem value="rejected">Отклонён</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <Button onClick={() => {
+                                  const data: Record<string, any> = {
+                                    ...editShopData,
+                                    deliveryPrice: editShopData.deliveryPrice !== "" ? Number(editShopData.deliveryPrice) : null,
+                                  };
+                                  editShopMutation.mutate({ id: shop.id, data });
+                                }} disabled={editShopMutation.isPending} className="w-full">
+                                  Сохранить изменения
                                 </Button>
                               </div>
                             </DialogContent>
@@ -671,20 +733,109 @@ export default function Admin() {
                       <Dialog open={editProductId === p.id} onOpenChange={(o) => {
                         if (o) {
                           setEditProductId(p.id);
-                          setEditProductData({ name: p.name, price: p.price?.toString() || "", description: p.description || "" });
+                          setEditProductData({
+                            name: p.name,
+                            price: p.price?.toString() || "",
+                            description: p.description || "",
+                            composition: p.composition || "",
+                            assemblyTime: p.assemblyTime?.toString() || "",
+                            discountPercent: p.discountPercent?.toString() || "0",
+                            categoryId: p.categoryId || "",
+                            type: p.type || "bouquet",
+                            inStock: p.inStock ? "true" : "false",
+                            isActive: p.isActive ? "true" : "false",
+                            isRecommended: p.isRecommended ? "true" : "false",
+                            tags: Array.isArray(p.tags) ? p.tags.join(", ") : "",
+                          });
                         } else setEditProductId(null);
                       }}>
                         <DialogTrigger asChild>
                           <Button size="icon" variant="ghost" data-testid={`button-admin-edit-${p.id}`}><Edit className="w-4 h-4" /></Button>
                         </DialogTrigger>
-                        <DialogContent>
+                        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
                           <DialogHeader><DialogTitle>Редактировать товар</DialogTitle></DialogHeader>
                           <div className="space-y-3">
-                            <div><Label>Название</Label><Input value={editProductData.name || ""} onChange={(e) => setEditProductData({ ...editProductData, name: e.target.value })} /></div>
-                            <div><Label>Цена (₽)</Label><Input type="number" value={editProductData.price || ""} onChange={(e) => setEditProductData({ ...editProductData, price: e.target.value })} /></div>
-                            <div><Label>Описание</Label><Textarea value={editProductData.description || ""} onChange={(e) => setEditProductData({ ...editProductData, description: e.target.value })} /></div>
-                            <Button onClick={() => adminEditProductMutation.mutate({ id: p.id, data: editProductData })} disabled={adminEditProductMutation.isPending} className="w-full">
-                              Сохранить
+                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Основное</p>
+                            <div><Label>Название</Label><Input value={editProductData.name || ""} onChange={(e) => setEditProductData({ ...editProductData, name: e.target.value })} data-testid="input-admin-product-name" /></div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div><Label>Цена (₽)</Label><Input type="number" value={editProductData.price || ""} onChange={(e) => setEditProductData({ ...editProductData, price: e.target.value })} /></div>
+                              <div><Label>Скидка (%)</Label><Input type="number" min="0" max="100" value={editProductData.discountPercent || "0"} onChange={(e) => setEditProductData({ ...editProductData, discountPercent: e.target.value })} /></div>
+                            </div>
+                            <div><Label>Описание</Label><Textarea rows={2} value={editProductData.description || ""} onChange={(e) => setEditProductData({ ...editProductData, description: e.target.value })} /></div>
+                            <div><Label>Состав</Label><Textarea rows={2} value={editProductData.composition || ""} onChange={(e) => setEditProductData({ ...editProductData, composition: e.target.value })} /></div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <Label>Категория</Label>
+                                <Select value={editProductData.categoryId || ""} onValueChange={(v) => setEditProductData({ ...editProductData, categoryId: v })}>
+                                  <SelectTrigger><SelectValue placeholder="Без категории" /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="">Без категории</SelectItem>
+                                    {categories?.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div>
+                                <Label>Тип</Label>
+                                <Select value={editProductData.type || "bouquet"} onValueChange={(v) => setEditProductData({ ...editProductData, type: v })}>
+                                  <SelectTrigger><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="bouquet">Букет</SelectItem>
+                                    <SelectItem value="gift">Подарок</SelectItem>
+                                    <SelectItem value="tasty_gift">Вкусный подарок</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                            <div><Label>Время сборки (мин)</Label><Input type="number" value={editProductData.assemblyTime || ""} onChange={(e) => setEditProductData({ ...editProductData, assemblyTime: e.target.value })} /></div>
+                            <div><Label>Теги (через запятую)</Label><Input placeholder="роза, красный, свадьба" value={editProductData.tags || ""} onChange={(e) => setEditProductData({ ...editProductData, tags: e.target.value })} /></div>
+                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pt-1">Статусы</p>
+                            <div className="grid grid-cols-3 gap-2">
+                              <div>
+                                <Label>В наличии</Label>
+                                <Select value={editProductData.inStock || "true"} onValueChange={(v) => setEditProductData({ ...editProductData, inStock: v })}>
+                                  <SelectTrigger><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="true">Да</SelectItem>
+                                    <SelectItem value="false">Нет</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div>
+                                <Label>Активен</Label>
+                                <Select value={editProductData.isActive || "true"} onValueChange={(v) => setEditProductData({ ...editProductData, isActive: v })}>
+                                  <SelectTrigger><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="true">Да</SelectItem>
+                                    <SelectItem value="false">Нет</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div>
+                                <Label>Рекомендован</Label>
+                                <Select value={editProductData.isRecommended || "false"} onValueChange={(v) => setEditProductData({ ...editProductData, isRecommended: v })}>
+                                  <SelectTrigger><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="true">Да</SelectItem>
+                                    <SelectItem value="false">Нет</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                            <Button onClick={() => {
+                              const data: Record<string, any> = {
+                                ...editProductData,
+                                price: editProductData.price ? parseInt(editProductData.price) : undefined,
+                                discountPercent: editProductData.discountPercent ? parseInt(editProductData.discountPercent) : 0,
+                                assemblyTime: editProductData.assemblyTime ? parseInt(editProductData.assemblyTime) : undefined,
+                                inStock: editProductData.inStock === "true",
+                                isActive: editProductData.isActive === "true",
+                                isRecommended: editProductData.isRecommended === "true",
+                                categoryId: editProductData.categoryId || null,
+                                tags: editProductData.tags ? editProductData.tags.split(",").map((t: string) => t.trim()).filter(Boolean) : [],
+                              };
+                              adminEditProductMutation.mutate({ id: p.id, data });
+                            }} disabled={adminEditProductMutation.isPending} className="w-full">
+                              Сохранить изменения
                             </Button>
                           </div>
                         </DialogContent>
