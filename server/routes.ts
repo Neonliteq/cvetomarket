@@ -212,7 +212,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.get("/api/shops/all", async (_req, res) => {
     const shopsList = await storage.getShops();
-    const visible = shopsList.filter((s) => s.status !== "rejected");
+    const visible = shopsList.filter((s) => s.status === "approved");
     res.json(await enrichShops(visible));
   });
 
