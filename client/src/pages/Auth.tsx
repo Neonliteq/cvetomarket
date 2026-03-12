@@ -68,8 +68,10 @@ export default function Auth() {
 
   const onLogin = async (data: z.infer<typeof loginSchema>) => {
     try {
-      await login(data.email, data.password);
-      navigate("/");
+      const user = await login(data.email, data.password);
+      if (user.role === "shop") navigate("/shop-dashboard");
+      else if (user.role === "admin") navigate("/admin");
+      else navigate("/");
     } catch {
       toast({ title: "Ошибка входа", description: "Неверный email или пароль", variant: "destructive" });
     }
