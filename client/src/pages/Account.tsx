@@ -63,7 +63,7 @@ function BuyerStats({ orders }: { orders: OrderWithItems[] }) {
   orders.forEach(o => {
     o.items?.forEach(item => {
       const name = item.productName || "—";
-      productCounts[name] = (productCounts[name] || 0) + (item.quantity || 1);
+      productCounts[name] = (productCounts[name] || 0) + 1;
     });
   });
   const favoriteProduct = Object.entries(productCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "—";
@@ -79,7 +79,7 @@ function BuyerStats({ orders }: { orders: OrderWithItems[] }) {
   ];
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-6" data-testid="buyer-stats">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6" data-testid="buyer-stats">
       {stats.map((s) => (
         <Card key={s.label} className="relative overflow-hidden">
           <CardContent className="p-4">
@@ -354,7 +354,7 @@ export default function Account() {
         <TabsContent value="orders">
           {ordersLoading ? (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 {Array.from({ length: 7 }).map((_, i) => <Skeleton key={`stat-${i}`} className="h-20 rounded-lg" />)}
               </div>
               {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-32 rounded-lg" />)}
