@@ -163,6 +163,20 @@ export default function Admin() {
     },
   });
 
+  const deleteUserMutation = useMutation({
+    mutationFn: (id: string) => apiRequest("DELETE", `/api/admin/users/${id}`, {}),
+    onSuccess: () => {
+      toast({ title: "Пользователь удалён" });
+      qc.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      qc.invalidateQueries({ queryKey: ["/api/admin/analytics"] });
+    },
+    onError: (err: any) => {
+      let msg = "Ошибка удаления";
+      try { msg = JSON.parse(err.message.slice(err.message.indexOf("{"))).error; } catch {}
+      toast({ title: msg, variant: "destructive" });
+    },
+  });
+
   const updateOrderStatusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) => apiRequest("PATCH", `/api/orders/${id}/status`, { status }),
     onSuccess: () => {
@@ -609,20 +623,36 @@ export default function Admin() {
                       {u.role === "admin" ? "Админ" : u.role === "shop" ? "Продавец" : "Покупатель"}
                     </Badge>
                     {u.role !== "admin" && (
-                      <Button
-                        size="sm"
-                        variant={u.isBlocked ? "default" : "destructive"}
-                        onClick={() => blockUserMutation.mutate(u.id)}
-                        disabled={blockUserMutation.isPending}
-                        className="gap-1.5"
-                        data-testid={`button-block-${u.id}`}
-                      >
-                        {u.isBlocked ? (
-                          <><UserCheck className="w-3.5 h-3.5" /> Разблокировать</>
-                        ) : (
-                          <><Ban className="w-3.5 h-3.5" /> Заблокировать</>
-                        )}
-                      </Button>
+                      <>
+                        <Button
+                          size="sm"
+                          variant={u.isBlocked ? "default" : "destructive"}
+                          onClick={() => blockUserMutation.mutate(u.id)}
+                          disabled={blockUserMutation.isPending}
+                          className="gap-1.5"
+                          data-testid={`button-block-${u.id}`}
+                        >
+                          {u.isBlocked ? (
+                            <><UserCheck className="w-3.5 h-3.5" /> Разблокировать</>
+                          ) : (
+                            <><Ban className="w-3.5 h-3.5" /> Заблокировать</>
+                          )}
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="text-destructive hover:text-destructive shrink-0"
+                          onClick={() => {
+                            if (confirm(`Удалить пользователя «${u.name}»? Это действие необратимо.`)) {
+                              deleteUserMutation.mutate(u.id);
+                            }
+                          }}
+                          disabled={deleteUserMutation.isPending}
+                          data-testid={`button-delete-user-${u.id}`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </>
                     )}
                   </CardContent>
                 </Card>

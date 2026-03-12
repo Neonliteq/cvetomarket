@@ -21,6 +21,7 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, data: Partial<User>): Promise<User | undefined>;
+  deleteUser(id: string): Promise<void>;
   getAllUsers(): Promise<User[]>;
 
   // Shops
@@ -106,6 +107,19 @@ export class DbStorage implements IStorage {
   async updateUser(id: string, data: Partial<User>) {
     const [u] = await db.update(users).set(data).where(eq(users.id, id)).returning();
     return u;
+  }
+  async deleteUser(id: string) {
+    const userOrders = await db.select({ id: orders.id }).from(orders).where(eq(orders.buyerId, id));
+    const orderIds = userOrders.map((o) => o.id);
+    if (orderIds.length > 0) {
+      await db.delete(messages).where(inArray(messages.orderId, orderIds));
+      await db.delete(orderItems).where(inArray(orderItems.orderId, orderIds));
+    }
+    await db.delete(messages).where(eq(messages.senderId, id));
+    await db.delete(reviews).where(eq(reviews.buyerId, id));
+    await db.delete(orders).where(eq(orders.buyerId, id));
+    await db.delete(shopWorkers).where(eq(shopWorkers.userId, id));
+    await db.delete(users).where(eq(users.id, id));
   }
   async getAllUsers() {
     return db.select().from(users).orderBy(desc(users.createdAt));

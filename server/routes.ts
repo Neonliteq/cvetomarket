@@ -706,6 +706,16 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.json(safe);
   });
 
+  app.delete("/api/admin/users/:id", requireRole("admin"), async (req, res) => {
+    const sessionUserId = (req.session as any).userId;
+    if (sessionUserId === req.params.id) return res.status(400).json({ error: "Нельзя удалить свой аккаунт" });
+    const targetUser = await storage.getUser(req.params.id);
+    if (!targetUser) return res.status(404).json({ error: "User not found" });
+    if (targetUser.role === "admin") return res.status(403).json({ error: "Нельзя удалить администратора" });
+    await storage.deleteUser(req.params.id);
+    res.json({ success: true });
+  });
+
   app.get("/api/admin/settings", requireRole("admin"), async (_req, res) => {
     const s = await storage.getSettings();
     res.json(s || { commissionRate: "10", deliveryCost: "300" });
