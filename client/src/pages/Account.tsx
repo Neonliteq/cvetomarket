@@ -267,7 +267,7 @@ function TelegramSection({ user, queryClient, toast }: { user: any; queryClient:
       return res as { url: string };
     },
     onSuccess: ({ url }) => {
-      window.open(url, "_blank");
+      window.location.href = url;
     },
     onError: () => toast({ title: "Ошибка", description: "Не удалось получить ссылку", variant: "destructive" }),
   });
