@@ -95,9 +95,11 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || "5000", 10);
-  const domain = (process.env.REPLIT_DEV_DOMAIN || process.env.REPLIT_DOMAINS || "").split(",")[0].trim();
-  if (domain) {
-    registerWebhook(domain).catch(() => {});
+  if (process.env.NODE_ENV === "production") {
+    const domain = (process.env.REPLIT_DEV_DOMAIN || process.env.REPLIT_DOMAINS || "").split(",")[0].trim();
+    if (domain) {
+      registerWebhook(domain).catch(() => {});
+    }
   }
 
   httpServer.listen(
