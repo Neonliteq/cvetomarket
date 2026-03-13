@@ -105,7 +105,7 @@ function ProductReviewDialog({ order, item, alreadyReviewed }: {
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
   const [open, setOpen] = useState(false);
-  const qc = useQueryClient();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const mutation = useMutation({
@@ -118,8 +118,8 @@ function ProductReviewDialog({ order, item, alreadyReviewed }: {
     }),
     onSuccess: () => {
       toast({ title: "Оценка товара отправлена!" });
-      qc.invalidateQueries({ queryKey: ["/api/reviews/my"] });
-      qc.invalidateQueries({ queryKey: ["/api/products", item.productId, "reviews"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/reviews/my"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/products", item.productId, "reviews"] });
       setOpen(false);
     },
     onError: (err: any) => toast({ title: err?.message || "Ошибка", variant: "destructive" }),
@@ -189,7 +189,7 @@ function ReviewDialog({ order }: { order: OrderWithItems }) {
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
   const [open, setOpen] = useState(false);
-  const qc = useQueryClient();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const mutation = useMutation({
@@ -201,9 +201,9 @@ function ReviewDialog({ order }: { order: OrderWithItems }) {
     }),
     onSuccess: () => {
       toast({ title: "Отзыв отправлен!", description: "Спасибо за вашу оценку!" });
-      qc.invalidateQueries({ queryKey: ["/api/orders/my"] });
-      qc.invalidateQueries({ queryKey: ["/api/reviews/my"] });
-      qc.invalidateQueries({ queryKey: ["/api/shops", order.shopId, "reviews"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/orders/my"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/reviews/my"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/shops", order.shopId, "reviews"] });
       setOpen(false);
     },
     onError: (err: any) => toast({ title: err?.message || "Ошибка", variant: "destructive" }),
@@ -325,7 +325,7 @@ function TelegramSection({ user, queryClient, toast }: { user: any; queryClient:
 export default function Account() {
   const { user, isLoading: authLoading, logout } = useAuth();
   const [, navigate] = useLocation();
-  const qc = useQueryClient();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const { data: orders, isLoading: ordersLoading } = useQuery<OrderWithItems[]>({
@@ -341,7 +341,7 @@ export default function Account() {
   const photoApprovalMutation = useMutation({
     mutationFn: ({ id, approval }: { id: string; approval: "approved" | "rejected" }) =>
       apiRequest("PATCH", `/api/orders/${id}/photo-approval`, { approval }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["/api/orders/my"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/orders/my"] }),
     onError: (err: any) => toast({ title: "Ошибка", description: err.message, variant: "destructive" }),
   });
 
@@ -685,7 +685,7 @@ export default function Account() {
 
               {/* Telegram notifications block — visible to all roles */}
               <Separator />
-              <TelegramSection user={user} queryClient={qc} toast={toast} />
+              <TelegramSection user={user} queryClient={queryClient} toast={toast} />
             </CardContent>
           </Card>
         </TabsContent>
