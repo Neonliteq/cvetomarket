@@ -76,8 +76,17 @@ A full-featured flower marketplace (маркетплейс цветочных м
 ## Add-on Suggestion Flow
 When a buyer adds a non-addon product to cart, `AddonSuggestionDialog` pops up showing addon products from the same shop. Buyer can select addons with quantity controls and add them in one click. If the shop has no addons, dialog auto-closes. Implemented via CartContext.triggerAddonSuggestion / clearAddonSuggestion + AddonModalMount in App.tsx.
 
+## Shop Map Feature
+- Shops page has list/map toggle (Список / Карта)
+- Map view uses Yandex Maps to show shops with coordinates as placemarks
+- Clicking a placemark shows balloon with shop name, rating, city, address, and "Перейти" link
+- Shop dashboard settings has a ShopLocationMap component for manual coordinate placement
+- When shop address is saved via PATCH /api/shops/:id, server auto-geocodes via Yandex Geocoder to get lat/lng
+- GET /api/geocode?address= endpoint for manual geocoding
+- Shops without coordinates appear in list but not on map
+
 ## Database Tables
-- users (with isBlocked, avatarUrl fields), shops (with logoUrl, coverUrl, deliveryZones jsonb), products, orders, order_items, reviews, messages, categories, cities, platform_settings, shop_workers (shopId + userId junction table for worker access)
+- users (with isBlocked, avatarUrl fields), shops (with logoUrl, coverUrl, deliveryZones jsonb, latitude, longitude), products, orders, order_items, reviews, messages, categories, cities, platform_settings, shop_workers (shopId + userId junction table for worker access)
 
 ## Important Patterns
 - Auth-protected pages must check `isLoading` before redirecting: `if (isLoading) return null; if (!user) { navigate("/auth"); return null; }`

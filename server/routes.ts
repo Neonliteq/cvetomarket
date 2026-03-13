@@ -229,6 +229,25 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  // ---- GEOCODING ----
+  app.get("/api/geocode", async (req, res) => {
+    const address = req.query.address as string;
+    if (!address) return res.status(400).json({ error: "address is required" });
+    const apiKey = process.env.VITE_YANDEX_MAPS_API_KEY;
+    if (!apiKey) return res.status(500).json({ error: "Yandex Maps API key not configured" });
+    try {
+      const url = `https://geocode-maps.yandex.ru/1.x/?apikey=${apiKey}&geocode=${encodeURIComponent(address)}&format=json&results=1`;
+      const resp = await fetch(url);
+      const data = await resp.json();
+      const pos = data?.response?.GeoObjectCollection?.featureMember?.[0]?.GeoObject?.Point?.pos;
+      if (!pos) return res.json({ latitude: null, longitude: null });
+      const [lng, lat] = pos.split(" ").map(Number);
+      res.json({ latitude: lat, longitude: lng });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   // ---- SHOPS ----
   app.get("/api/shops/approved", async (_req, res) => {
     const shopsList = await storage.getApprovedShops();
@@ -283,6 +302,22 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   app.patch("/api/shops/:id", requireRole("admin", "shop"), async (req, res) => {
+    if (req.body.address && !req.body.latitude && !req.body.longitude) {
+      const apiKey = process.env.VITE_YANDEX_MAPS_API_KEY;
+      if (apiKey) {
+        try {
+          const url = `https://geocode-maps.yandex.ru/1.x/?apikey=${apiKey}&geocode=${encodeURIComponent(req.body.address)}&format=json&results=1`;
+          const resp = await fetch(url);
+          const data = await resp.json();
+          const pos = data?.response?.GeoObjectCollection?.featureMember?.[0]?.GeoObject?.Point?.pos;
+          if (pos) {
+            const [lng, lat] = pos.split(" ").map(Number);
+            req.body.latitude = lat.toString();
+            req.body.longitude = lng.toString();
+          }
+        } catch {}
+      }
+    }
     const shop = await storage.updateShop(req.params.id, req.body);
     res.json(shop);
   });

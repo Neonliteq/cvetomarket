@@ -30,6 +30,7 @@ import type { Product, Order, Shop, Category, Review } from "@shared/schema";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { DeliveryZonesMap, type DeliveryZone } from "@/components/DeliveryZonesMap";
+import { ShopLocationMap } from "@/components/ShopLocationMap";
 
 const STATUS_LABELS: Record<string, string> = {
   new: "Новый", confirmed: "Подтверждён", assembling: "Сборка",
@@ -1338,6 +1339,22 @@ export default function ShopDashboard() {
                       id="shop-address-input"
                       placeholder="Город, улица, дом"
                       data-testid="input-shop-address"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Точка на карте</label>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Укажите местоположение магазина на карте. Координаты также определяются автоматически при сохранении адреса.
+                    </p>
+                    <ShopLocationMap
+                      latitude={myShop?.latitude}
+                      longitude={myShop?.longitude}
+                      onLocationSelect={(lat, lng) => {
+                        updateShopMutation.mutate({
+                          latitude: lat.toString(),
+                          longitude: lng.toString(),
+                        });
+                      }}
                     />
                   </div>
                   <div>

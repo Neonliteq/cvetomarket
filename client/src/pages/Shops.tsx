@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search } from "lucide-react";
+import { Search, List, Map } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { ShopCard } from "@/components/ShopCard";
+import { ShopsMap } from "@/components/ShopsMap";
 import type { Shop, City } from "@shared/schema";
 
 type ShopWithMeta = Shop & { cityName?: string };
@@ -12,6 +14,7 @@ type ShopWithMeta = Shop & { cityName?: string };
 export default function Shops() {
   const [search, setSearch] = useState("");
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"list" | "map">("list");
 
   const { data: shops, isLoading } = useQuery<ShopWithMeta[]>({ queryKey: ["/api/shops/all"] });
   const { data: cities } = useQuery<City[]>({ queryKey: ["/api/cities"] });
@@ -42,6 +45,28 @@ export default function Shops() {
             data-testid="input-shop-search"
           />
         </div>
+        <div className="flex rounded-lg border overflow-hidden">
+          <Button
+            variant={viewMode === "list" ? "default" : "ghost"}
+            size="sm"
+            className="rounded-none gap-1.5"
+            onClick={() => setViewMode("list")}
+            data-testid="button-view-list"
+          >
+            <List className="w-4 h-4" />
+            Список
+          </Button>
+          <Button
+            variant={viewMode === "map" ? "default" : "ghost"}
+            size="sm"
+            className="rounded-none gap-1.5"
+            onClick={() => setViewMode("map")}
+            data-testid="button-view-map"
+          >
+            <Map className="w-4 h-4" />
+            Карта
+          </Button>
+        </div>
       </div>
 
       {cities && cities.length > 0 && (
@@ -70,16 +95,20 @@ export default function Shops() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-lg" />)}
         </div>
-      ) : filtered.length ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filtered.map((s) => <ShopCard key={s.id} shop={s} />)}
-        </div>
+      ) : viewMode === "list" ? (
+        filtered.length ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {filtered.map((s) => <ShopCard key={s.id} shop={s} />)}
+          </div>
+        ) : (
+          <div className="text-center py-20 text-muted-foreground space-y-2">
+            <Search className="w-12 h-12 mx-auto opacity-20" />
+            <p className="font-medium">Магазины не найдены</p>
+            <p className="text-sm">Попробуйте изменить параметры поиска</p>
+          </div>
+        )
       ) : (
-        <div className="text-center py-20 text-muted-foreground space-y-2">
-          <Search className="w-12 h-12 mx-auto opacity-20" />
-          <p className="font-medium">Магазины не найдены</p>
-          <p className="text-sm">Попробуйте изменить параметры поиска</p>
-        </div>
+        <ShopsMap shops={filtered} />
       )}
     </div>
   );

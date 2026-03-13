@@ -55,6 +55,8 @@ export const shops = pgTable("shops", {
   reviewCount: integer("review_count").default(0),
   logoUrl: text("logo_url"),
   coverUrl: text("cover_url"),
+  latitude: decimal("latitude", { precision: 10, scale: 7 }),
+  longitude: decimal("longitude", { precision: 10, scale: 7 }),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

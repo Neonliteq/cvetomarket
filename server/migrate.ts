@@ -10,6 +10,8 @@ export async function runMigrations() {
       ALTER TABLE shops ADD COLUMN IF NOT EXISTS commission_rate numeric(5,2);
       ALTER TABLE users ADD COLUMN IF NOT EXISTS buyer_city text;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_chat_id text;
+      ALTER TABLE shops ADD COLUMN IF NOT EXISTS latitude numeric(10,7);
+      ALTER TABLE shops ADD COLUMN IF NOT EXISTS longitude numeric(10,7);
     `);
 
     await client.query(`
