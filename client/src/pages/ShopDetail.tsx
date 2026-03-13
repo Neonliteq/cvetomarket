@@ -1,6 +1,6 @@
 import { useParams, Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, MapPin, Clock, Phone, Mail, MessageCircle, TrendingUp, Tag, Star } from "lucide-react";
+import { ArrowLeft, MapPin, Clock, MessageCircle, TrendingUp, Tag, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -117,12 +117,6 @@ export default function ShopDetail() {
             )}
             {shop.workingHours && (
               <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" />{shop.workingHours}</span>
-            )}
-            {shop.phone && (
-              <span className="flex items-center gap-1"><Phone className="w-3.5 h-3.5" />{shop.phone}</span>
-            )}
-            {shop.email && (
-              <span className="flex items-center gap-1"><Mail className="w-3.5 h-3.5" />{shop.email}</span>
             )}
           </div>
           {shop.address && (

@@ -249,15 +249,20 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   // ---- SHOPS ----
+  const stripShopContacts = (shop: any) => {
+    const { phone, email, ...rest } = shop;
+    return rest;
+  };
+
   app.get("/api/shops/approved", async (_req, res) => {
     const shopsList = await storage.getApprovedShops();
-    res.json(await enrichShops(shopsList));
+    res.json((await enrichShops(shopsList)).map(stripShopContacts));
   });
 
   app.get("/api/shops/all", async (_req, res) => {
     const shopsList = await storage.getShops();
     const visible = shopsList.filter((s) => s.status === "approved");
-    res.json(await enrichShops(visible));
+    res.json((await enrichShops(visible)).map(stripShopContacts));
   });
 
   app.get("/api/shops/my", requireRole("shop"), async (req, res) => {
@@ -272,7 +277,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const shop = await storage.getShop(req.params.id);
     if (!shop) return res.status(404).json({ error: "Not found" });
     const [enriched] = await enrichShops([shop]);
-    res.json(enriched);
+    res.json(stripShopContacts(enriched));
   });
 
   app.get("/api/shops/:id/delivery-zones", async (req, res) => {
