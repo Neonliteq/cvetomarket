@@ -685,7 +685,7 @@ export default function Account() {
 
               {/* Telegram notifications block — visible to all roles */}
               <Separator />
-              <TelegramSection user={user} queryClient={queryClient} toast={toast} />
+              <TelegramSection user={user} queryClient={qc} toast={toast} />
             </CardContent>
           </Card>
         </TabsContent>
