@@ -140,6 +140,17 @@ export const platformSettings = pgTable("platform_settings", {
   deliveryCost: decimal("delivery_cost", { precision: 10, scale: 2 }).default("300"),
 });
 
+export const notifications = pgTable("notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  type: varchar("type").notNull(),
+  title: varchar("title").notNull(),
+  text: text("text"),
+  link: varchar("link"),
+  isRead: boolean("is_read").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
 export const insertShopSchema = createInsertSchema(shops).omit({ id: true, createdAt: true, rating: true, reviewCount: true });
 export const insertProductSchema = createInsertSchema(products).omit({ id: true, createdAt: true, rating: true, reviewCount: true });
@@ -172,3 +183,6 @@ export type InsertCity = z.infer<typeof insertCitySchema>;
 export type PlatformSettings = typeof platformSettings.$inferSelect;
 export type ShopWorker = typeof shopWorkers.$inferSelect;
 export type InsertShopWorker = z.infer<typeof insertShopWorkerSchema>;
+export type Notification = typeof notifications.$inferSelect;
+export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, createdAt: true });
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;

@@ -12,6 +12,19 @@ export async function runMigrations() {
     `);
 
     await client.query(`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id varchar NOT NULL REFERENCES users(id),
+        type varchar NOT NULL,
+        title varchar NOT NULL,
+        text text,
+        link varchar,
+        is_read boolean DEFAULT false,
+        created_at timestamp DEFAULT now()
+      );
+    `);
+
+    await client.query(`
       INSERT INTO cities (name)
       VALUES ('Калининград и область')
       ON CONFLICT (name) DO NOTHING;

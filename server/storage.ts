@@ -10,7 +10,8 @@ import {
   type City, type InsertCity,
   type PlatformSettings,
   type ShopWorker,
-  users, shops, products, orders, orderItems, reviews, messages, categories, cities, platformSettings, shopWorkers,
+  type Notification, type InsertNotification,
+  users, shops, products, orders, orderItems, reviews, messages, categories, cities, platformSettings, shopWorkers, notifications,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, inArray, sql } from "drizzle-orm";
@@ -56,7 +57,7 @@ export interface IStorage {
   getOrdersByShop(shopId: string): Promise<Order[]>;
   getAllOrders(): Promise<Order[]>;
   createOrder(order: InsertOrder): Promise<Order>;
-  updateOrderStatus(id: string, status: string): Promise<Order | undefined>;
+  updateOrderStatus(id: string, status: string, assemblyPhotoUrl?: string): Promise<Order | undefined>;
 
   // Order Items
   getOrderItems(orderId: string): Promise<OrderItem[]>;
@@ -88,6 +89,12 @@ export interface IStorage {
 
   // Platform Settings
   getSettings(): Promise<PlatformSettings | undefined>;
+
+  // Notifications
+  createNotification(data: InsertNotification): Promise<Notification>;
+  getUserNotifications(userId: string): Promise<Notification[]>;
+  markNotificationsRead(userId: string): Promise<void>;
+  deleteOldNotifications(userId: string): Promise<void>;
   updateSettings(data: Partial<PlatformSettings>): Promise<PlatformSettings>;
 }
 
@@ -340,6 +347,23 @@ export class DbStorage implements IStorage {
       const [s] = await db.insert(platformSettings).values({ ...data, id: "global" }).returning();
       return s;
     }
+  }
+
+  async createNotification(data: InsertNotification) {
+    const [n] = await db.insert(notifications).values(data).returning();
+    return n;
+  }
+  async getUserNotifications(userId: string) {
+    return db.select().from(notifications)
+      .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)))
+      .orderBy(desc(notifications.createdAt))
+      .limit(50);
+  }
+  async markNotificationsRead(userId: string) {
+    await db.update(notifications).set({ isRead: true }).where(eq(notifications.userId, userId));
+  }
+  async deleteOldNotifications(userId: string) {
+    await db.delete(notifications).where(and(eq(notifications.userId, userId), eq(notifications.isRead, true)));
   }
 }
 

@@ -467,6 +467,24 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           price: item.price.toString(),
         })));
       }
+      // Notify shop owner and workers about new order
+      const shopData = await storage.getShop(shopId);
+      if (shopData) {
+        const notifText = `Сумма: ${Number(totalAmount).toLocaleString("ru-RU")} ₽`;
+        const recipientIds = new Set<string>([shopData.ownerId]);
+        const workers = await storage.getShopWorkers(shopData.id);
+        workers.forEach((w) => recipientIds.add(w.userId));
+        for (const recipientId of recipientIds) {
+          await storage.createNotification({
+            userId: recipientId,
+            type: "order_new",
+            title: "Новый заказ",
+            text: notifText,
+            link: "/shop-dashboard",
+            isRead: false,
+          });
+        }
+      }
       res.json({ order });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
@@ -484,6 +502,37 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       return res.status(400).json({ error: "Загрузите фото готового букета перед тем как пометить заказ собранным" });
     }
     const order = await storage.updateOrderStatus(req.params.id, req.body.status, req.body.assemblyPhotoUrl);
+    // Notify buyer about status change
+    const STATUS_LABELS: Record<string, string> = {
+      confirmed: "Ваш заказ подтверждён магазином",
+      assembling: "Ваш заказ собирается",
+      delivering: "Ваш заказ передан в доставку",
+      delivered: "Ваш заказ доставлен",
+      cancelled: "Ваш заказ отменён",
+    };
+    const label = STATUS_LABELS[req.body.status];
+    if (label && order) {
+      const shopForNotif = await storage.getShop(order.shopId);
+      await storage.createNotification({
+        userId: order.buyerId,
+        type: "order_status",
+        title: label,
+        text: shopForNotif ? `Магазин «${shopForNotif.name}»` : undefined,
+        link: "/account",
+        isRead: false,
+      });
+    }
+    // Notify shop if buyer approved/rejected photo (assembling = photo ready for review)
+    if (req.body.status === "assembling" && req.body.assemblyPhotoUrl && order) {
+      await storage.createNotification({
+        userId: order.buyerId,
+        type: "photo_pending",
+        title: "Фото готового букета ожидает одобрения",
+        text: "Пожалуйста, проверьте фото и подтвердите заказ",
+        link: "/account",
+        isRead: false,
+      });
+    }
     res.json(order);
   });
 
@@ -496,6 +545,24 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const { approval } = req.body;
     if (approval !== "approved" && approval !== "rejected") return res.status(400).json({ error: "Неверный статус" });
     const order = await storage.updateOrderPhotoApproval(existing.id, approval);
+    // Notify shop owner + workers about buyer's photo decision
+    const shopForApproval = await storage.getShop(existing.shopId);
+    if (shopForApproval) {
+      const isApproved = approval === "approved";
+      const recipientIds = new Set<string>([shopForApproval.ownerId]);
+      const workers = await storage.getShopWorkers(shopForApproval.id);
+      workers.forEach((w) => recipientIds.add(w.userId));
+      for (const recipientId of recipientIds) {
+        await storage.createNotification({
+          userId: recipientId,
+          type: isApproved ? "photo_approved" : "photo_rejected",
+          title: isApproved ? "Покупатель одобрил фото букета" : "Покупатель отклонил фото букета",
+          text: isApproved ? "Заказ можно отправлять в доставку" : "Требуется пересборка букета",
+          link: "/shop-dashboard",
+          isRead: false,
+        });
+      }
+    }
     res.json(order);
   });
 
@@ -577,99 +644,49 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/messages", requireAuth, async (req, res) => {
     const senderId = (req.session as any).userId;
     const msg = await storage.createMessage({ ...req.body, senderId });
+    const sender = await storage.getUser(senderId);
+    if (sender) {
+      await storage.createNotification({
+        userId: msg.receiverId,
+        type: "message",
+        title: `Новое сообщение от ${sender.name}`,
+        text: msg.content.length > 80 ? msg.content.slice(0, 80) + "..." : msg.content,
+        link: `/chat?userId=${senderId}`,
+        isRead: false,
+      });
+    }
     res.json(msg);
   });
 
   // ---- NOTIFICATIONS ----
   app.get("/api/notifications", requireAuth, async (req, res) => {
     const userId = (req.session as any).userId;
-    const user = await storage.getUser(userId);
-    if (!user) return res.status(401).json({ error: "Unauthorized" });
 
-    const notifications: { id: string; type: string; title: string; text: string; link: string; time: string }[] = [];
-
+    // Unread message count (from messages table, separate from notifications)
     const partnerIds = await storage.getConversations(userId);
     let totalUnread = 0;
     for (const pid of partnerIds) {
       const msgs = await storage.getMessages(userId, pid);
-      const unread = msgs.filter((m) => m.receiverId === userId && !m.isRead);
-      totalUnread += unread.length;
-      if (unread.length > 0) {
-        const last = unread[unread.length - 1];
-        const allUsers = await storage.getAllUsers();
-        const sender = allUsers.find((u) => u.id === pid);
-        notifications.push({
-          id: `msg-${pid}`,
-          type: "message",
-          title: `Новое сообщение от ${sender?.name || "пользователя"}`,
-          text: last.content.length > 60 ? last.content.slice(0, 60) + "..." : last.content,
-          link: `/chat?userId=${pid}`,
-          time: last.createdAt ? new Date(last.createdAt).toISOString() : new Date().toISOString(),
-        });
-      }
+      totalUnread += msgs.filter((m) => m.receiverId === userId && !m.isRead).length;
     }
 
-    if (user.role === "buyer") {
-      const orders = await storage.getOrdersByBuyer(userId);
-      const recent = orders
-        .filter((o) => o.createdAt && Date.now() - new Date(o.createdAt).getTime() < 7 * 24 * 60 * 60 * 1000)
-        .slice(0, 10);
-      for (const order of recent) {
-        const statusLabels: Record<string, string> = {
-          confirmed: "подтверждён магазином",
-          assembling: "собирается",
-          delivering: "передан в доставку",
-          delivered: "доставлен",
-          cancelled: "отменён",
-        };
-        if (statusLabels[order.status]) {
-          const allShops = await storage.getShops();
-          const shop = allShops.find((s) => s.id === order.shopId);
-          notifications.push({
-            id: `order-${order.id}`,
-            type: "order",
-            title: `Заказ ${statusLabels[order.status]}`,
-            text: shop ? `Магазин «${shop.name}»` : `Заказ #${order.id.slice(0, 8)}`,
-            link: "/account",
-            time: order.createdAt ? new Date(order.createdAt).toISOString() : new Date().toISOString(),
-          });
-        }
-      }
-    }
+    const dbNotifications = await storage.getUserNotifications(userId);
+    const notifications = dbNotifications.map((n) => ({
+      id: n.id,
+      type: n.type,
+      title: n.title,
+      text: n.text || "",
+      link: n.link || "/",
+      time: n.createdAt ? new Date(n.createdAt).toISOString() : new Date().toISOString(),
+    }));
 
-    if (user.role === "shop") {
-      const shop = await storage.getShopForUser(userId);
-      if (shop) {
-        const orders = await storage.getOrdersByShop(shop.id);
-        const newOrders = orders.filter((o) => o.status === "new");
-        if (newOrders.length > 0) {
-          notifications.push({
-            id: "new-orders",
-            type: "order",
-            title: `${newOrders.length} новых заказов`,
-            text: "Требуют подтверждения",
-            link: "/shop-dashboard",
-            time: newOrders[0].createdAt ? new Date(newOrders[0].createdAt).toISOString() : new Date().toISOString(),
-          });
-        }
-        const revs = await storage.getReviewsByShop(shop.id);
-        const seenAt = user.reviewsSeenAt ? new Date(user.reviewsSeenAt).getTime() : 0;
-        const unseenRevs = revs.filter((r) => r.createdAt && new Date(r.createdAt).getTime() > seenAt);
-        if (unseenRevs.length > 0) {
-          notifications.push({
-            id: "new-reviews",
-            type: "review",
-            title: `${unseenRevs.length} новых отзывов`,
-            text: `Средняя оценка: ${(unseenRevs.reduce((s, r) => s + r.rating, 0) / unseenRevs.length).toFixed(1)}`,
-            link: "/shop-dashboard",
-            time: unseenRevs[0].createdAt ? new Date(unseenRevs[0].createdAt).toISOString() : new Date().toISOString(),
-          });
-        }
-      }
-    }
-
-    notifications.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
     res.json({ notifications, unreadMessages: totalUnread });
+  });
+
+  app.post("/api/notifications/read", requireAuth, async (req, res) => {
+    const userId = (req.session as any).userId;
+    await storage.markNotificationsRead(userId);
+    res.json({ ok: true });
   });
 
   // ---- ADMIN ----

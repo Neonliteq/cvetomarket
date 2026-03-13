@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { ShoppingCart, User, Flower2, Menu, X, ChevronDown, Bell, MessageCircle, Package, Star, ChevronRight, LogOut, LayoutDashboard, ShoppingBag, Shield, Clock } from "lucide-react";
+import { ShoppingCart, User, Flower2, Menu, X, ChevronDown, Bell, MessageCircle, Package, Star, ChevronRight, LogOut, LayoutDashboard, ShoppingBag, Shield, Clock, CheckCircle2, XCircle, Camera, ShoppingBag as OrderNewIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -12,13 +12,14 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useAuth } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { apiRequest } from "@/lib/queryClient";
 
 interface Notification {
   id: string;
-  type: "message" | "order" | "review";
+  type: string;
   title: string;
   text: string;
   link: string;
@@ -32,13 +33,21 @@ interface NotificationsData {
 
 const ICON_MAP: Record<string, typeof MessageCircle> = {
   message: MessageCircle,
-  order: Package,
+  order_new: OrderNewIcon,
+  order_status: Package,
+  photo_pending: Camera,
+  photo_approved: CheckCircle2,
+  photo_rejected: XCircle,
   review: Star,
 };
 
 const COLOR_MAP: Record<string, string> = {
   message: "bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300",
-  order: "bg-primary/10 text-primary",
+  order_new: "bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-300",
+  order_status: "bg-primary/10 text-primary",
+  photo_pending: "bg-amber-100 text-amber-600 dark:bg-amber-900 dark:text-amber-300",
+  photo_approved: "bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-300",
+  photo_rejected: "bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-300",
   review: "bg-amber-100 text-amber-600 dark:bg-amber-900 dark:text-amber-300",
 };
 
@@ -72,12 +81,25 @@ export function Header() {
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const qc = useQueryClient();
 
   const { data: notifData } = useQuery<NotificationsData>({
     queryKey: ["/api/notifications"],
     enabled: !!user,
-    refetchInterval: 30000,
+    refetchInterval: 15000,
   });
+
+  const markReadMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/notifications/read"),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["/api/notifications"] }),
+  });
+
+  const handleNotifOpen = (open: boolean) => {
+    setNotifOpen(open);
+    if (open && (notifData?.notifications?.length ?? 0) > 0) {
+      markReadMutation.mutate();
+    }
+  };
 
   const { data: myOrders } = useQuery<any[]>({
     queryKey: ["/api/orders/my"],
@@ -136,7 +158,7 @@ export function Header() {
 
         <div className="flex items-center gap-2">
           {user && (
-            <Popover open={notifOpen} onOpenChange={setNotifOpen}>
+            <Popover open={notifOpen} onOpenChange={handleNotifOpen}>
               <PopoverTrigger asChild>
                 <Button variant="ghost" size="icon" className="relative" data-testid="button-notifications">
                   <Bell className="w-5 h-5" />
