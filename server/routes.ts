@@ -11,6 +11,7 @@ import { insertUserSchema, insertShopSchema, insertProductSchema, insertOrderSch
 import { z } from "zod";
 import { objectStorageClient, ObjectStorageService } from "./replit_integrations/object_storage";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
+import { sendTelegramMessage, generateLinkToken, consumeLinkToken, getBotUsername, ORDER_STATUS_MESSAGES } from "./telegram";
 
 function parseObjPath(p: string): { bucketName: string; objectName: string } {
   if (!p.startsWith("/")) p = `/${p}`;
@@ -483,6 +484,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
             link: "/shop-dashboard",
             isRead: false,
           });
+          const recipient = await storage.getUser(recipientId);
+          if (recipient?.telegramChatId) {
+            await sendTelegramMessage(
+              recipient.telegramChatId,
+              `🛍 <b>Новый заказ в магазине «${shopData.name}»</b>\n\nСумма: <b>${Number(totalAmount).toLocaleString("ru-RU")} ₽</b>\n\nОткройте панель управления, чтобы подтвердить заказ.`
+            );
+          }
         }
       }
       res.json({ order });
@@ -521,8 +529,18 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         link: "/account",
         isRead: false,
       });
+      const buyer = await storage.getUser(order.buyerId);
+      if (buyer?.telegramChatId) {
+        const tgMsg = ORDER_STATUS_MESSAGES[req.body.status];
+        if (tgMsg) {
+          await sendTelegramMessage(
+            buyer.telegramChatId,
+            `${tgMsg}${shopForNotif ? `\n\n🏪 Магазин: ${shopForNotif.name}` : ""}`
+          );
+        }
+      }
     }
-    // Notify shop if buyer approved/rejected photo (assembling = photo ready for review)
+    // Notify buyer about photo pending approval
     if (req.body.status === "assembling" && req.body.assemblyPhotoUrl && order) {
       await storage.createNotification({
         userId: order.buyerId,
@@ -532,6 +550,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         link: "/account",
         isRead: false,
       });
+      const buyerForPhoto = await storage.getUser(order.buyerId);
+      if (buyerForPhoto?.telegramChatId) {
+        await sendTelegramMessage(
+          buyerForPhoto.telegramChatId,
+          `📸 <b>Магазин загрузил фото готового букета</b>\n\nПожалуйста, откройте раздел «Мои заказы» на сайте и одобрите или отклоните фото.`
+        );
+      }
     }
     res.json(order);
   });
@@ -561,6 +586,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           link: "/shop-dashboard",
           isRead: false,
         });
+        const recipient = await storage.getUser(recipientId);
+        if (recipient?.telegramChatId) {
+          await sendTelegramMessage(
+            recipient.telegramChatId,
+            isApproved
+              ? `✅ <b>Покупатель одобрил фото букета</b>\n\nЗаказ можно отправлять в доставку.`
+              : `❌ <b>Покупатель отклонил фото букета</b>\n\nТребуется пересборка. Откройте панель управления.`
+          );
+        }
       }
     }
     res.json(order);
@@ -645,6 +679,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const senderId = (req.session as any).userId;
     const msg = await storage.createMessage({ ...req.body, senderId });
     const sender = await storage.getUser(senderId);
+    const receiver = await storage.getUser(msg.receiverId);
     if (sender) {
       await storage.createNotification({
         userId: msg.receiverId,
@@ -654,6 +689,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         link: `/chat?userId=${senderId}`,
         isRead: false,
       });
+      if (receiver?.telegramChatId) {
+        await sendTelegramMessage(
+          receiver.telegramChatId,
+          `💬 <b>Новое сообщение от ${sender.name}</b>\n\n${msg.content.length > 200 ? msg.content.slice(0, 200) + "..." : msg.content}`
+        );
+      }
     }
     res.json(msg);
   });
@@ -687,6 +728,51 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const userId = (req.session as any).userId;
     await storage.markNotificationsRead(userId);
     res.json({ ok: true });
+  });
+
+  // ---- TELEGRAM ----
+  app.get("/api/telegram/link", requireAuth, async (req, res) => {
+    const userId = (req.session as any).userId;
+    const token = generateLinkToken(userId);
+    res.json({ url: `https://t.me/${getBotUsername()}?start=${token}` });
+  });
+
+  app.delete("/api/telegram/link", requireAuth, async (req, res) => {
+    const userId = (req.session as any).userId;
+    await storage.setTelegramChatId(userId, null);
+    res.json({ ok: true });
+  });
+
+  app.post("/api/telegram/webhook", async (req, res) => {
+    try {
+      const message = req.body?.message;
+      if (!message) return res.json({ ok: true });
+
+      const chatId = String(message.chat?.id);
+      const text: string = message.text || "";
+
+      if (text.startsWith("/start")) {
+        const token = text.split(" ")[1]?.trim();
+        if (token) {
+          const userId = consumeLinkToken(token);
+          if (userId) {
+            await storage.setTelegramChatId(userId, chatId);
+            await sendTelegramMessage(
+              chatId,
+              "✅ <b>Telegram-уведомления подключены!</b>\n\nТеперь вы будете получать уведомления о заказах и сообщениях прямо здесь."
+            );
+          } else {
+            await sendTelegramMessage(chatId, "⚠️ Ссылка устарела или недействительна.\n\nПожалуйста, сгенерируйте новую ссылку в настройках профиля.");
+          }
+        } else {
+          await sendTelegramMessage(chatId, "👋 Привет! Чтобы получать уведомления от ЦветоМаркет, перейдите в профиль на сайте и нажмите «Подключить Telegram».");
+        }
+      }
+
+      res.json({ ok: true });
+    } catch {
+      res.json({ ok: true });
+    }
   });
 
   // ---- ADMIN ----

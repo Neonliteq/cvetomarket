@@ -9,6 +9,7 @@ export async function runMigrations() {
       ALTER TABLE products ADD COLUMN IF NOT EXISTS tags text[] DEFAULT '{}'::text[];
       ALTER TABLE shops ADD COLUMN IF NOT EXISTS commission_rate numeric(5,2);
       ALTER TABLE users ADD COLUMN IF NOT EXISTS buyer_city text;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_chat_id text;
     `);
 
     await client.query(`

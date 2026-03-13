@@ -1,7 +1,7 @@
 import { useState, useEffect, type ComponentType } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Package, MessageCircle, User, LogOut, Star, CheckCircle, Upload, Camera, X, MapPin, ShoppingBag, TrendingUp, Store, Flower2, Activity } from "lucide-react";
+import { Package, MessageCircle, User, LogOut, Star, CheckCircle, Upload, Camera, X, MapPin, ShoppingBag, TrendingUp, Store, Flower2, Activity, Send, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -255,6 +255,70 @@ function ReviewDialog({ order }: { order: OrderWithItems }) {
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function TelegramSection({ user, queryClient, toast }: { user: any; queryClient: any; toast: any }) {
+  const isConnected = !!(user as any).telegramChatId;
+
+  const connectMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("GET", "/api/telegram/link");
+      return res as { url: string };
+    },
+    onSuccess: ({ url }) => {
+      window.open(url, "_blank");
+    },
+    onError: () => toast({ title: "Ошибка", description: "Не удалось получить ссылку", variant: "destructive" }),
+  });
+
+  const disconnectMutation = useMutation({
+    mutationFn: () => apiRequest("DELETE", "/api/telegram/link"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      toast({ title: "Telegram отключён" });
+    },
+  });
+
+  return (
+    <div>
+      <p className="text-sm font-medium mb-1.5 flex items-center gap-1.5">
+        <Send className="w-4 h-4 text-blue-500" /> Telegram-уведомления
+      </p>
+      <p className="text-xs text-muted-foreground mb-3">
+        Получайте уведомления о заказах, фото и сообщениях прямо в Telegram
+      </p>
+
+      {isConnected ? (
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+            <CheckCircle className="w-4 h-4" />
+            <span>Telegram подключён</span>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => disconnectMutation.mutate()}
+            disabled={disconnectMutation.isPending}
+            data-testid="button-telegram-disconnect"
+          >
+            Отключить
+          </Button>
+        </div>
+      ) : (
+        <Button
+          size="sm"
+          variant="outline"
+          className="gap-2"
+          onClick={() => connectMutation.mutate()}
+          disabled={connectMutation.isPending}
+          data-testid="button-telegram-connect"
+        >
+          <ExternalLink className="w-4 h-4" />
+          {connectMutation.isPending ? "Открываем..." : "Подключить Telegram"}
+        </Button>
+      )}
+    </div>
   );
 }
 
@@ -618,6 +682,10 @@ export default function Account() {
                   </div>
                 </>
               )}
+
+              {/* Telegram notifications block — visible to all roles */}
+              <Separator />
+              <TelegramSection user={user} queryClient={queryClient} toast={toast} />
             </CardContent>
           </Card>
         </TabsContent>

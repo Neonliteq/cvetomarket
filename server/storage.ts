@@ -95,6 +95,9 @@ export interface IStorage {
   getUserNotifications(userId: string): Promise<Notification[]>;
   markNotificationsRead(userId: string): Promise<void>;
   deleteOldNotifications(userId: string): Promise<void>;
+
+  // Telegram
+  setTelegramChatId(userId: string, chatId: string | null): Promise<void>;
   updateSettings(data: Partial<PlatformSettings>): Promise<PlatformSettings>;
 }
 
@@ -364,6 +367,10 @@ export class DbStorage implements IStorage {
   }
   async deleteOldNotifications(userId: string) {
     await db.delete(notifications).where(and(eq(notifications.userId, userId), eq(notifications.isRead, true)));
+  }
+
+  async setTelegramChatId(userId: string, chatId: string | null) {
+    await db.update(users).set({ telegramChatId: chatId } as any).where(eq(users.id, userId));
   }
 }
 

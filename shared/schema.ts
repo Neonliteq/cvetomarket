@@ -14,6 +14,7 @@ export const users = pgTable("users", {
   avatarUrl: text("avatar_url"),
   reviewsSeenAt: timestamp("reviews_seen_at"),
   buyerCity: text("buyer_city"),
+  telegramChatId: text("telegram_chat_id"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
