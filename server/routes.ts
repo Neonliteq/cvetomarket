@@ -11,7 +11,7 @@ import { insertUserSchema, insertShopSchema, insertProductSchema, insertOrderSch
 import { z } from "zod";
 import { objectStorageClient, ObjectStorageService } from "./replit_integrations/object_storage";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
-import { sendTelegramMessage, generateLinkToken, consumeLinkToken, getBotUsername, ORDER_STATUS_MESSAGES } from "./telegram";
+import { sendTelegramMessage, generateLinkToken, consumeLinkToken, getBotUsername, ORDER_STATUS_MESSAGES, registerWebhook } from "./telegram";
 
 function parseObjPath(p: string): { bucketName: string; objectName: string } {
   if (!p.startsWith("/")) p = `/${p}`;
@@ -733,7 +733,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // ---- TELEGRAM ----
   app.get("/api/telegram/link", requireAuth, async (req, res) => {
     const userId = (req.session as any).userId;
-    const token = generateLinkToken(userId);
+    const token = await generateLinkToken(userId);
     res.json({ url: `https://t.me/${getBotUsername()}?start=${token}` });
   });
 
