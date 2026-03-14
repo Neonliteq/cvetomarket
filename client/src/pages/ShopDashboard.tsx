@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Plus, Edit, Trash2, Package, ShoppingBag, BarChart2, MessageCircle,
   Eye, EyeOff, Star, MapPin, Phone, Calendar, Clock, User, FileText, Send, Settings, Truck,
-  Upload, Image, X, Users, UserPlus, UserMinus, Crown, Tag
+  Upload, Image, X, Users, UserPlus, UserMinus, Crown, Tag, CheckCircle, ExternalLink
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -363,6 +363,24 @@ export default function ShopDashboard() {
   const [, navigate] = useLocation();
   const searchStr = useSearch();
   const qc = useQueryClient();
+
+  const telegramConnectMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("GET", "/api/telegram/link");
+      return res as { url: string };
+    },
+    onSuccess: ({ url }) => { window.location.href = url; },
+    onError: () => toast({ title: "Ошибка", description: "Не удалось получить ссылку", variant: "destructive" }),
+  });
+
+  const telegramDisconnectMutation = useMutation({
+    mutationFn: () => apiRequest("DELETE", "/api/telegram/link"),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      toast({ title: "Telegram отключён" });
+    },
+  });
+
   const tabParam = new URLSearchParams(searchStr).get("tab");
   const validTabs = ["products", "orders", "reviews", "settings", "workers"];
   const [activeTab, setActiveTab] = useState(validTabs.includes(tabParam || "") ? tabParam! : "products");
@@ -1398,6 +1416,48 @@ export default function ShopDashboard() {
                     Сохранить информацию
                   </Button>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Telegram notifications */}
+            <Card>
+              <CardContent className="p-5">
+                <div className="flex items-center gap-2 mb-1">
+                  <Send className="w-4 h-4 text-blue-500" />
+                  <h3 className="font-semibold">Telegram-уведомления</h3>
+                </div>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Получайте мгновенные уведомления о новых заказах, фотоотчётах и сообщениях прямо в Telegram
+                </p>
+                {(user as any)?.telegramChatId ? (
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+                      <CheckCircle className="w-4 h-4" />
+                      <span>Telegram подключён</span>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => telegramDisconnectMutation.mutate()}
+                      disabled={telegramDisconnectMutation.isPending}
+                      data-testid="button-shop-telegram-disconnect"
+                    >
+                      Отключить
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-2"
+                    onClick={() => telegramConnectMutation.mutate()}
+                    disabled={telegramConnectMutation.isPending}
+                    data-testid="button-shop-telegram-connect"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    {telegramConnectMutation.isPending ? "Открываем..." : "Подключить Telegram"}
+                  </Button>
+                )}
               </CardContent>
             </Card>
           </div>
