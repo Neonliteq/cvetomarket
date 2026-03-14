@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { ShoppingCart, User, Flower2, Menu, X, ChevronDown, Bell, MessageCircle, Package, Star, ChevronRight, LogOut, LayoutDashboard, ShoppingBag, Shield, Clock, CheckCircle2, XCircle, Camera, ShoppingBag as OrderNewIcon } from "lucide-react";
+import { ShoppingCart, User, Flower2, Menu, X, ChevronDown, Bell, MessageCircle, Package, Star, ChevronRight, LogOut, LayoutDashboard, ShoppingBag, Shield, Clock, CheckCircle2, XCircle, Camera, ShoppingBag as OrderNewIcon, MapPin, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -12,6 +12,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useAuth } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
+import { useCity } from "@/lib/cityContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -78,6 +79,7 @@ const ROLE_COLORS: Record<string, string> = {
 export function Header() {
   const { user, logout } = useAuth();
   const { itemCount } = useCart();
+  const { selectedCityId, setSelectedCityId, selectedCity, cities } = useCity();
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -141,6 +143,47 @@ export function Header() {
           </div>
           <span className="font-bold text-lg hidden sm:block">ЦветоМаркет</span>
         </Link>
+
+        {/* City selector */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 text-muted-foreground hover:text-foreground shrink-0 px-2"
+              data-testid="button-city-selector"
+            >
+              <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
+              <span className="max-w-[90px] truncate text-sm hidden xs:block sm:block">
+                {selectedCity ? selectedCity.name : "Все города"}
+              </span>
+              <ChevronDown className="w-3 h-3 opacity-50 hidden sm:block" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-52">
+            <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">Выберите город</div>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => setSelectedCityId(null)}
+              className="gap-2 cursor-pointer"
+              data-testid="city-option-all"
+            >
+              <Check className={cn("w-3.5 h-3.5 shrink-0", selectedCityId === null ? "opacity-100" : "opacity-0")} />
+              Все города
+            </DropdownMenuItem>
+            {cities.map((c) => (
+              <DropdownMenuItem
+                key={c.id}
+                onClick={() => setSelectedCityId(c.id)}
+                className="gap-2 cursor-pointer"
+                data-testid={`city-option-${c.id}`}
+              >
+                <Check className={cn("w-3.5 h-3.5 shrink-0", selectedCityId === c.id ? "opacity-100" : "opacity-0")} />
+                {c.name}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         <nav className="hidden md:flex items-center gap-1">
           {navLinks.map((l) => (

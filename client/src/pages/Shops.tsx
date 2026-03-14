@@ -7,21 +7,21 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ShopCard } from "@/components/ShopCard";
 import { ShopsMap } from "@/components/ShopsMap";
-import type { Shop, City } from "@shared/schema";
+import { useCity } from "@/lib/cityContext";
+import type { Shop } from "@shared/schema";
 
 type ShopWithMeta = Shop & { cityName?: string };
 
 export default function Shops() {
   const [search, setSearch] = useState("");
-  const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
+  const { selectedCityId, setSelectedCityId, cities } = useCity();
 
   const { data: shops, isLoading } = useQuery<ShopWithMeta[]>({ queryKey: ["/api/shops/all"] });
-  const { data: cities } = useQuery<City[]>({ queryKey: ["/api/cities"] });
 
   const filtered = (shops || []).filter((s) => {
     if (search && !s.name.toLowerCase().includes(search.toLowerCase())) return false;
-    if (selectedCity && s.cityId !== selectedCity) return false;
+    if (selectedCityId && s.cityId !== selectedCityId) return false;
     return true;
   });
 
@@ -72,18 +72,18 @@ export default function Shops() {
       {cities && cities.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-6">
           <Badge
-            variant={selectedCity === null ? "default" : "secondary"}
+            variant={selectedCityId === null ? "default" : "secondary"}
             className="cursor-pointer"
-            onClick={() => setSelectedCity(null)}
+            onClick={() => setSelectedCityId(null)}
           >
             Все города
           </Badge>
           {cities.map((c) => (
             <Badge
               key={c.id}
-              variant={selectedCity === c.id ? "default" : "secondary"}
+              variant={selectedCityId === c.id ? "default" : "secondary"}
               className="cursor-pointer"
-              onClick={() => setSelectedCity(selectedCity === c.id ? null : c.id)}
+              onClick={() => setSelectedCityId(selectedCityId === c.id ? null : c.id)}
             >
               {c.name}
             </Badge>

@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/lib/auth";
 import { CartProvider, useCart } from "@/lib/cart";
+import { CityProvider } from "@/lib/cityContext";
 import { AddonSuggestionDialog } from "@/components/AddonSuggestionDialog";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -67,13 +68,15 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <CartProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Router />
-            <AddonModalMount />
-          </TooltipProvider>
-        </CartProvider>
+        <CityProvider>
+          <CartProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Router />
+              <AddonModalMount />
+            </TooltipProvider>
+          </CartProvider>
+        </CityProvider>
       </AuthProvider>
     </QueryClientProvider>
   );
