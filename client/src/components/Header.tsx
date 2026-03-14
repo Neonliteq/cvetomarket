@@ -14,9 +14,10 @@ import { useAuth } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
 import { useCity } from "@/lib/cityContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
+import { playMessageSound, playOrderSound } from "@/lib/sounds";
 
 interface Notification {
   id: string;
@@ -127,6 +128,23 @@ export function Header() {
   const assemblingCount = (shopOrders || []).filter(
     (o) => o.status === "assembling" && o.buyerPhotoApproval === "approved"
   ).length;
+
+  const prevUnreadMessages = useRef<number | null>(null);
+  const prevPendingOrders = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (prevUnreadMessages.current !== null && unreadMessages > prevUnreadMessages.current) {
+      playMessageSound();
+    }
+    prevUnreadMessages.current = unreadMessages;
+  }, [unreadMessages]);
+
+  useEffect(() => {
+    if (prevPendingOrders.current !== null && pendingShopOrdersCount > prevPendingOrders.current) {
+      playOrderSound();
+    }
+    prevPendingOrders.current = pendingShopOrdersCount;
+  }, [pendingShopOrdersCount]);
 
   const navLinks = [
     { href: "/", label: "Главная" },

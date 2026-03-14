@@ -1,7 +1,7 @@
 import { useState, useEffect, type ComponentType } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Package, MessageCircle, User, LogOut, Star, CheckCircle, Upload, Camera, X, MapPin, ShoppingBag, TrendingUp, Store, Flower2, Activity, Send, ExternalLink } from "lucide-react";
+import { Package, MessageCircle, User, LogOut, Star, CheckCircle, Upload, Camera, X, MapPin, ShoppingBag, TrendingUp, Store, Flower2, Activity, Send, ExternalLink, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,8 @@ import { RUSSIAN_CITIES } from "@/lib/russianCities";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { isSoundEnabled, setSoundEnabled } from "@/lib/sounds";
+import { Switch } from "@/components/ui/switch";
 import type { Order, OrderItem, Review } from "@shared/schema";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
@@ -318,6 +320,37 @@ function TelegramSection({ user, queryClient, toast }: { user: any; queryClient:
           {connectMutation.isPending ? "Открываем..." : "Подключить Telegram"}
         </Button>
       )}
+    </div>
+  );
+}
+
+function SoundSection() {
+  const [enabled, setEnabled] = useState(isSoundEnabled);
+
+  const toggle = (val: boolean) => {
+    setSoundEnabled(val);
+    setEnabled(val);
+  };
+
+  return (
+    <div>
+      <p className="text-sm font-medium mb-1.5 flex items-center gap-1.5">
+        {enabled
+          ? <Volume2 className="w-4 h-4 text-primary" />
+          : <VolumeX className="w-4 h-4 text-muted-foreground" />}
+        Звуковые уведомления
+      </p>
+      <p className="text-xs text-muted-foreground mb-3">
+        Звук при новом сообщении и при новом заказе (для продавцов)
+      </p>
+      <div className="flex items-center gap-3">
+        <Switch
+          checked={enabled}
+          onCheckedChange={toggle}
+          data-testid="switch-sound-notifications"
+        />
+        <span className="text-sm text-muted-foreground">{enabled ? "Включены" : "Выключены"}</span>
+      </div>
     </div>
   );
 }
@@ -686,6 +719,10 @@ export default function Account() {
               {/* Telegram notifications block — visible to all roles */}
               <Separator />
               <TelegramSection user={user} queryClient={queryClient} toast={toast} />
+
+              {/* Sound notifications */}
+              <Separator />
+              <SoundSection />
             </CardContent>
           </Card>
         </TabsContent>
