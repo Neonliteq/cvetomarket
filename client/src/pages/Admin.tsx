@@ -253,6 +253,10 @@ export default function Admin() {
       setBonusGrantUser(null);
       setBonusAmount("");
       setBonusDesc("");
+      qc.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      if (bonusViewUser) {
+        qc.invalidateQueries({ queryKey: ["/api/admin/users", bonusViewUser.id, "bonuses"] });
+      }
     },
     onError: (err: any) => {
       let msg = "Ошибка";

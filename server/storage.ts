@@ -112,6 +112,7 @@ export interface IStorage {
   getBonusTransactions(userId: string): Promise<BonusTransaction[]>;
   addBonusTransaction(userId: string, amount: number, reason: string, description: string, expiresAt?: Date): Promise<BonusTransaction>;
   getUserByReferralCode(code: string): Promise<User | undefined>;
+  getReferralCode(userId: string): Promise<string>;
 }
 
 export class DbStorage implements IStorage {
@@ -142,6 +143,7 @@ export class DbStorage implements IStorage {
     await db.delete(reviews).where(eq(reviews.buyerId, id));
     await db.delete(orders).where(eq(orders.buyerId, id));
     await db.delete(shopWorkers).where(eq(shopWorkers.userId, id));
+    await db.delete(bonusTransactions).where(eq(bonusTransactions.userId, id));
     await db.delete(users).where(eq(users.id, id));
   }
   async getAllUsers() {
@@ -428,6 +430,16 @@ export class DbStorage implements IStorage {
   async getUserByReferralCode(code: string): Promise<User | undefined> {
     const [u] = await db.select().from(users).where(eq(users.referralCode as any, code));
     return u;
+  }
+
+  async getReferralCode(userId: string): Promise<string> {
+    const user = await this.getUser(userId);
+    if (user && (user as any).referralCode) return (user as any).referralCode;
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let code = "";
+    for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    await db.update(users).set({ referralCode: code } as any).where(eq(users.id, userId));
+    return code;
   }
 }
 

@@ -1269,13 +1269,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.get("/api/bonuses/referral-code", requireAuth, async (req, res) => {
     const userId = (req.session as any).userId;
-    const user = await storage.getUser(userId);
-    if (!user) return res.status(404).json({ error: "User not found" });
-    let code = (user as any).referralCode;
-    if (!code) {
-      code = generateReferralCode();
-      await storage.updateUser(userId, { referralCode: code } as any);
-    }
+    const code = await storage.getReferralCode(userId);
     const proto = req.headers["x-forwarded-proto"] || req.protocol;
     const host = req.headers["x-forwarded-host"] || req.headers.host;
     const referralLink = `${proto}://${host}/auth?ref=${code}`;
