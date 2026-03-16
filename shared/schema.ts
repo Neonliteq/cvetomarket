@@ -127,7 +127,8 @@ export const messages = pgTable("messages", {
   orderId: varchar("order_id").references(() => orders.id),
   senderId: varchar("sender_id").notNull().references(() => users.id),
   receiverId: varchar("receiver_id").notNull().references(() => users.id),
-  content: text("content").notNull(),
+  content: text("content").default(""),
+  imageUrl: text("image_url"),
   isRead: boolean("is_read").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });

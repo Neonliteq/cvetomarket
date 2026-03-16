@@ -178,10 +178,6 @@ export default function ProductDetail() {
                   const res = await fetch(`/api/shops/${shop.id}/owner`, { credentials: "include" });
                   const data = await res.json();
                   if (data.ownerId) {
-                    await apiRequest("POST", "/api/messages", {
-                      receiverId: data.ownerId,
-                      content: `Здравствуйте! Вопрос по товару «${product.name}»`,
-                    });
                     navigate(`/chat?userId=${data.ownerId}`);
                   }
                 } catch {

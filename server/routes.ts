@@ -719,22 +719,49 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.post("/api/messages", requireAuth, async (req, res) => {
     const senderId = (req.session as any).userId;
-    const msg = await storage.createMessage({ ...req.body, senderId });
     const sender = await storage.getUser(senderId);
+
+    // Block external links for non-admins
+    const content: string = req.body.content || "";
+    if (content && sender?.role !== "admin") {
+      const externalLinkRe = /(https?:\/\/|www\.)[^\s]+/gi;
+      const matches = content.match(externalLinkRe) || [];
+      const host = req.hostname;
+      const hasExternal = matches.some((url) => {
+        try {
+          const u = new URL(url.startsWith("www.") ? `https://${url}` : url);
+          return u.hostname !== host;
+        } catch {
+          return false;
+        }
+      });
+      if (hasExternal) {
+        return res.status(400).json({ error: "Отправка внешних ссылок запрещена" });
+      }
+    }
+
+    const { content: _, imageUrl, receiverId, orderId } = req.body;
+    if (!content.trim() && !imageUrl) {
+      return res.status(400).json({ error: "Сообщение не может быть пустым" });
+    }
+
+    const msg = await storage.createMessage({ content, imageUrl: imageUrl || null, receiverId, orderId: orderId || null, senderId });
     const receiver = await storage.getUser(msg.receiverId);
     if (sender) {
+      const notifText = imageUrl && !content.trim() ? "📷 Фото" : (content.length > 80 ? content.slice(0, 80) + "..." : content);
       await storage.createNotification({
         userId: msg.receiverId,
         type: "message",
         title: `Новое сообщение от ${sender.name}`,
-        text: msg.content.length > 80 ? msg.content.slice(0, 80) + "..." : msg.content,
+        text: notifText,
         link: `/chat?userId=${senderId}`,
         isRead: false,
       });
       if (receiver?.telegramChatId) {
+        const tgText = imageUrl && !content.trim() ? "📷 Фото" : (content.length > 200 ? content.slice(0, 200) + "..." : content);
         await sendTelegramMessage(
           receiver.telegramChatId,
-          `💬 <b>Новое сообщение от ${sender.name}</b>\n\n${msg.content.length > 200 ? msg.content.slice(0, 200) + "..." : msg.content}`
+          `💬 <b>Новое сообщение от ${sender.name}</b>\n\n${tgText}`
         );
       }
     }

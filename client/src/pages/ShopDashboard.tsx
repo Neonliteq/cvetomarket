@@ -984,16 +984,8 @@ export default function ShopDashboard() {
                         size="sm"
                         variant="outline"
                         className="gap-1.5 ml-auto"
-                        onClick={async () => {
-                          try {
-                            await apiRequest("POST", "/api/messages", {
-                              receiverId: order.buyerId,
-                              content: `Здравствуйте! По вашему заказу #${order.id.slice(0, 8).toUpperCase()}`,
-                            });
-                            navigate(`/chat?userId=${order.buyerId}`);
-                          } catch {
-                            navigate("/chat");
-                          }
+                        onClick={() => {
+                          navigate(`/chat?userId=${order.buyerId}`);
                         }}
                         data-testid={`button-message-buyer-${order.id}`}
                       >

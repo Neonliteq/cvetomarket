@@ -144,10 +144,6 @@ export default function ShopDetail() {
                   const res = await fetch(`/api/shops/${id}/owner`, { credentials: "include" });
                   const data = await res.json();
                   if (data.ownerId) {
-                    await apiRequest("POST", "/api/messages", {
-                      receiverId: data.ownerId,
-                      content: `Здравствуйте! У меня вопрос по магазину «${shop.name}»`,
-                    });
                     navigate(`/chat?userId=${data.ownerId}`);
                   }
                 } catch {

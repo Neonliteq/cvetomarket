@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Send, MessageCircle, ArrowLeft } from "lucide-react";
+import { Send, MessageCircle, ArrowLeft, Paperclip, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,6 +13,7 @@ import { apiRequest } from "@/lib/queryClient";
 import type { Message } from "@shared/schema";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
+import { useToast } from "@/hooks/use-toast";
 
 type MessageWithUsers = Message & { senderName?: string; receiverName?: string };
 type ConversationUser = { id: string; name: string; unreadCount: number };
@@ -25,9 +26,14 @@ export default function Chat() {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(urlUserId);
   const [showChat, setShowChat] = useState<boolean>(!!urlUserId);
   const [text, setText] = useState("");
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const qc = useQueryClient();
+  const { toast } = useToast();
 
   const { data: conversations, isLoading: loadingConvs } = useQuery<ConversationUser[]>({
     queryKey: ["/api/messages/conversations"],
@@ -42,11 +48,22 @@ export default function Chat() {
   });
 
   const sendMutation = useMutation({
-    mutationFn: () => apiRequest("POST", "/api/messages", { receiverId: selectedUserId, content: text }),
+    mutationFn: () =>
+      apiRequest("POST", "/api/messages", {
+        receiverId: selectedUserId,
+        content: text,
+        imageUrl: imageUrl || undefined,
+      }),
     onSuccess: () => {
       setText("");
+      setImageUrl(null);
+      setImagePreview(null);
       qc.invalidateQueries({ queryKey: ["/api/messages", selectedUserId] });
       qc.invalidateQueries({ queryKey: ["/api/messages/conversations"] });
+    },
+    onError: (err: any) => {
+      const msg = err?.message || "Ошибка отправки сообщения";
+      toast({ title: msg, variant: "destructive" });
     },
   });
 
@@ -68,8 +85,50 @@ export default function Chat() {
   }
 
   const handleSend = () => {
-    if (!text.trim() || !selectedUserId) return;
+    if ((!text.trim() && !imageUrl) || !selectedUserId) return;
     sendMutation.mutate();
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Можно прикреплять только изображения", variant: "destructive" });
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ title: "Файл слишком большой (максимум 10 МБ)", variant: "destructive" });
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(file);
+    setImagePreview(previewUrl);
+    setUploading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("images", file);
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      const data = await res.json();
+      setImageUrl(data.urls?.[0] || null);
+    } catch {
+      toast({ title: "Не удалось загрузить изображение", variant: "destructive" });
+      setImagePreview(null);
+      setImageUrl(null);
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImageUrl(null);
+    setImagePreview(null);
   };
 
   const handleSelectConversation = (id: string) => {
@@ -201,21 +260,36 @@ export default function Chat() {
                         <div key={msg.id} className={cn("flex", isMe ? "justify-end" : "justify-start")}>
                           <div
                             className={cn(
-                              "max-w-[75%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed",
+                              "max-w-[75%] rounded-2xl text-sm leading-relaxed overflow-hidden",
                               isMe
                                 ? "bg-primary text-primary-foreground rounded-br-sm"
                                 : "bg-muted rounded-bl-sm"
                             )}
                           >
-                            <p className="break-words">{msg.content}</p>
-                            {msg.createdAt && (
-                              <p className={cn(
-                                "text-[11px] mt-1 text-right",
-                                isMe ? "text-primary-foreground/60" : "text-muted-foreground"
-                              )}>
-                                {format(new Date(msg.createdAt), "HH:mm")}
-                              </p>
+                            {msg.imageUrl && (
+                              <a href={msg.imageUrl} target="_blank" rel="noopener noreferrer">
+                                <img
+                                  src={msg.imageUrl}
+                                  alt="Фото"
+                                  className="max-w-full max-h-64 object-cover block"
+                                />
+                              </a>
                             )}
+                            {msg.content && (
+                              <div className="px-4 py-2.5">
+                                <p className="break-words">{msg.content}</p>
+                              </div>
+                            )}
+                            <div className={cn("px-4 pb-2", !msg.content && msg.imageUrl ? "" : "-mt-1")}>
+                              {msg.createdAt && (
+                                <p className={cn(
+                                  "text-[11px] text-right",
+                                  isMe ? "text-primary-foreground/60" : "text-muted-foreground"
+                                )}>
+                                  {format(new Date(msg.createdAt), "HH:mm")}
+                                </p>
+                              )}
+                            </div>
                           </div>
                         </div>
                       );
@@ -230,8 +304,51 @@ export default function Chat() {
                 )}
               </ScrollArea>
 
+              {/* Image preview */}
+              {imagePreview && (
+                <div className="px-3 pt-2 border-t border-border">
+                  <div className="relative w-fit">
+                    <img
+                      src={imagePreview}
+                      alt="Предпросмотр"
+                      className="h-20 w-auto rounded-lg object-cover border border-border"
+                    />
+                    {uploading && (
+                      <div className="absolute inset-0 bg-black/40 rounded-lg flex items-center justify-center">
+                        <span className="text-white text-xs">Загрузка...</span>
+                      </div>
+                    )}
+                    <button
+                      onClick={handleRemoveImage}
+                      className="absolute -top-2 -right-2 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center"
+                      data-testid="button-remove-image"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Input */}
-              <div className="p-3 border-t border-border flex gap-2 shrink-0 bg-background">
+              <div className="p-3 border-t border-border flex gap-2 shrink-0 bg-background items-center">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleFileSelect}
+                  data-testid="input-file"
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="shrink-0 rounded-full text-muted-foreground hover:text-foreground"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading || sendMutation.isPending}
+                  data-testid="button-attach"
+                >
+                  <Paperclip className="w-4 h-4" />
+                </Button>
                 <Input
                   ref={inputRef}
                   value={text}
@@ -244,7 +361,7 @@ export default function Chat() {
                 <Button
                   size="icon"
                   onClick={handleSend}
-                  disabled={!text.trim() || sendMutation.isPending}
+                  disabled={(!text.trim() && !imageUrl) || uploading || sendMutation.isPending}
                   className="rounded-full shrink-0"
                   data-testid="button-send"
                 >
