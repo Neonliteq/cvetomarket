@@ -146,6 +146,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
       let newRefCode = "";
       for (let i = 0; i < 8; i++) newRefCode += chars[Math.floor(Math.random() * chars.length)];
+      const existingRef = await storage.getUserByReferralCode(newRefCode);
+      if (existingRef) {
+        newRefCode = "";
+        for (let i = 0; i < 8; i++) newRefCode += chars[Math.floor(Math.random() * chars.length)];
+      }
       let referredBy: string | null = null;
       if (refCode) {
         const referrer = await storage.getUserByReferralCode(refCode);

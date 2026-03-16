@@ -436,10 +436,18 @@ export class DbStorage implements IStorage {
     const user = await this.getUser(userId);
     if (user && (user as any).referralCode) return (user as any).referralCode;
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    let code = "";
-    for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
-    await db.update(users).set({ referralCode: code } as any).where(eq(users.id, userId));
-    return code;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      let code = "";
+      for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
+      try {
+        await db.update(users).set({ referralCode: code } as any).where(eq(users.id, userId));
+        return code;
+      } catch (e: any) {
+        if (e.code === "23505" && attempt < 4) continue;
+        throw e;
+      }
+    }
+    throw new Error("Failed to generate unique referral code");
   }
 }
 
