@@ -12,6 +12,7 @@ import { z } from "zod";
 import { objectStorageClient, ObjectStorageService } from "./replit_integrations/object_storage";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { sendTelegramMessage, generateLinkToken, consumeLinkToken, getBotUsername, ORDER_STATUS_MESSAGES, registerWebhook } from "./telegram";
+import { sendPasswordResetEmail } from "./resend";
 
 function parseObjPath(p: string): { bucketName: string; objectName: string } {
   if (!p.startsWith("/")) p = `/${p}`;
@@ -199,15 +200,23 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const resetLink = `${proto}://${host}/auth?resetToken=${token}`;
 
       const hasTelegram = !!user.telegramChatId;
+
+      // Send email via Resend
+      const emailSent = await sendPasswordResetEmail(user.email, resetLink);
+
+      // Also send via Telegram if connected
       if (hasTelegram) {
         await sendTelegramMessage(
           user.telegramChatId!,
           `🔑 <b>Сброс пароля ЦветоМаркет</b>\n\nВы запросили сброс пароля. Перейдите по ссылке (действительна 1 час):\n\n${resetLink}\n\nЕсли вы не запрашивали сброс — проигнорируйте это сообщение.`
         );
-        res.json({ ok: true, hasTelegram: true });
+      }
+
+      if (emailSent) {
+        res.json({ ok: true, emailSent: true, hasTelegram });
       } else {
-        // No email service — return link for display
-        res.json({ ok: true, hasTelegram: false, resetLink });
+        // Fallback: show link on screen if email failed
+        res.json({ ok: true, emailSent: false, hasTelegram, resetLink });
       }
     } catch (e: any) {
       res.status(500).json({ error: e.message });

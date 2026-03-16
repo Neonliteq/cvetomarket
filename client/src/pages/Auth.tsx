@@ -66,7 +66,7 @@ export default function Auth() {
   const [view, setView] = useState<"tabs" | "forgot" | "forgot-success" | "reset" | "reset-success">(
     resetToken ? "reset" : "tabs"
   );
-  const [forgotResult, setForgotResult] = useState<{ hasTelegram: boolean; resetLink?: string } | null>(null);
+  const [forgotResult, setForgotResult] = useState<{ hasTelegram: boolean; emailSent?: boolean; resetLink?: string } | null>(null);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -131,7 +131,7 @@ export default function Auth() {
         body: JSON.stringify({ email: data.email }),
       });
       const json = await res.json();
-      setForgotResult({ hasTelegram: json.hasTelegram, resetLink: json.resetLink });
+      setForgotResult({ hasTelegram: json.hasTelegram, emailSent: json.emailSent, resetLink: json.resetLink });
       setView("forgot-success");
     } catch {
       toast({ title: "Ошибка", description: "Попробуйте позже", variant: "destructive" });
@@ -213,7 +213,19 @@ export default function Auth() {
             {/* ── FORGOT SUCCESS ── */}
             {view === "forgot-success" && (
               <div className="space-y-5">
-                {forgotResult?.hasTelegram ? (
+                {forgotResult?.emailSent ? (
+                  <div className="text-center space-y-3">
+                    <div className="w-14 h-14 rounded-full bg-green-100 dark:bg-green-900/30 mx-auto flex items-center justify-center">
+                      <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-400" />
+                    </div>
+                    <h2 className="text-lg font-semibold">Письмо отправлено</h2>
+                    <p className="text-sm text-muted-foreground">
+                      Мы отправили ссылку для сброса пароля на ваш email. Ссылка действительна 1 час.
+                      {forgotResult.hasTelegram && " Также отправили уведомление в Telegram."}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Не получили письмо? Проверьте папку «Спам».</p>
+                  </div>
+                ) : forgotResult?.hasTelegram ? (
                   <div className="text-center space-y-3">
                     <div className="w-14 h-14 rounded-full bg-green-100 dark:bg-green-900/30 mx-auto flex items-center justify-center">
                       <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-400" />
@@ -227,7 +239,7 @@ export default function Auth() {
                   <div className="space-y-3">
                     <h2 className="text-lg font-semibold">Ссылка для сброса пароля</h2>
                     <p className="text-sm text-muted-foreground">
-                      Telegram не подключён. Скопируйте ссылку ниже и перейдите по ней, чтобы установить новый пароль. Ссылка действительна 1 час.
+                      Скопируйте ссылку ниже и перейдите по ней, чтобы установить новый пароль. Ссылка действительна 1 час.
                     </p>
                     {forgotResult?.resetLink && (
                       <div className="relative bg-muted rounded-lg p-3 pr-12 break-all text-xs font-mono" data-testid="text-reset-link">
