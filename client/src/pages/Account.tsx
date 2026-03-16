@@ -1,7 +1,7 @@
 import { useState, useEffect, type ComponentType } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Package, MessageCircle, User, LogOut, Star, CheckCircle, Upload, Camera, X, MapPin, ShoppingBag, TrendingUp, Store, Flower2, Activity, Send, ExternalLink, Volume2, VolumeX } from "lucide-react";
+import { Package, MessageCircle, User, LogOut, Star, CheckCircle, Upload, Camera, X, MapPin, ShoppingBag, TrendingUp, Store, Flower2, Activity, Send, ExternalLink, Volume2, VolumeX, Gift, Copy, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { InteractiveStarRating, StarRating } from "@/components/StarRating";
@@ -355,6 +356,104 @@ function SoundSection() {
   );
 }
 
+const REASON_LABELS: Record<string, string> = {
+  first_order: "Первый заказ",
+  purchase_milestone: "Бонус за покупку",
+  first_review: "Первый отзыв",
+  referral: "Реферальный бонус",
+  admin_grant: "Начисление",
+  order_spend: "Списание",
+};
+
+function BonusesTab() {
+  const { toast } = useToast();
+  const { data: bonusData, isLoading } = useQuery<{ balance: number; transactions: any[] }>({
+    queryKey: ["/api/bonuses"],
+  });
+
+  const { data: referralData } = useQuery<{ code: string; referralLink: string }>({
+    queryKey: ["/api/bonuses/referral-code"],
+  });
+
+  const copyLink = () => {
+    if (referralData?.referralLink) {
+      navigator.clipboard.writeText(referralData.referralLink);
+      toast({ title: "Ссылка скопирована" });
+    }
+  };
+
+  if (isLoading) return <Skeleton className="h-40 rounded-lg" />;
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardContent className="pt-5">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="w-14 h-14 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+              <Gift className="w-7 h-7 text-amber-600" />
+            </div>
+            <div>
+              <div className="text-sm text-muted-foreground">Ваш баланс</div>
+              <div className="text-3xl font-bold" data-testid="text-bonus-balance">{bonusData?.balance || 0} бонусов</div>
+              <div className="text-xs text-muted-foreground">1 бонус = 1 ₽ · срок действия 30 дней</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle className="text-base flex items-center gap-2"><Link2 className="w-4 h-4" /> Реферальная программа</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">Пригласите друга и получите 500 бонусов, когда он сделает первый заказ от 3000 ₽</p>
+          {referralData && (
+            <div className="flex items-center gap-2">
+              <Input value={referralData.referralLink} readOnly className="text-xs" data-testid="input-referral-link" />
+              <Button variant="outline" size="icon" onClick={copyLink} data-testid="button-copy-referral">
+                <Copy className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle className="text-base">Как получить бонусы</CardTitle></CardHeader>
+        <CardContent>
+          <ul className="space-y-2 text-sm text-muted-foreground">
+            <li>🎁 +250 за первый заказ</li>
+            <li>💰 +100 за каждые 3000 ₽ в заказе</li>
+            <li>⭐ +250 за первый отзыв</li>
+            <li>👥 +500 за приглашённого друга</li>
+          </ul>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle className="text-base">История бонусов</CardTitle></CardHeader>
+        <CardContent>
+          {!bonusData?.transactions?.length ? (
+            <p className="text-sm text-muted-foreground">Пока нет операций</p>
+          ) : (
+            <div className="space-y-3">
+              {bonusData.transactions.map((t: any) => (
+                <div key={t.id} className="flex justify-between items-center text-sm border-b pb-2 last:border-0" data-testid={`bonus-txn-${t.id}`}>
+                  <div>
+                    <div className="font-medium">{t.description || REASON_LABELS[t.reason] || t.reason}</div>
+                    <div className="text-xs text-muted-foreground">{t.createdAt ? format(new Date(t.createdAt), "d MMM yyyy, HH:mm", { locale: ru }) : ""}</div>
+                  </div>
+                  <Badge variant={t.amount > 0 ? "default" : "destructive"}>
+                    {t.amount > 0 ? "+" : ""}{t.amount}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export default function Account() {
   const { user, isLoading: authLoading, logout } = useAuth();
   const [, navigate] = useLocation();
@@ -442,6 +541,9 @@ export default function Account() {
         <TabsList className="mb-6">
           <TabsTrigger value="orders" className="gap-1.5">
             <Package className="w-4 h-4" /> Мои заказы
+          </TabsTrigger>
+          <TabsTrigger value="bonuses" className="gap-1.5" data-testid="tab-bonuses">
+            <Gift className="w-4 h-4" /> Бонусы
           </TabsTrigger>
           <TabsTrigger value="profile" className="gap-1.5">
             <User className="w-4 h-4" /> Профиль
@@ -600,6 +702,10 @@ export default function Account() {
               </Link>
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="bonuses">
+          <BonusesTab />
         </TabsContent>
 
         <TabsContent value="profile">

@@ -59,10 +59,12 @@ const resetSchema = z.object({
 export default function Auth() {
   const [, navigate] = useLocation();
   const search = useSearch();
-  const resetToken = new URLSearchParams(search).get("resetToken");
+  const params = new URLSearchParams(search);
+  const resetToken = params.get("resetToken");
+  const refCode = params.get("ref");
   const { login, register } = useAuth();
   const { toast } = useToast();
-  const [tab, setTab] = useState("login");
+  const [tab, setTab] = useState(refCode ? "register" : "login");
   const [view, setView] = useState<"tabs" | "forgot" | "forgot-success" | "reset" | "reset-success">(
     resetToken ? "reset" : "tabs"
   );
@@ -114,7 +116,7 @@ export default function Auth() {
   const onRegister = async (data: z.infer<typeof registerSchema>) => {
     try {
       const { confirmPassword, ...payload } = data;
-      await register(payload);
+      await register({ ...payload, referralCode: refCode || undefined });
       toast({ title: "Добро пожаловать!", description: "Аккаунт успешно создан" });
       if (data.role === "shop") navigate("/shop-dashboard");
       else navigate("/");

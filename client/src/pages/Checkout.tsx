@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { CheckCircle2, MapPin } from "lucide-react";
+import { CheckCircle2, MapPin, Gift } from "lucide-react";
 import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -51,8 +51,22 @@ export default function Checkout() {
   const [outsideZone, setOutsideZone] = useState(false);
   const [addressChecked, setAddressChecked] = useState(false);
   const [deliveryCoords, setDeliveryCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [bonusToUse, setBonusToUse] = useState(0);
   const shopHasZones = !!(shop as any)?.deliveryZones?.length;
   const DELIVERY = deliveryCost !== null ? deliveryCost : defaultDelivery;
+
+  const { data: bonusData } = useQuery<{ balance: number }>({
+    queryKey: ["/api/bonuses"],
+    enabled: !!user,
+  });
+  const bonusBalance = bonusData?.balance || 0;
+  const maxBonus = Math.min(bonusBalance, Math.floor(total + DELIVERY));
+
+  useEffect(() => {
+    if (bonusToUse > maxBonus) setBonusToUse(maxBonus);
+  }, [maxBonus, bonusToUse]);
+
+  const finalTotal = total + DELIVERY - bonusToUse;
 
   const fetchDeliveryCost = useCallback(async (lat: number, lng: number) => {
     if (!shopId) return;
@@ -136,6 +150,7 @@ export default function Checkout() {
         })),
         totalAmount: total + DELIVERY,
         deliveryCost: DELIVERY,
+        bonusUsed: bonusToUse,
         deliveryLat: deliveryCoords?.lat ?? null,
         deliveryLng: deliveryCoords?.lng ?? null,
       });
@@ -321,7 +336,7 @@ export default function Checkout() {
               </Card>
 
               <Button type="submit" size="lg" className="w-full" disabled={mutation.isPending || outsideZone || geocoding || (shopHasZones && !addressChecked)} data-testid="button-place-order">
-                {mutation.isPending ? "Оформляем..." : outsideZone ? "Адрес за пределами зоны доставки" : (shopHasZones && !addressChecked) ? "Укажите адрес в зоне доставки" : `Оформить заказ на ${(total + DELIVERY).toLocaleString("ru-RU")} ₽`}
+                {mutation.isPending ? "Оформляем..." : outsideZone ? "Адрес за пределами зоны доставки" : (shopHasZones && !addressChecked) ? "Укажите адрес в зоне доставки" : `Оформить заказ на ${finalTotal.toLocaleString("ru-RU")} ₽`}
               </Button>
             </form>
           </Form>
@@ -362,10 +377,46 @@ export default function Checkout() {
                   <span>{DELIVERY.toLocaleString("ru-RU")} ₽</span>
                 </div>
               </div>
+              {bonusBalance > 0 && (
+                <>
+                  <Separator />
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm">
+                      <Gift className="w-4 h-4 text-amber-600" />
+                      <span className="font-medium">Списать бонусы</span>
+                      <span className="text-xs text-muted-foreground">(доступно {bonusBalance})</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        min={0}
+                        max={maxBonus}
+                        value={bonusToUse || ""}
+                        onChange={(e) => {
+                          const v = Math.min(Math.max(0, parseInt(e.target.value) || 0), maxBonus);
+                          setBonusToUse(v);
+                        }}
+                        className="w-24 h-8 text-sm"
+                        placeholder="0"
+                        data-testid="input-bonus-use"
+                      />
+                      <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={() => setBonusToUse(maxBonus)} data-testid="button-use-all-bonuses">
+                        Все
+                      </Button>
+                    </div>
+                    {bonusToUse > 0 && (
+                      <div className="flex justify-between text-sm text-green-600 dark:text-green-400">
+                        <span>Скидка бонусами</span>
+                        <span>-{bonusToUse.toLocaleString("ru-RU")} ₽</span>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
               <Separator />
               <div className="flex justify-between font-bold">
                 <span>Итого</span>
-                <span className="text-primary">{(total + DELIVERY).toLocaleString("ru-RU")} ₽</span>
+                <span className="text-primary">{finalTotal.toLocaleString("ru-RU")} ₽</span>
               </div>
             </CardContent>
           </Card>

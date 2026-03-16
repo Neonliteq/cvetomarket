@@ -11,7 +11,8 @@ import {
   type PlatformSettings,
   type ShopWorker,
   type Notification, type InsertNotification,
-  users, shops, products, orders, orderItems, reviews, messages, categories, cities, platformSettings, shopWorkers, notifications,
+  type BonusTransaction, type InsertBonusTransaction,
+  users, shops, products, orders, orderItems, reviews, messages, categories, cities, platformSettings, shopWorkers, notifications, bonusTransactions,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, inArray, sql } from "drizzle-orm";
@@ -105,6 +106,12 @@ export interface IStorage {
   getUserByResetToken(token: string): Promise<User | undefined>;
   updateUserPassword(userId: string, hashedPassword: string): Promise<void>;
   clearPasswordResetToken(userId: string): Promise<void>;
+
+  // Bonuses
+  getBonusBalance(userId: string): Promise<number>;
+  getBonusTransactions(userId: string): Promise<BonusTransaction[]>;
+  addBonusTransaction(userId: string, amount: number, reason: string, description: string, expiresAt?: Date): Promise<BonusTransaction>;
+  getUserByReferralCode(code: string): Promise<User | undefined>;
 }
 
 export class DbStorage implements IStorage {
@@ -391,6 +398,36 @@ export class DbStorage implements IStorage {
   }
   async clearPasswordResetToken(userId: string) {
     await db.update(users).set({ passwordResetToken: null, passwordResetTokenExpiresAt: null } as any).where(eq(users.id, userId));
+  }
+
+  async getBonusBalance(userId: string): Promise<number> {
+    const now = new Date();
+    const txns = await db.select().from(bonusTransactions).where(eq(bonusTransactions.userId, userId));
+    let balance = 0;
+    for (const t of txns) {
+      if (t.amount > 0 && t.expiresAt && new Date(t.expiresAt) < now) continue;
+      balance += t.amount;
+    }
+    return Math.max(0, balance);
+  }
+
+  async getBonusTransactions(userId: string): Promise<BonusTransaction[]> {
+    return db.select().from(bonusTransactions).where(eq(bonusTransactions.userId, userId)).orderBy(desc(bonusTransactions.createdAt));
+  }
+
+  async addBonusTransaction(userId: string, amount: number, reason: string, description: string, expiresAt?: Date): Promise<BonusTransaction> {
+    const exp = expiresAt || (amount > 0 ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : undefined);
+    const [t] = await db.insert(bonusTransactions).values({
+      userId, amount, reason, description, expiresAt: exp || null,
+    }).returning();
+    const newBalance = await this.getBonusBalance(userId);
+    await db.update(users).set({ bonusBalance: newBalance }).where(eq(users.id, userId));
+    return t;
+  }
+
+  async getUserByReferralCode(code: string): Promise<User | undefined> {
+    const [u] = await db.select().from(users).where(eq(users.referralCode as any, code));
+    return u;
   }
 }
 

@@ -19,6 +19,9 @@ export const users = pgTable("users", {
   telegramLinkTokenExpiresAt: timestamp("telegram_link_token_expires_at"),
   passwordResetToken: text("password_reset_token"),
   passwordResetTokenExpiresAt: timestamp("password_reset_token_expires_at"),
+  bonusBalance: integer("bonus_balance").default(0),
+  referralCode: text("referral_code").unique(),
+  referredBy: varchar("referred_by"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -98,6 +101,7 @@ export const orders = pgTable("orders", {
   totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
   deliveryCost: decimal("delivery_cost", { precision: 10, scale: 2 }).default("300"),
   platformCommission: decimal("platform_commission", { precision: 10, scale: 2 }).default("0"),
+  bonusUsed: integer("bonus_used").default(0),
   assemblyPhotoUrl: text("assembly_photo_url"),
   buyerPhotoApproval: text("buyer_photo_approval"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -148,6 +152,16 @@ export const platformSettings = pgTable("platform_settings", {
   deliveryCost: decimal("delivery_cost", { precision: 10, scale: 2 }).default("300"),
 });
 
+export const bonusTransactions = pgTable("bonus_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  amount: integer("amount").notNull(),
+  reason: text("reason").notNull(),
+  description: text("description"),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const notifications = pgTable("notifications", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id),
@@ -194,3 +208,6 @@ export type InsertShopWorker = z.infer<typeof insertShopWorkerSchema>;
 export type Notification = typeof notifications.$inferSelect;
 export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, createdAt: true });
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type BonusTransaction = typeof bonusTransactions.$inferSelect;
+export const insertBonusTransactionSchema = createInsertSchema(bonusTransactions).omit({ id: true, createdAt: true });
+export type InsertBonusTransaction = z.infer<typeof insertBonusTransactionSchema>;

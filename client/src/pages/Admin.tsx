@@ -5,7 +5,7 @@ import {
   CheckCircle, XCircle, Users, Store, Package, Settings, Plus, Trash2,
   BarChart3, MapPin, Tag, ShieldAlert, ShieldCheck, TrendingUp, DollarSign,
   Ban, UserCheck, Eye, ChevronDown, Edit, ShoppingBag, EyeOff, FileText,
-  Wallet, Receipt, Percent, ArrowDownRight, Filter, ChevronsUpDown
+  Wallet, Receipt, Percent, ArrowDownRight, Filter, ChevronsUpDown, Gift
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -172,6 +172,26 @@ export default function Admin() {
     },
     onError: (err: any) => {
       let msg = "Ошибка удаления";
+      try { msg = JSON.parse(err.message.slice(err.message.indexOf("{"))).error; } catch {}
+      toast({ title: msg, variant: "destructive" });
+    },
+  });
+
+  const [bonusGrantUser, setBonusGrantUser] = useState<{ id: string; name: string } | null>(null);
+  const [bonusAmount, setBonusAmount] = useState("");
+  const [bonusDesc, setBonusDesc] = useState("");
+
+  const grantBonusMutation = useMutation({
+    mutationFn: ({ userId, amount, description }: { userId: string; amount: number; description: string }) =>
+      apiRequest("POST", "/api/admin/bonuses/grant", { userId, amount, description }),
+    onSuccess: () => {
+      toast({ title: "Бонусы начислены" });
+      setBonusGrantUser(null);
+      setBonusAmount("");
+      setBonusDesc("");
+    },
+    onError: (err: any) => {
+      let msg = "Ошибка";
       try { msg = JSON.parse(err.message.slice(err.message.indexOf("{"))).error; } catch {}
       toast({ title: msg, variant: "destructive" });
     },
@@ -628,6 +648,15 @@ export default function Admin() {
                       </div>
                       {u.role !== "admin" && (
                         <div className="flex items-center gap-2 shrink-0">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setBonusGrantUser({ id: u.id, name: u.name })}
+                            className="gap-1.5 text-xs"
+                            data-testid={`button-grant-bonus-${u.id}`}
+                          >
+                            <Gift className="w-3.5 h-3.5" /> Бонусы
+                          </Button>
                           <Button
                             size="sm"
                             variant={u.isBlocked ? "default" : "destructive"}
@@ -1418,6 +1447,48 @@ export default function Admin() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={!!bonusGrantUser} onOpenChange={(open) => { if (!open) setBonusGrantUser(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Начислить бонусы — {bonusGrantUser?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Сумма бонусов</Label>
+              <Input
+                type="number"
+                min={1}
+                value={bonusAmount}
+                onChange={(e) => setBonusAmount(e.target.value)}
+                placeholder="100"
+                data-testid="input-bonus-grant-amount"
+              />
+            </div>
+            <div>
+              <Label>Описание (необязательно)</Label>
+              <Input
+                value={bonusDesc}
+                onChange={(e) => setBonusDesc(e.target.value)}
+                placeholder="Причина начисления"
+                data-testid="input-bonus-grant-desc"
+              />
+            </div>
+            <Button
+              onClick={() => {
+                if (bonusGrantUser && Number(bonusAmount) > 0) {
+                  grantBonusMutation.mutate({ userId: bonusGrantUser.id, amount: Number(bonusAmount), description: bonusDesc });
+                }
+              }}
+              disabled={!bonusAmount || Number(bonusAmount) <= 0 || grantBonusMutation.isPending}
+              className="w-full"
+              data-testid="button-confirm-bonus-grant"
+            >
+              {grantBonusMutation.isPending ? "Начисляем..." : "Начислить"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

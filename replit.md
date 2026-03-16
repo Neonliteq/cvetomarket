@@ -85,8 +85,17 @@ When a buyer adds a non-addon product to cart, `AddonSuggestionDialog` pops up s
 - GET /api/geocode?address= endpoint for manual geocoding
 - Shops without coordinates appear in list but not on map
 
+## Bonus System
+- Users earn bonuses: +250 first order, +100 per 3000₽ spent (on delivery), +250 first review, +500 referral bonus when invited user makes first order ≥3000₽
+- 1 bonus = 1 ruble, 30-day expiry for accrued bonuses
+- Users can spend bonuses at checkout (deducted from total before commission calculation)
+- Admin can manually grant bonuses via user management panel
+- Referral system: each user gets unique referral code; shared via link; new user signs up with code → referrer gets bonus
+- Tables: bonus_transactions (userId, amount, reason, description, expiresAt); users have bonusBalance, referralCode, referredBy columns; orders have bonusUsed column
+- Frontend: Account → "Бонусы" tab (balance, referral link, history), Checkout → "Списать бонусы" block, Admin → "Бонусы" button per user
+
 ## Database Tables
-- users (with isBlocked, avatarUrl fields), shops (with logoUrl, coverUrl, deliveryZones jsonb, latitude, longitude), products, orders, order_items, reviews, messages, categories, cities, platform_settings, shop_workers (shopId + userId junction table for worker access)
+- users (with isBlocked, avatarUrl, bonusBalance, referralCode, referredBy fields), shops (with logoUrl, coverUrl, deliveryZones jsonb, latitude, longitude), products, orders (with bonusUsed), order_items, reviews, messages, categories, cities, platform_settings, shop_workers, bonus_transactions
 
 ## Important Patterns
 - Auth-protected pages must check `isLoading` before redirecting: `if (isLoading) return null; if (!user) { navigate("/auth"); return null; }`
