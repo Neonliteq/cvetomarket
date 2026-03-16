@@ -86,6 +86,69 @@ function getStatusColor(status: string) {
   return ORDER_STATUSES.find((s) => s.value === status)?.color || "bg-gray-100 text-gray-800";
 }
 
+const BONUS_REASON_LABELS: Record<string, string> = {
+  first_order: "Первый заказ",
+  purchase_milestone: "Бонус за покупку",
+  first_review: "Первый отзыв",
+  referral: "Реферальный бонус",
+  admin_grant: "Начисление",
+  order_spend: "Списание",
+};
+
+function AdminBonusCard({ userId }: { userId: string }) {
+  const { data, isLoading } = useQuery<{ balance: number; transactions: any[] }>({
+    queryKey: ["/api/admin/users", userId, "bonuses"],
+    queryFn: async () => {
+      const res = await fetch(`/api/admin/users/${userId}/bonuses`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch");
+      return res.json();
+    },
+  });
+
+  if (isLoading) return <Skeleton className="h-20 rounded-lg" />;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+          <Gift className="w-5 h-5 text-amber-600" />
+        </div>
+        <div>
+          <div className="text-xs text-muted-foreground">Текущий баланс</div>
+          <div className="text-xl font-bold" data-testid="text-admin-bonus-balance">{data?.balance || 0} бонусов</div>
+        </div>
+      </div>
+      <div>
+        <h4 className="text-sm font-medium mb-2">История транзакций</h4>
+        {!data?.transactions?.length ? (
+          <p className="text-xs text-muted-foreground">Нет операций</p>
+        ) : (
+          <div className="space-y-2 max-h-48 overflow-y-auto">
+            {data.transactions.map((t: any) => (
+              <div key={t.id} className="flex justify-between items-start text-xs border-b pb-1.5 last:border-0" data-testid={`admin-bonus-txn-${t.id}`}>
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium">{t.description || BONUS_REASON_LABELS[t.reason] || t.reason}</div>
+                  <div className="text-muted-foreground">
+                    {t.createdAt ? format(new Date(t.createdAt), "d MMM yyyy, HH:mm", { locale: ru }) : ""}
+                    {t.amount > 0 && t.expiresAt && (
+                      <span className="ml-2 text-amber-600">
+                        сгорает {format(new Date(t.expiresAt), "d MMM yyyy", { locale: ru })}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <Badge variant={t.amount > 0 ? "default" : "destructive"} className="shrink-0 ml-2">
+                  {t.amount > 0 ? "+" : ""}{t.amount}
+                </Badge>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function Admin() {
   const { user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
@@ -178,6 +241,7 @@ export default function Admin() {
   });
 
   const [bonusGrantUser, setBonusGrantUser] = useState<{ id: string; name: string } | null>(null);
+  const [bonusViewUser, setBonusViewUser] = useState<{ id: string; name: string } | null>(null);
   const [bonusAmount, setBonusAmount] = useState("");
   const [bonusDesc, setBonusDesc] = useState("");
 
@@ -651,9 +715,9 @@ export default function Admin() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => setBonusGrantUser({ id: u.id, name: u.name })}
+                            onClick={() => setBonusViewUser({ id: u.id, name: u.name })}
                             className="gap-1.5 text-xs"
-                            data-testid={`button-grant-bonus-${u.id}`}
+                            data-testid={`button-view-bonus-${u.id}`}
                           >
                             <Gift className="w-3.5 h-3.5" /> Бонусы
                           </Button>
@@ -1448,45 +1512,42 @@ export default function Admin() {
         </TabsContent>
       </Tabs>
 
-      <Dialog open={!!bonusGrantUser} onOpenChange={(open) => { if (!open) setBonusGrantUser(null); }}>
-        <DialogContent>
+      <Dialog open={!!bonusViewUser} onOpenChange={(open) => { if (!open) { setBonusViewUser(null); setBonusGrantUser(null); setBonusAmount(""); setBonusDesc(""); } }}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Начислить бонусы — {bonusGrantUser?.name}</DialogTitle>
+            <DialogTitle>Бонусы — {bonusViewUser?.name}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Сумма бонусов</Label>
-              <Input
-                type="number"
-                min={1}
-                value={bonusAmount}
-                onChange={(e) => setBonusAmount(e.target.value)}
-                placeholder="100"
-                data-testid="input-bonus-grant-amount"
-              />
-            </div>
-            <div>
-              <Label>Описание (необязательно)</Label>
-              <Input
-                value={bonusDesc}
-                onChange={(e) => setBonusDesc(e.target.value)}
-                placeholder="Причина начисления"
-                data-testid="input-bonus-grant-desc"
-              />
-            </div>
-            <Button
-              onClick={() => {
-                if (bonusGrantUser && Number(bonusAmount) > 0) {
-                  grantBonusMutation.mutate({ userId: bonusGrantUser.id, amount: Number(bonusAmount), description: bonusDesc });
-                }
-              }}
-              disabled={!bonusAmount || Number(bonusAmount) <= 0 || grantBonusMutation.isPending}
-              className="w-full"
-              data-testid="button-confirm-bonus-grant"
-            >
-              {grantBonusMutation.isPending ? "Начисляем..." : "Начислить"}
+          {bonusViewUser && <AdminBonusCard userId={bonusViewUser.id} />}
+          <Separator />
+          {!bonusGrantUser ? (
+            <Button variant="outline" onClick={() => setBonusGrantUser(bonusViewUser)} className="w-full gap-2" data-testid="button-open-grant-form">
+              <Gift className="w-4 h-4" /> Начислить бонусы
             </Button>
-          </div>
+          ) : (
+            <div className="space-y-3">
+              <h4 className="font-medium text-sm">Начислить бонусы</h4>
+              <div>
+                <Label>Сумма</Label>
+                <Input type="number" min={1} value={bonusAmount} onChange={(e) => setBonusAmount(e.target.value)} placeholder="100" data-testid="input-bonus-grant-amount" />
+              </div>
+              <div>
+                <Label>Описание</Label>
+                <Input value={bonusDesc} onChange={(e) => setBonusDesc(e.target.value)} placeholder="Причина начисления" data-testid="input-bonus-grant-desc" />
+              </div>
+              <Button
+                onClick={() => {
+                  if (bonusGrantUser && Number(bonusAmount) > 0) {
+                    grantBonusMutation.mutate({ userId: bonusGrantUser.id, amount: Number(bonusAmount), description: bonusDesc });
+                  }
+                }}
+                disabled={!bonusAmount || Number(bonusAmount) <= 0 || grantBonusMutation.isPending}
+                className="w-full"
+                data-testid="button-confirm-bonus-grant"
+              >
+                {grantBonusMutation.isPending ? "Начисляем..." : "Начислить"}
+              </Button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

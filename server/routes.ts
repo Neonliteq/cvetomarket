@@ -149,7 +149,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       let referredBy: string | null = null;
       if (refCode) {
         const referrer = await storage.getUserByReferralCode(refCode);
-        if (referrer) referredBy = refCode;
+        if (referrer) referredBy = referrer.id;
       }
       const user = await storage.createUser({ email, password: hash, name, phone: phone || null, role: role || "buyer", referralCode: newRefCode, referredBy } as any);
       if (role === "shop") {
@@ -687,7 +687,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
         const buyerUser = await storage.getUser(order.buyerId);
         if ((buyerUser as any)?.referredBy && deliveredOrders.length === 1 && orderAmount >= 3000) {
-          const referrer = await storage.getUserByReferralCode((buyerUser as any).referredBy);
+          const referrerId = (buyerUser as any).referredBy;
+          const referrer = await storage.getUser(referrerId);
           if (referrer) {
             const referrerTxns = await storage.getBonusTransactions(referrer.id);
             const hasReferralBonus = referrerTxns.some((t) => t.reason === "referral" && t.description?.includes(order.buyerId.slice(0, 8)));

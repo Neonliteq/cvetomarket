@@ -439,7 +439,12 @@ function BonusesTab() {
                 <div key={t.id} className="flex justify-between items-center text-sm border-b pb-2 last:border-0" data-testid={`bonus-txn-${t.id}`}>
                   <div>
                     <div className="font-medium">{t.description || REASON_LABELS[t.reason] || t.reason}</div>
-                    <div className="text-xs text-muted-foreground">{t.createdAt ? format(new Date(t.createdAt), "d MMM yyyy, HH:mm", { locale: ru }) : ""}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {t.createdAt ? format(new Date(t.createdAt), "d MMM yyyy, HH:mm", { locale: ru }) : ""}
+                      {t.amount > 0 && t.expiresAt && (
+                        <span className="ml-2 text-amber-600">сгорает {format(new Date(t.expiresAt), "d MMM yyyy", { locale: ru })}</span>
+                      )}
+                    </div>
                   </div>
                   <Badge variant={t.amount > 0 ? "default" : "destructive"}>
                     {t.amount > 0 ? "+" : ""}{t.amount}
