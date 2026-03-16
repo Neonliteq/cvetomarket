@@ -180,6 +180,62 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     req.session.destroy(() => res.json({ ok: true }));
   });
 
+  app.post("/api/auth/forgot-password", async (req, res) => {
+    try {
+      const { email: rawEmail } = req.body;
+      if (!rawEmail) return res.status(400).json({ error: "Email обязателен" });
+      const email = rawEmail.toLowerCase();
+      const user = await storage.getUserByEmail(email);
+      // Always respond OK to prevent user enumeration
+      if (!user) return res.json({ ok: true, hasTelegram: false });
+
+      const crypto = await import("crypto");
+      const token = crypto.randomBytes(32).toString("hex");
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+      await storage.setPasswordResetToken(user.id, token, expiresAt);
+
+      const proto = req.headers["x-forwarded-proto"] || req.protocol;
+      const host = req.headers["x-forwarded-host"] || req.headers.host;
+      const resetLink = `${proto}://${host}/auth?resetToken=${token}`;
+
+      const hasTelegram = !!user.telegramChatId;
+      if (hasTelegram) {
+        await sendTelegramMessage(
+          user.telegramChatId!,
+          `🔑 <b>Сброс пароля ЦветоМаркет</b>\n\nВы запросили сброс пароля. Перейдите по ссылке (действительна 1 час):\n\n${resetLink}\n\nЕсли вы не запрашивали сброс — проигнорируйте это сообщение.`
+        );
+        res.json({ ok: true, hasTelegram: true });
+      } else {
+        // No email service — return link for display
+        res.json({ ok: true, hasTelegram: false, resetLink });
+      }
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post("/api/auth/reset-password", async (req, res) => {
+    try {
+      const { token, password } = req.body;
+      if (!token || !password) return res.status(400).json({ error: "Токен и пароль обязательны" });
+      if (password.length < 6) return res.status(400).json({ error: "Пароль должен содержать минимум 6 символов" });
+
+      const user = await storage.getUserByResetToken(token);
+      if (!user || !user.passwordResetToken) return res.status(400).json({ error: "Ссылка недействительна" });
+      if (!user.passwordResetTokenExpiresAt || new Date() > user.passwordResetTokenExpiresAt) {
+        return res.status(400).json({ error: "Ссылка устарела. Запросите новую." });
+      }
+
+      const hash = await bcrypt.hash(password, SALT_ROUNDS);
+      await storage.updateUserPassword(user.id, hash);
+      await storage.clearPasswordResetToken(user.id);
+
+      res.json({ ok: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   app.patch("/api/auth/profile", requireAuth, async (req, res) => {
     const userId = (req.session as any).userId;
     const { name, phone, avatarUrl, buyerCity } = req.body;

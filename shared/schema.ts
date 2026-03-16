@@ -17,6 +17,8 @@ export const users = pgTable("users", {
   telegramChatId: text("telegram_chat_id"),
   telegramLinkToken: text("telegram_link_token"),
   telegramLinkTokenExpiresAt: timestamp("telegram_link_token_expires_at"),
+  passwordResetToken: text("password_reset_token"),
+  passwordResetTokenExpiresAt: timestamp("password_reset_token_expires_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

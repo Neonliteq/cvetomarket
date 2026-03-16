@@ -99,6 +99,12 @@ export interface IStorage {
   // Telegram
   setTelegramChatId(userId: string, chatId: string | null): Promise<void>;
   updateSettings(data: Partial<PlatformSettings>): Promise<PlatformSettings>;
+
+  // Password Reset
+  setPasswordResetToken(userId: string, token: string, expiresAt: Date): Promise<void>;
+  getUserByResetToken(token: string): Promise<User | undefined>;
+  updateUserPassword(userId: string, hashedPassword: string): Promise<void>;
+  clearPasswordResetToken(userId: string): Promise<void>;
 }
 
 export class DbStorage implements IStorage {
@@ -371,6 +377,20 @@ export class DbStorage implements IStorage {
 
   async setTelegramChatId(userId: string, chatId: string | null) {
     await db.update(users).set({ telegramChatId: chatId } as any).where(eq(users.id, userId));
+  }
+
+  async setPasswordResetToken(userId: string, token: string, expiresAt: Date) {
+    await db.update(users).set({ passwordResetToken: token, passwordResetTokenExpiresAt: expiresAt } as any).where(eq(users.id, userId));
+  }
+  async getUserByResetToken(token: string) {
+    const [u] = await db.select().from(users).where(eq(users.passwordResetToken as any, token));
+    return u;
+  }
+  async updateUserPassword(userId: string, hashedPassword: string) {
+    await db.update(users).set({ password: hashedPassword }).where(eq(users.id, userId));
+  }
+  async clearPasswordResetToken(userId: string) {
+    await db.update(users).set({ passwordResetToken: null, passwordResetTokenExpiresAt: null } as any).where(eq(users.id, userId));
   }
 }
 
