@@ -137,7 +137,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.post("/api/auth/register", async (req, res) => {
     try {
-      const { email, password, name, phone, role } = req.body;
+      const { email: rawEmail, password, name, phone, role } = req.body;
+      const email = rawEmail?.toLowerCase?.() || rawEmail;
       const existing = await storage.getUserByEmail(email);
       if (existing) return res.status(400).json({ error: "Пользователь с таким email уже существует" });
       const hash = await bcrypt.hash(password, SALT_ROUNDS);
@@ -342,7 +343,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     if (!shop) return res.status(404).json({ error: "Shop not found" });
     if (shop.ownerId !== user.id) return res.status(403).json({ error: "Только владелец может добавлять сотрудников" });
 
-    const { email, name } = req.body;
+    const { email: rawInviteEmail, name } = req.body;
+    const email = rawInviteEmail?.toLowerCase?.() || rawInviteEmail;
     if (!email) return res.status(400).json({ error: "Email обязателен" });
 
     let target = await storage.getUserByEmail(email);
