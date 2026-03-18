@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { MapPin, Clock } from "lucide-react";
+import { MapPin, Clock, Award } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -24,8 +24,18 @@ export function ShopCard({ shop, className }: ShopCardProps) {
         </Avatar>
         <div className="flex-1 min-w-0 space-y-1">
           <div className="flex items-start justify-between gap-2">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <p className="font-semibold line-clamp-1 group-hover:text-primary transition-colors">{shop.name}</p>
+              {(shop as any).isFeatured && (
+                <Badge className="text-xs shrink-0 bg-amber-500 hover:bg-amber-500 text-white gap-1 px-1.5">
+                  <Award className="w-3 h-3" /> Топ
+                </Badge>
+              )}
+              {!((shop as any).isFeatured) && Number(shop.rating) >= 4.5 && (shop.reviewCount || 0) > 0 && (
+                <Badge className="text-xs shrink-0 bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-300 gap-1 px-1.5" variant="outline">
+                  <Award className="w-3 h-3" /> Высокий рейтинг
+                </Badge>
+              )}
               {shop.status === "pending" && (
                 <Badge variant="secondary" className="text-xs shrink-0">На модерации</Badge>
               )}

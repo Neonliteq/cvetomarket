@@ -5,7 +5,8 @@ import {
   CheckCircle, XCircle, Users, Store, Package, Settings, Plus, Trash2,
   BarChart3, MapPin, Tag, ShieldAlert, ShieldCheck, TrendingUp, DollarSign,
   Ban, UserCheck, Eye, ChevronDown, Edit, ShoppingBag, EyeOff, FileText,
-  Wallet, Receipt, Percent, ArrowDownRight, Filter, ChevronsUpDown, Gift
+  Wallet, Receipt, Percent, ArrowDownRight, Filter, ChevronsUpDown, Gift,
+  Star, Award, MessageSquare
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -203,6 +204,10 @@ export default function Admin() {
     queryKey: ["/api/admin/payouts"],
     enabled: isAdmin,
   });
+  const { data: adminReviews, isLoading: loadingReviews } = useQuery<any[]>({
+    queryKey: ["/api/admin/reviews"],
+    enabled: isAdmin,
+  });
   const finQueryKey = ["/api/admin/financial-analytics", financeShopFilter, financePeriod];
   const { data: finAnalytics, isLoading: loadingFin } = useQuery<FinancialAnalytics>({
     queryKey: finQueryKey,
@@ -348,6 +353,31 @@ export default function Admin() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["/api/admin/products"] }),
   });
 
+  const toggleShopFeaturedMutation = useMutation({
+    mutationFn: ({ id, isFeatured }: { id: string; isFeatured: boolean }) => apiRequest("PATCH", `/api/admin/shops/${id}/featured`, { isFeatured }),
+    onSuccess: () => {
+      toast({ title: "Статус топа магазина обновлён" });
+      qc.invalidateQueries({ queryKey: ["/api/admin/shops"] });
+    },
+  });
+
+  const toggleProductFeaturedMutation = useMutation({
+    mutationFn: ({ id, isFeatured }: { id: string; isFeatured: boolean }) => apiRequest("PATCH", `/api/admin/products/${id}/featured`, { isFeatured }),
+    onSuccess: () => {
+      toast({ title: "Статус топа товара обновлён" });
+      qc.invalidateQueries({ queryKey: ["/api/admin/products"] });
+    },
+  });
+
+  const deleteReviewMutation = useMutation({
+    mutationFn: (id: string) => apiRequest("DELETE", `/api/admin/reviews/${id}`, {}),
+    onSuccess: () => {
+      toast({ title: "Отзыв удалён" });
+      qc.invalidateQueries({ queryKey: ["/api/admin/reviews"] });
+    },
+    onError: () => toast({ title: "Ошибка удаления", variant: "destructive" }),
+  });
+
   const setShopCommissionMutation = useMutation({
     mutationFn: ({ id, commissionRate }: { id: string; commissionRate: string }) =>
       apiRequest("PATCH", `/api/admin/shops/${id}/commission`, { commissionRate: commissionRate === "" ? null : commissionRate }),
@@ -460,6 +490,10 @@ export default function Admin() {
             <TrendingUp className="w-4 h-4 shrink-0" />
             <span>Аналитика</span>
           </TabsTrigger>
+          <TabsTrigger value="reviews" className="gap-1 text-xs sm:text-sm" data-testid="tab-reviews">
+            <Star className="w-4 h-4 shrink-0" />
+            <span>Отзывы</span>
+          </TabsTrigger>
           <TabsTrigger value="settings" className="gap-1 text-xs sm:text-sm" data-testid="tab-settings">
             <Settings className="w-4 h-4 shrink-0" />
             <span>Настройки</span>
@@ -558,7 +592,7 @@ export default function Admin() {
                         </div>
                       </div>
                       <div className="flex flex-col gap-2 shrink-0">
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
                           {shop.status !== "approved" && (
                             <Button
                               size="sm"
@@ -582,6 +616,17 @@ export default function Admin() {
                               <XCircle className="w-3.5 h-3.5" /> Отклонить
                             </Button>
                           )}
+                          <Button
+                            size="sm"
+                            variant={(shop as any).isFeatured ? "default" : "outline"}
+                            className={`gap-1.5 ${(shop as any).isFeatured ? "bg-amber-500 hover:bg-amber-600 border-amber-500" : ""}`}
+                            onClick={() => toggleShopFeaturedMutation.mutate({ id: shop.id, isFeatured: !(shop as any).isFeatured })}
+                            disabled={toggleShopFeaturedMutation.isPending}
+                            data-testid={`button-featured-shop-${shop.id}`}
+                          >
+                            <Award className="w-3.5 h-3.5" />
+                            {(shop as any).isFeatured ? "Снять с топа" : "В топ"}
+                          </Button>
                         </div>
                         <div className="flex gap-2">
                           <Dialog open={editShopId === shop.id} onOpenChange={(o) => {
@@ -868,6 +913,18 @@ export default function Admin() {
                       </div>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
+                      <Button
+                        size="sm"
+                        variant={(p as any).isFeatured ? "default" : "ghost"}
+                        className={`gap-1 text-xs px-2 ${(p as any).isFeatured ? "bg-amber-500 hover:bg-amber-600 border-amber-500 text-white" : "text-muted-foreground"}`}
+                        onClick={() => toggleProductFeaturedMutation.mutate({ id: p.id, isFeatured: !(p as any).isFeatured })}
+                        disabled={toggleProductFeaturedMutation.isPending}
+                        data-testid={`button-featured-product-${p.id}`}
+                        title={(p as any).isFeatured ? "Снять с топа" : "В топ"}
+                      >
+                        <Award className="w-3.5 h-3.5" />
+                        {(p as any).isFeatured ? "Топ" : "В топ"}
+                      </Button>
                       <Button
                         size="icon" variant="ghost"
                         onClick={() => adminToggleProductMutation.mutate({ id: p.id, isActive: !p.isActive })}
@@ -1477,6 +1534,74 @@ export default function Admin() {
             </div>
           ) : (
             <div className="text-center py-12 text-muted-foreground">Нет данных</div>
+          )}
+        </TabsContent>
+
+        {/* ==================== REVIEWS ==================== */}
+        <TabsContent value="reviews">
+          {loadingReviews ? (
+            <div className="space-y-3">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-lg" />)}</div>
+          ) : adminReviews?.length ? (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground mb-2">Всего отзывов: {adminReviews.length}</p>
+              {adminReviews.map((review) => (
+                <Card key={review.id} data-testid={`card-review-${review.id}`}>
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <div className="flex">
+                            {[1,2,3,4,5].map((s) => (
+                              <Star key={s} className={`w-4 h-4 ${s <= review.rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`} />
+                            ))}
+                          </div>
+                          <span className="text-sm font-semibold">{review.rating} / 5</span>
+                          {review.productName ? (
+                            <Badge variant="outline" className="text-xs"><MessageSquare className="w-3 h-3 mr-1" />Товар: {review.productName}</Badge>
+                          ) : (
+                            <Badge variant="secondary" className="text-xs"><Store className="w-3 h-3 mr-1" />Магазин</Badge>
+                          )}
+                        </div>
+                        {(review.ratingPrice || review.ratingDelivery || review.ratingService) && (
+                          <div className="flex flex-wrap gap-3 text-xs text-muted-foreground mb-1">
+                            {review.ratingPrice && <span>Цена/кач.: <span className="font-medium text-foreground">{review.ratingPrice}</span></span>}
+                            {review.ratingDelivery && <span>Доставка: <span className="font-medium text-foreground">{review.ratingDelivery}</span></span>}
+                            {review.ratingService && <span>Сервис: <span className="font-medium text-foreground">{review.ratingService}</span></span>}
+                          </div>
+                        )}
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                          {review.buyerName && <span>Покупатель: <span className="font-medium">{review.buyerName}</span></span>}
+                          {review.shopName && <span>Магазин: <span className="font-medium">{review.shopName}</span></span>}
+                          {review.createdAt && <span>{format(new Date(review.createdAt), "d MMM yyyy, HH:mm", { locale: ru })}</span>}
+                        </div>
+                        {review.comment && (
+                          <p className="text-sm mt-1.5 text-muted-foreground italic">«{review.comment}»</p>
+                        )}
+                      </div>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="text-destructive hover:text-destructive shrink-0"
+                        onClick={() => {
+                          if (confirm("Удалить этот отзыв? Рейтинг будет пересчитан.")) {
+                            deleteReviewMutation.mutate(review.id);
+                          }
+                        }}
+                        disabled={deleteReviewMutation.isPending}
+                        data-testid={`button-delete-review-${review.id}`}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 text-muted-foreground">
+              <Star className="w-10 h-10 mx-auto opacity-20 mb-3" />
+              <p>Отзывов пока нет</p>
+            </div>
           )}
         </TabsContent>
 

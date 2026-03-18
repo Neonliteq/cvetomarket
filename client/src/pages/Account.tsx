@@ -188,18 +188,44 @@ function ProductReviewDialog({ order, item, alreadyReviewed }: {
   );
 }
 
+const RATING_LABELS: Record<number, string> = { 1: "Очень плохо", 2: "Плохо", 3: "Нормально", 4: "Хорошо", 5: "Отлично" };
+
+function SubRatingRow({ label, value, onChange, testId }: { label: string; value: number; onChange: (v: number) => void; testId: string }) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <span className="text-sm text-muted-foreground w-32 shrink-0">{label}</span>
+      <div className="flex items-center gap-0.5">
+        {[1,2,3,4,5].map((s) => (
+          <button key={s} type="button" onClick={() => onChange(s)} data-testid={`${testId}-${s}`}
+            className={`w-7 h-7 flex items-center justify-center transition-colors ${s <= value ? "text-amber-400" : "text-muted-foreground/30"} hover:text-amber-400`}>
+            <Star className={`w-5 h-5 ${s <= value ? "fill-amber-400" : "fill-transparent"}`} strokeWidth={1.5} />
+          </button>
+        ))}
+        <span className="text-xs text-muted-foreground ml-1 w-16 shrink-0">{RATING_LABELS[value]}</span>
+      </div>
+    </div>
+  );
+}
+
 function ReviewDialog({ order }: { order: OrderWithItems }) {
-  const [rating, setRating] = useState(5);
+  const [ratingPrice, setRatingPrice] = useState(5);
+  const [ratingDelivery, setRatingDelivery] = useState(5);
+  const [ratingService, setRatingService] = useState(5);
   const [comment, setComment] = useState("");
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
+  const overallRating = Math.round((ratingPrice + ratingDelivery + ratingService) / 3 * 10) / 10;
+
   const mutation = useMutation({
     mutationFn: () => apiRequest("POST", "/api/reviews", {
       orderId: order.id,
       shopId: order.shopId,
-      rating,
+      rating: Math.round(overallRating),
+      ratingPrice,
+      ratingDelivery,
+      ratingService,
       comment,
     }),
     onSuccess: () => {
@@ -224,20 +250,14 @@ function ReviewDialog({ order }: { order: OrderWithItems }) {
           <DialogTitle>Оценить магазин{order.shopName ? ` «${order.shopName}»` : ""}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 mt-2">
-          <p className="text-sm text-muted-foreground">
-            Оцените качество обслуживания и доставки по пятибалльной шкале
-          </p>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Ваша оценка</p>
-            <InteractiveStarRating value={rating} onChange={setRating} />
-            <p className="text-xs text-muted-foreground">
-              {rating === 1 && "Очень плохо"}
-              {rating === 2 && "Плохо"}
-              {rating === 3 && "Нормально"}
-              {rating === 4 && "Хорошо"}
-              {rating === 5 && "Отлично"}
-            </p>
+          <div className="space-y-3 p-3 rounded-lg bg-muted/50">
+            <SubRatingRow label="Цена / качество" value={ratingPrice} onChange={setRatingPrice} testId="star-price" />
+            <SubRatingRow label="Доставка" value={ratingDelivery} onChange={setRatingDelivery} testId="star-delivery" />
+            <SubRatingRow label="Сервис" value={ratingService} onChange={setRatingService} testId="star-service" />
           </div>
+          <p className="text-xs text-center text-muted-foreground">
+            Общая оценка: <span className="font-semibold text-foreground">{overallRating} из 5</span>
+          </p>
           <div className="space-y-2">
             <p className="text-sm font-medium">Комментарий (необязательно)</p>
             <Textarea

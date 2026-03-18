@@ -789,7 +789,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         if (shopReview) return res.status(400).json({ error: "Вы уже оставили отзыв об этом магазине" });
       }
     }
-    const review = await storage.createReview({ ...req.body, buyerId: userId });
+    // For shop reviews with sub-ratings, compute overall as average
+    let reviewData = { ...req.body, buyerId: userId };
+    if (!req.body.productId && req.body.ratingPrice && req.body.ratingDelivery && req.body.ratingService) {
+      const avg = Math.round((Number(req.body.ratingPrice) + Number(req.body.ratingDelivery) + Number(req.body.ratingService)) / 3 * 10) / 10;
+      reviewData.rating = Math.round(avg);
+    }
+    const review = await storage.createReview(reviewData);
     const shopRevs = await storage.getReviewsByShop(review.shopId);
     const shopOnlyRevs = shopRevs.filter((r) => !r.productId);
     if (shopOnlyRevs.length > 0) {
@@ -1151,6 +1157,60 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const val = commissionRate === "" || commissionRate === null ? null : Number(commissionRate);
     const shop = await storage.updateShop(req.params.id, { commissionRate: val as any });
     res.json(shop);
+  });
+
+  app.patch("/api/admin/shops/:id/featured", requireRole("admin"), async (req, res) => {
+    const { isFeatured } = req.body;
+    await storage.setShopFeatured(req.params.id, !!isFeatured);
+    res.json({ ok: true });
+  });
+
+  app.patch("/api/admin/products/:id/featured", requireRole("admin"), async (req, res) => {
+    const { isFeatured } = req.body;
+    await storage.setProductFeatured(req.params.id, !!isFeatured);
+    res.json({ ok: true });
+  });
+
+  app.get("/api/admin/reviews", requireRole("admin"), async (_req, res) => {
+    const allReviews = await storage.getAllReviews();
+    const allUsers = await storage.getAllUsers();
+    const allShops = await storage.getShops();
+    const allProducts = await storage.getAllProducts();
+    const userMap = Object.fromEntries(allUsers.map((u) => [u.id, u.name]));
+    const shopMap = Object.fromEntries(allShops.map((s) => [s.id, s.name]));
+    const productMap = Object.fromEntries(allProducts.map((p) => [p.id, p.name]));
+    res.json(allReviews.map((r) => ({
+      ...r,
+      buyerName: userMap[r.buyerId],
+      shopName: shopMap[r.shopId],
+      productName: r.productId ? productMap[r.productId] : null,
+    })));
+  });
+
+  app.delete("/api/admin/reviews/:id", requireRole("admin"), async (req, res) => {
+    const allReviews = await storage.getAllReviews();
+    const review = allReviews.find((r) => r.id === req.params.id);
+    if (!review) return res.status(404).json({ error: "Отзыв не найден" });
+    await storage.deleteReview(req.params.id);
+    // Recalculate ratings after deletion
+    const shopRevs = await storage.getReviewsByShop(review.shopId);
+    const shopOnlyRevs = shopRevs.filter((r) => !r.productId);
+    if (shopOnlyRevs.length > 0) {
+      const avg = shopOnlyRevs.reduce((sum, r) => sum + r.rating, 0) / shopOnlyRevs.length;
+      await storage.updateShop(review.shopId, { rating: avg.toFixed(2), reviewCount: shopOnlyRevs.length });
+    } else {
+      await storage.updateShop(review.shopId, { rating: "0", reviewCount: 0 });
+    }
+    if (review.productId) {
+      const productRevs = await storage.getReviewsByProduct(review.productId);
+      if (productRevs.length > 0) {
+        const avg = productRevs.reduce((sum, r) => sum + r.rating, 0) / productRevs.length;
+        await storage.updateProduct(review.productId, { rating: avg.toFixed(2), reviewCount: productRevs.length });
+      } else {
+        await storage.updateProduct(review.productId, { rating: "0", reviewCount: 0 });
+      }
+    }
+    res.json({ ok: true });
   });
 
   // Payouts: per-shop financial summary

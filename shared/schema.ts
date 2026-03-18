@@ -58,6 +58,7 @@ export const shops = pgTable("shops", {
   status: text("status").notNull().default("pending"),
   rating: decimal("rating", { precision: 3, scale: 2 }).default("0"),
   reviewCount: integer("review_count").default(0),
+  isFeatured: boolean("is_featured").default(false),
   logoUrl: text("logo_url"),
   coverUrl: text("cover_url"),
   latitude: decimal("latitude", { precision: 10, scale: 7 }),
@@ -83,6 +84,7 @@ export const products = pgTable("products", {
   tags: text("tags").array().default(sql`'{}'::text[]`),
   rating: decimal("rating", { precision: 3, scale: 2 }).default("0"),
   reviewCount: integer("review_count").default(0),
+  isFeatured: boolean("is_featured").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -125,6 +127,9 @@ export const reviews = pgTable("reviews", {
   shopId: varchar("shop_id").notNull().references(() => shops.id),
   productId: varchar("product_id").references(() => products.id),
   rating: integer("rating").notNull(),
+  ratingPrice: integer("rating_price"),
+  ratingDelivery: integer("rating_delivery"),
+  ratingService: integer("rating_service"),
   comment: text("comment"),
   createdAt: timestamp("created_at").defaultNow(),
 });

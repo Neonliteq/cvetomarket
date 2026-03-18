@@ -67,6 +67,11 @@ export function ProductCard({ product, shopId, className }: ProductCardProps) {
                 -{discountPercent}%
               </Badge>
             )}
+            {(product as any).isFeatured && (
+              <Badge className="bg-amber-500 hover:bg-amber-500 text-white" data-testid={`badge-featured-${product.id}`}>
+                ★ Топ
+              </Badge>
+            )}
             {(product as any).isRecommended && (
               <Badge className="bg-amber-500 hover:bg-amber-500 text-white" data-testid={`badge-recommended-${product.id}`}>
                 ★ Выбор магазина

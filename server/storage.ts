@@ -70,7 +70,11 @@ export interface IStorage {
   getReviewByOrder(orderId: string): Promise<Review | undefined>;
   getReviewsByOrder(orderId: string): Promise<Review[]>;
   getReviewsByBuyer(buyerId: string): Promise<Review[]>;
+  getAllReviews(): Promise<Review[]>;
   createReview(review: InsertReview): Promise<Review>;
+  deleteReview(id: string): Promise<void>;
+  setShopFeatured(id: string, isFeatured: boolean): Promise<void>;
+  setProductFeatured(id: string, isFeatured: boolean): Promise<void>;
 
   // Messages
   getMessages(userId1: string, userId2: string): Promise<Message[]>;
@@ -301,9 +305,21 @@ export class DbStorage implements IStorage {
   async getReviewsByBuyer(buyerId: string) {
     return db.select().from(reviews).where(eq(reviews.buyerId, buyerId)).orderBy(desc(reviews.createdAt));
   }
+  async getAllReviews() {
+    return db.select().from(reviews).orderBy(desc(reviews.createdAt));
+  }
   async createReview(data: InsertReview) {
     const [r] = await db.insert(reviews).values(data).returning();
     return r;
+  }
+  async deleteReview(id: string) {
+    await db.delete(reviews).where(eq(reviews.id, id));
+  }
+  async setShopFeatured(id: string, isFeatured: boolean) {
+    await db.update(shops).set({ isFeatured }).where(eq(shops.id, id));
+  }
+  async setProductFeatured(id: string, isFeatured: boolean) {
+    await db.update(products).set({ isFeatured }).where(eq(products.id, id));
   }
 
   async getMessages(userId1: string, userId2: string) {
