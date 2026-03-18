@@ -1501,25 +1501,9 @@ export default function Admin() {
                   )}
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label>Стоимость доставки (₽)</Label>
-                <div className="flex gap-3 items-center">
-                  <Input
-                    type="number"
-                    placeholder={settings?.deliveryCost?.toString() || "300"}
-                    value={deliveryCost}
-                    onChange={(e) => setDeliveryCost(e.target.value)}
-                    className="max-w-32"
-                    data-testid="input-delivery-cost"
-                  />
-                  {settings && (
-                    <span className="text-sm text-muted-foreground">Текущая: {settings.deliveryCost} ₽</span>
-                  )}
-                </div>
-              </div>
               <Button
                 onClick={() => updateSettingsMutation.mutate()}
-                disabled={(!commission && !deliveryCost) || updateSettingsMutation.isPending}
+                disabled={!commission || updateSettingsMutation.isPending}
                 data-testid="button-save-settings"
               >
                 Сохранить настройки
