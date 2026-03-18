@@ -6,7 +6,7 @@ import {
   BarChart3, MapPin, Tag, ShieldAlert, ShieldCheck, TrendingUp, DollarSign,
   Ban, UserCheck, Eye, ChevronDown, Edit, ShoppingBag, EyeOff, FileText,
   Wallet, Receipt, Percent, ArrowDownRight, Filter, ChevronsUpDown, Gift,
-  Star, Award, MessageSquare
+  Star, Award, MessageSquare, AlertCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -378,6 +378,16 @@ export default function Admin() {
     onError: () => toast({ title: "Ошибка удаления", variant: "destructive" }),
   });
 
+  const updateReviewStatusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      apiRequest("PATCH", `/api/admin/reviews/${id}/status`, { status }),
+    onSuccess: (_data, vars) => {
+      toast({ title: vars.status === "approved" ? "Отзыв одобрен" : "Отзыв отклонён" });
+      qc.invalidateQueries({ queryKey: ["/api/admin/reviews"] });
+    },
+    onError: () => toast({ title: "Ошибка", variant: "destructive" }),
+  });
+
   const setShopCommissionMutation = useMutation({
     mutationFn: ({ id, commissionRate }: { id: string; commissionRate: string }) =>
       apiRequest("PATCH", `/api/admin/shops/${id}/commission`, { commissionRate: commissionRate === "" ? null : commissionRate }),
@@ -493,6 +503,11 @@ export default function Admin() {
           <TabsTrigger value="reviews" className="gap-1 text-xs sm:text-sm" data-testid="tab-reviews">
             <Star className="w-4 h-4 shrink-0" />
             <span>Отзывы</span>
+            {adminReviews && adminReviews.filter((r: any) => r.status === "pending").length > 0 && (
+              <span className="ml-0.5 bg-amber-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                {adminReviews.filter((r: any) => r.status === "pending").length}
+              </span>
+            )}
           </TabsTrigger>
           <TabsTrigger value="settings" className="gap-1 text-xs sm:text-sm" data-testid="tab-settings">
             <Settings className="w-4 h-4 shrink-0" />
@@ -1543,59 +1558,119 @@ export default function Admin() {
             <div className="space-y-3">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-lg" />)}</div>
           ) : adminReviews?.length ? (
             <div className="space-y-3">
-              <p className="text-sm text-muted-foreground mb-2">Всего отзывов: {adminReviews.length}</p>
-              {adminReviews.map((review) => (
-                <Card key={review.id} data-testid={`card-review-${review.id}`}>
-                  <CardContent className="p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <div className="flex">
-                            {[1,2,3,4,5].map((s) => (
-                              <Star key={s} className={`w-4 h-4 ${s <= review.rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`} />
-                            ))}
+              {(() => {
+                const pendingReviews = adminReviews.filter((r: any) => r.status === "pending");
+                const otherReviews = adminReviews.filter((r: any) => r.status !== "pending");
+                const renderReview = (review: any) => (
+                  <Card key={review.id} data-testid={`card-review-${review.id}`} className={review.status === "pending" ? "border-amber-400 dark:border-amber-600" : review.status === "rejected" ? "border-destructive/40" : ""}>
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap mb-1">
+                            <div className="flex">
+                              {[1,2,3,4,5].map((s) => (
+                                <Star key={s} className={`w-4 h-4 ${s <= review.rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`} />
+                              ))}
+                            </div>
+                            <span className="text-sm font-semibold">{review.rating} / 5</span>
+                            {review.productName ? (
+                              <Badge variant="outline" className="text-xs"><MessageSquare className="w-3 h-3 mr-1" />Товар: {review.productName}</Badge>
+                            ) : (
+                              <Badge variant="secondary" className="text-xs"><Store className="w-3 h-3 mr-1" />Магазин</Badge>
+                            )}
+                            {review.status === "pending" && (
+                              <Badge className="text-xs bg-amber-500 hover:bg-amber-500 text-white">На модерации</Badge>
+                            )}
+                            {review.status === "rejected" && (
+                              <Badge variant="destructive" className="text-xs">Отклонён</Badge>
+                            )}
                           </div>
-                          <span className="text-sm font-semibold">{review.rating} / 5</span>
-                          {review.productName ? (
-                            <Badge variant="outline" className="text-xs"><MessageSquare className="w-3 h-3 mr-1" />Товар: {review.productName}</Badge>
-                          ) : (
-                            <Badge variant="secondary" className="text-xs"><Store className="w-3 h-3 mr-1" />Магазин</Badge>
+                          {(review.ratingPrice || review.ratingDelivery || review.ratingService) && (
+                            <div className="flex flex-wrap gap-3 text-xs text-muted-foreground mb-1">
+                              {review.ratingPrice && <span>Цена/кач.: <span className="font-medium text-foreground">{review.ratingPrice}</span></span>}
+                              {review.ratingDelivery && <span>Доставка: <span className="font-medium text-foreground">{review.ratingDelivery}</span></span>}
+                              {review.ratingService && <span>Сервис: <span className="font-medium text-foreground">{review.ratingService}</span></span>}
+                            </div>
+                          )}
+                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                            {review.buyerName && <span>Покупатель: <span className="font-medium">{review.buyerName}</span></span>}
+                            {review.shopName && <span>Магазин: <span className="font-medium">{review.shopName}</span></span>}
+                            {review.createdAt && <span>{format(new Date(review.createdAt), "d MMM yyyy, HH:mm", { locale: ru })}</span>}
+                          </div>
+                          {review.comment && (
+                            <p className="text-sm mt-1.5 text-muted-foreground italic">«{review.comment}»</p>
                           )}
                         </div>
-                        {(review.ratingPrice || review.ratingDelivery || review.ratingService) && (
-                          <div className="flex flex-wrap gap-3 text-xs text-muted-foreground mb-1">
-                            {review.ratingPrice && <span>Цена/кач.: <span className="font-medium text-foreground">{review.ratingPrice}</span></span>}
-                            {review.ratingDelivery && <span>Доставка: <span className="font-medium text-foreground">{review.ratingDelivery}</span></span>}
-                            {review.ratingService && <span>Сервис: <span className="font-medium text-foreground">{review.ratingService}</span></span>}
-                          </div>
-                        )}
-                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                          {review.buyerName && <span>Покупатель: <span className="font-medium">{review.buyerName}</span></span>}
-                          {review.shopName && <span>Магазин: <span className="font-medium">{review.shopName}</span></span>}
-                          {review.createdAt && <span>{format(new Date(review.createdAt), "d MMM yyyy, HH:mm", { locale: ru })}</span>}
+                        <div className="flex flex-col gap-1 shrink-0">
+                          {review.status === "pending" && (
+                            <>
+                              <Button
+                                size="sm"
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-7 px-2 gap-1"
+                                onClick={() => updateReviewStatusMutation.mutate({ id: review.id, status: "approved" })}
+                                disabled={updateReviewStatusMutation.isPending}
+                                data-testid={`button-approve-review-${review.id}`}
+                              >
+                                <CheckCircle className="w-3.5 h-3.5" />Одобрить
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                className="text-xs h-7 px-2 gap-1"
+                                onClick={() => updateReviewStatusMutation.mutate({ id: review.id, status: "rejected" })}
+                                disabled={updateReviewStatusMutation.isPending}
+                                data-testid={`button-reject-review-${review.id}`}
+                              >
+                                <XCircle className="w-3.5 h-3.5" />Отклонить
+                              </Button>
+                            </>
+                          )}
+                          {review.status === "rejected" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-xs h-7 px-2 gap-1"
+                              onClick={() => updateReviewStatusMutation.mutate({ id: review.id, status: "approved" })}
+                              disabled={updateReviewStatusMutation.isPending}
+                              data-testid={`button-restore-review-${review.id}`}
+                            >
+                              <CheckCircle className="w-3.5 h-3.5" />Одобрить
+                            </Button>
+                          )}
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="text-destructive hover:text-destructive h-7 w-7"
+                            onClick={() => {
+                              if (confirm("Удалить этот отзыв? Рейтинг будет пересчитан.")) {
+                                deleteReviewMutation.mutate(review.id);
+                              }
+                            }}
+                            disabled={deleteReviewMutation.isPending}
+                            data-testid={`button-delete-review-${review.id}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
                         </div>
-                        {review.comment && (
-                          <p className="text-sm mt-1.5 text-muted-foreground italic">«{review.comment}»</p>
-                        )}
                       </div>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="text-destructive hover:text-destructive shrink-0"
-                        onClick={() => {
-                          if (confirm("Удалить этот отзыв? Рейтинг будет пересчитан.")) {
-                            deleteReviewMutation.mutate(review.id);
-                          }
-                        }}
-                        disabled={deleteReviewMutation.isPending}
-                        data-testid={`button-delete-review-${review.id}`}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                );
+                return (
+                  <>
+                    {pendingReviews.length > 0 && (
+                      <div>
+                        <h3 className="text-sm font-semibold text-amber-600 dark:text-amber-400 mb-2 flex items-center gap-1.5">
+                          <AlertCircle className="w-4 h-4" />На модерации ({pendingReviews.length})
+                        </h3>
+                        <div className="space-y-2 mb-4">{pendingReviews.map(renderReview)}</div>
+                      </div>
+                    )}
+                    <p className="text-sm text-muted-foreground mb-2">Все отзывы: {adminReviews.length} (одобрено: {adminReviews.filter((r: any) => r.status === "approved").length}, отклонено: {adminReviews.filter((r: any) => r.status === "rejected").length})</p>
+                    <div className="space-y-2">{otherReviews.map(renderReview)}</div>
+                  </>
+                );
+              })()}
             </div>
           ) : (
             <div className="text-center py-12 text-muted-foreground">

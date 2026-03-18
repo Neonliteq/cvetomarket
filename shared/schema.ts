@@ -131,6 +131,7 @@ export const reviews = pgTable("reviews", {
   ratingDelivery: integer("rating_delivery"),
   ratingService: integer("rating_service"),
   comment: text("comment"),
+  status: varchar("status", { length: 20 }).notNull().default("approved"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

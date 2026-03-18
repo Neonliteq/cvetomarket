@@ -105,7 +105,14 @@ export default function ShopDetail() {
         </Avatar>
         <div className="flex-1 space-y-3">
           <div>
-            <h1 className="text-2xl font-bold">{shop.name}</h1>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-2xl font-bold">{shop.name}</h1>
+              {(shop as any).isFeatured && (
+                <Badge className="bg-amber-500 hover:bg-amber-500 text-white text-xs font-semibold" data-testid="badge-shop-featured">
+                  ★ Топ
+                </Badge>
+              )}
+            </div>
             {Number(shop.rating) > 0 && (
               <StarRating rating={Number(shop.rating)} size="md" showValue count={shop.reviewCount || 0} className="mt-1" />
             )}

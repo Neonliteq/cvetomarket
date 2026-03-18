@@ -73,6 +73,7 @@ export interface IStorage {
   getAllReviews(): Promise<Review[]>;
   createReview(review: InsertReview): Promise<Review>;
   deleteReview(id: string): Promise<void>;
+  updateReviewStatus(id: string, status: string): Promise<Review>;
   setShopFeatured(id: string, isFeatured: boolean): Promise<void>;
   setProductFeatured(id: string, isFeatured: boolean): Promise<void>;
 
@@ -290,10 +291,10 @@ export class DbStorage implements IStorage {
   }
 
   async getReviewsByProduct(productId: string) {
-    return db.select().from(reviews).where(eq(reviews.productId, productId)).orderBy(desc(reviews.createdAt));
+    return db.select().from(reviews).where(and(eq(reviews.productId, productId), eq(reviews.status, "approved"))).orderBy(desc(reviews.createdAt));
   }
   async getReviewsByShop(shopId: string) {
-    return db.select().from(reviews).where(eq(reviews.shopId, shopId)).orderBy(desc(reviews.createdAt));
+    return db.select().from(reviews).where(and(eq(reviews.shopId, shopId), eq(reviews.status, "approved"))).orderBy(desc(reviews.createdAt));
   }
   async getReviewByOrder(orderId: string) {
     const [r] = await db.select().from(reviews).where(and(eq(reviews.orderId, orderId), sql`${reviews.productId} IS NULL`));
@@ -314,6 +315,10 @@ export class DbStorage implements IStorage {
   }
   async deleteReview(id: string) {
     await db.delete(reviews).where(eq(reviews.id, id));
+  }
+  async updateReviewStatus(id: string, status: string) {
+    const [r] = await db.update(reviews).set({ status }).where(eq(reviews.id, id)).returning();
+    return r;
   }
   async setShopFeatured(id: string, isFeatured: boolean) {
     await db.update(shops).set({ isFeatured }).where(eq(shops.id, id));

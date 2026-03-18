@@ -790,23 +790,30 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
     }
     // For shop reviews with sub-ratings, compute overall as average
-    let reviewData = { ...req.body, buyerId: userId };
+    let reviewData: any = { ...req.body, buyerId: userId };
     if (!req.body.productId && req.body.ratingPrice && req.body.ratingDelivery && req.body.ratingService) {
       const avg = Math.round((Number(req.body.ratingPrice) + Number(req.body.ratingDelivery) + Number(req.body.ratingService)) / 3 * 10) / 10;
       reviewData.rating = Math.round(avg);
     }
-    const review = await storage.createReview(reviewData);
-    const shopRevs = await storage.getReviewsByShop(review.shopId);
-    const shopOnlyRevs = shopRevs.filter((r) => !r.productId);
-    if (shopOnlyRevs.length > 0) {
-      const avg = shopOnlyRevs.reduce((sum, r) => sum + r.rating, 0) / shopOnlyRevs.length;
-      await storage.updateShop(review.shopId, { rating: avg.toFixed(2), reviewCount: shopOnlyRevs.length });
+    // Reviews with rating < 3 go to moderation (pending)
+    if (Number(reviewData.rating) < 3) {
+      reviewData.status = "pending";
     }
-    if (review.productId) {
-      const productRevs = await storage.getReviewsByProduct(review.productId);
-      if (productRevs.length > 0) {
-        const avg = productRevs.reduce((sum, r) => sum + r.rating, 0) / productRevs.length;
-        await storage.updateProduct(review.productId, { rating: avg.toFixed(2), reviewCount: productRevs.length });
+    const review = await storage.createReview(reviewData);
+    // Only recalculate ratings if this review is approved
+    if (review.status === "approved") {
+      const shopRevs = await storage.getReviewsByShop(review.shopId);
+      const shopOnlyRevs = shopRevs.filter((r) => !r.productId);
+      if (shopOnlyRevs.length > 0) {
+        const avg = shopOnlyRevs.reduce((sum, r) => sum + r.rating, 0) / shopOnlyRevs.length;
+        await storage.updateShop(review.shopId, { rating: avg.toFixed(2), reviewCount: shopOnlyRevs.length });
+      }
+      if (review.productId) {
+        const productRevs = await storage.getReviewsByProduct(review.productId);
+        if (productRevs.length > 0) {
+          const avg = productRevs.reduce((sum, r) => sum + r.rating, 0) / productRevs.length;
+          await storage.updateProduct(review.productId, { rating: avg.toFixed(2), reviewCount: productRevs.length });
+        }
       }
     }
     try {
@@ -1193,6 +1200,36 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     if (!review) return res.status(404).json({ error: "Отзыв не найден" });
     await storage.deleteReview(req.params.id);
     // Recalculate ratings after deletion
+    const shopRevs = await storage.getReviewsByShop(review.shopId);
+    const shopOnlyRevs = shopRevs.filter((r) => !r.productId);
+    if (shopOnlyRevs.length > 0) {
+      const avg = shopOnlyRevs.reduce((sum, r) => sum + r.rating, 0) / shopOnlyRevs.length;
+      await storage.updateShop(review.shopId, { rating: avg.toFixed(2), reviewCount: shopOnlyRevs.length });
+    } else {
+      await storage.updateShop(review.shopId, { rating: "0", reviewCount: 0 });
+    }
+    if (review.productId) {
+      const productRevs = await storage.getReviewsByProduct(review.productId);
+      if (productRevs.length > 0) {
+        const avg = productRevs.reduce((sum, r) => sum + r.rating, 0) / productRevs.length;
+        await storage.updateProduct(review.productId, { rating: avg.toFixed(2), reviewCount: productRevs.length });
+      } else {
+        await storage.updateProduct(review.productId, { rating: "0", reviewCount: 0 });
+      }
+    }
+    res.json({ ok: true });
+  });
+
+  app.patch("/api/admin/reviews/:id/status", requireRole("admin"), async (req, res) => {
+    const { status } = req.body;
+    if (!["approved", "rejected", "pending"].includes(status)) {
+      return res.status(400).json({ error: "Недопустимый статус" });
+    }
+    const allReviews = await storage.getAllReviews();
+    const review = allReviews.find((r) => r.id === req.params.id);
+    if (!review) return res.status(404).json({ error: "Отзыв не найден" });
+    await storage.updateReviewStatus(req.params.id, status);
+    // Recalculate shop/product ratings using only approved reviews
     const shopRevs = await storage.getReviewsByShop(review.shopId);
     const shopOnlyRevs = shopRevs.filter((r) => !r.productId);
     if (shopOnlyRevs.length > 0) {
