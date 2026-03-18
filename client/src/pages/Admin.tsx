@@ -161,6 +161,7 @@ export default function Admin() {
   const [deliveryCost, setDeliveryCost] = useState("");
   const [shopFilter, setShopFilter] = useState("all");
   const [orderFilter, setOrderFilter] = useState("all");
+  const [orderSearch, setOrderSearch] = useState("");
   const [editShopId, setEditShopId] = useState<string | null>(null);
   const [editShopData, setEditShopData] = useState<Record<string, string>>({});
   const [editProductId, setEditProductId] = useState<string | null>(null);
@@ -383,7 +384,12 @@ export default function Admin() {
 
   const pendingShops = (shops || []).filter((s) => s.status === "pending");
   const filteredShops = shopFilter === "all" ? shops : shops?.filter((s) => s.status === shopFilter);
-  const filteredOrders = orderFilter === "all" ? orders : orders?.filter((o) => o.status === orderFilter);
+  const filteredOrders = (orderFilter === "all" ? orders : orders?.filter((o) => o.status === orderFilter))?.filter((o) => {
+    if (!orderSearch.trim()) return true;
+    const q = orderSearch.trim().toLowerCase().replace("#", "");
+    const num = (o as any).orderNumber?.toString() || "";
+    return num === q || o.id.startsWith(q) || o.recipientName?.toLowerCase().includes(q) || (o as any).buyerName?.toLowerCase().includes(q);
+  });
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -765,7 +771,7 @@ export default function Admin() {
 
         {/* ==================== ORDERS ==================== */}
         <TabsContent value="orders">
-          <div className="flex items-center gap-3 mb-4">
+          <div className="flex flex-wrap items-center gap-3 mb-4">
             <Select value={orderFilter} onValueChange={setOrderFilter}>
               <SelectTrigger className="w-48" data-testid="select-order-filter">
                 <SelectValue placeholder="Все заказы" />
@@ -777,6 +783,13 @@ export default function Admin() {
                 ))}
               </SelectContent>
             </Select>
+            <Input
+              placeholder="Поиск: #номер, получатель…"
+              value={orderSearch}
+              onChange={(e) => setOrderSearch(e.target.value)}
+              className="w-56 h-9"
+              data-testid="input-order-search"
+            />
             <span className="text-sm text-muted-foreground">
               Показано: {filteredOrders?.length || 0}
             </span>
@@ -790,7 +803,7 @@ export default function Admin() {
                   <CardContent className="p-4">
                     <div className="flex flex-wrap items-start gap-3">
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm">#{order.id.slice(0, 8).toUpperCase()}</p>
+                        <p className="font-semibold text-sm">#{(order as any).orderNumber || order.id.slice(0, 8).toUpperCase()}</p>
                         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground mt-1">
                           {order.buyerName && <span>Покупатель: {order.buyerName}</span>}
                           {order.shopName && <span>Магазин: {order.shopName}</span>}

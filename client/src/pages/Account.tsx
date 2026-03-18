@@ -572,7 +572,7 @@ export default function Account() {
                     <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
                       <div>
                         <div className="flex items-center gap-2">
-                          <p className="font-semibold text-sm">Заказ #{order.id.slice(0, 8).toUpperCase()}</p>
+                          <p className="font-semibold text-sm">Заказ #{(order as any).orderNumber || order.id.slice(0, 8).toUpperCase()}</p>
                           <Badge variant={(STATUS_COLORS[order.status] || "secondary") as any}>
                             {STATUS_LABELS[order.status] || order.status}
                           </Badge>

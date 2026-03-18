@@ -393,6 +393,7 @@ export default function ShopDashboard() {
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [orderStatusFilter, setOrderStatusFilter] = useState("all");
   const [orderSort, setOrderSort] = useState<"date-desc" | "date-asc" | "time-asc" | "time-desc">("date-desc");
+  const [orderSearch, setOrderSearch] = useState("");
 
   const { data: myShop, isLoading: loadingShop } = useQuery<Shop & { cityName?: string }>({
     queryKey: ["/api/shops/my"],
@@ -718,7 +719,14 @@ export default function ShopDashboard() {
                     </Button>
                   ))}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Input
+                    placeholder="Поиск: #номер, получатель…"
+                    value={orderSearch}
+                    onChange={(e) => setOrderSearch(e.target.value)}
+                    className="w-48 h-8 text-xs"
+                    data-testid="input-order-search"
+                  />
                   <span className="text-xs font-medium text-muted-foreground">Сортировка:</span>
                   <Select value={orderSort} onValueChange={(v: any) => setOrderSort(v)}>
                     <SelectTrigger className="w-48 h-8 text-xs" data-testid="select-order-sort">
@@ -734,7 +742,13 @@ export default function ShopDashboard() {
                 </div>
               </div>
               {(() => {
-                const filtered = (orders || []).filter((o) => orderStatusFilter === "all" || o.status === orderStatusFilter);
+                const filtered = (orders || []).filter((o) => {
+                  if (orderStatusFilter !== "all" && o.status !== orderStatusFilter) return false;
+                  if (!orderSearch.trim()) return true;
+                  const q = orderSearch.trim().toLowerCase().replace("#", "");
+                  const num = (o as any).orderNumber?.toString() || "";
+                  return num === q || o.id.startsWith(q) || o.recipientName?.toLowerCase().includes(q);
+                });
                 const sorted = [...filtered].sort((a, b) => {
                   if (orderSort === "date-desc") return new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime();
                   if (orderSort === "date-asc") return new Date(a.createdAt!).getTime() - new Date(b.createdAt!).getTime();
@@ -753,7 +767,7 @@ export default function ShopDashboard() {
                     <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
                       <div>
                         <div className="flex items-center gap-2 mb-1">
-                          <p className="font-bold text-base">Заказ #{order.id.slice(0, 8).toUpperCase()}</p>
+                          <p className="font-bold text-base">Заказ #{(order as any).orderNumber || order.id.slice(0, 8).toUpperCase()}</p>
                           <Badge className={`text-xs ${STATUS_COLORS[order.status] || ""}`}>
                             {STATUS_LABELS[order.status] || order.status}
                           </Badge>
