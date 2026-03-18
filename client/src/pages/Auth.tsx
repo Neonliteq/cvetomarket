@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Flower2, Copy, CheckCircle2, ArrowLeft } from "lucide-react";
+import { Flower2, Copy, CheckCircle2, ArrowLeft, Key } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -192,7 +192,7 @@ export default function Auth() {
                 <div>
                   <h2 className="text-lg font-semibold">Восстановление пароля</h2>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Укажите email вашего аккаунта. Ссылка для сброса пароля будет отправлена в Telegram (если он подключён) или показана на экране.
+                    Укажите email вашего аккаунта. Ссылка для сброса пароля будет отправлена на почту и/или в Telegram (если он подключён).
                   </p>
                 </div>
                 <Form {...forgotForm}>
@@ -238,23 +238,37 @@ export default function Auth() {
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    <h2 className="text-lg font-semibold">Ссылка для сброса пароля</h2>
-                    <p className="text-sm text-muted-foreground">
-                      Скопируйте ссылку ниже и перейдите по ней, чтобы установить новый пароль. Ссылка действительна 1 час.
-                    </p>
-                    {forgotResult?.resetLink && (
-                      <div className="relative bg-muted rounded-lg p-3 pr-12 break-all text-xs font-mono" data-testid="text-reset-link">
-                        {forgotResult.resetLink}
-                        <button
-                          onClick={handleCopy}
-                          className="absolute right-2 top-2 p-1.5 rounded-md hover:bg-background transition-colors"
-                          title="Скопировать"
-                          data-testid="button-copy-link"
-                        >
-                          {copied ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4 text-muted-foreground" />}
-                        </button>
+                  <div className="space-y-4">
+                    <div className="text-center space-y-2">
+                      <div className="w-14 h-14 rounded-full bg-amber-100 dark:bg-amber-900/30 mx-auto flex items-center justify-center">
+                        <Key className="w-7 h-7 text-amber-600 dark:text-amber-400" />
                       </div>
+                      <h2 className="text-lg font-semibold">Ссылка для сброса пароля</h2>
+                      <p className="text-sm text-muted-foreground">
+                        Отправка письма недоступна. Нажмите кнопку ниже или скопируйте ссылку для сброса пароля. Ссылка действительна 1 час.
+                      </p>
+                    </div>
+                    {forgotResult?.resetLink && (
+                      <>
+                        <Button
+                          className="w-full"
+                          onClick={() => window.location.href = forgotResult.resetLink!}
+                          data-testid="button-goto-reset-link"
+                        >
+                          Сбросить пароль →
+                        </Button>
+                        <div className="relative bg-muted rounded-lg p-3 pr-12 break-all text-xs font-mono text-muted-foreground" data-testid="text-reset-link">
+                          {forgotResult.resetLink}
+                          <button
+                            onClick={handleCopy}
+                            className="absolute right-2 top-2 p-1.5 rounded-md hover:bg-background transition-colors"
+                            title="Скопировать"
+                            data-testid="button-copy-link"
+                          >
+                            {copied ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4 text-muted-foreground" />}
+                          </button>
+                        </div>
+                      </>
                     )}
                   </div>
                 )}
