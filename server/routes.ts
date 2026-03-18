@@ -272,6 +272,24 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.json({ user: safe });
   });
 
+  app.post("/api/auth/change-password", requireAuth, async (req, res) => {
+    const userId = (req.session as any).userId;
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: "Все поля обязательны" });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: "Новый пароль должен быть не менее 6 символов" });
+    }
+    const user = await storage.getUserById(userId);
+    if (!user) return res.status(404).json({ error: "Пользователь не найден" });
+    const match = await bcrypt.compare(currentPassword, user.password);
+    if (!match) return res.status(400).json({ error: "Текущий пароль введён неверно" });
+    const hash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+    await storage.updateUserPassword(userId, hash);
+    res.json({ ok: true });
+  });
+
   // ---- CITIES ----
   app.get("/api/cities", async (_req, res) => {
     res.json(await storage.getCities());

@@ -1,7 +1,7 @@
 import { useState, useEffect, type ComponentType } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Package, MessageCircle, User, LogOut, Star, CheckCircle, Upload, Camera, X, MapPin, ShoppingBag, TrendingUp, Store, Flower2, Activity, Send, ExternalLink, Volume2, VolumeX, Gift, Copy, Link2 } from "lucide-react";
+import { Package, MessageCircle, User, LogOut, Star, CheckCircle, Upload, Camera, X, MapPin, ShoppingBag, TrendingUp, Store, Flower2, Activity, Send, ExternalLink, Volume2, VolumeX, Gift, Copy, Link2, Lock, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -502,6 +502,24 @@ export default function Account() {
     onError: (err: any) => toast({ title: "Ошибка", description: err.message, variant: "destructive" }),
   });
 
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [pwCurrent, setPwCurrent] = useState("");
+  const [pwNew, setPwNew] = useState("");
+  const [pwConfirm, setPwConfirm] = useState("");
+  const [showPwCurrent, setShowPwCurrent] = useState(false);
+  const [showPwNew, setShowPwNew] = useState(false);
+  const [showPwConfirm, setShowPwConfirm] = useState(false);
+
+  const changePasswordMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/auth/change-password", { currentPassword: pwCurrent, newPassword: pwNew }),
+    onSuccess: () => {
+      toast({ title: "Пароль успешно изменён" });
+      setShowPasswordForm(false);
+      setPwCurrent(""); setPwNew(""); setPwConfirm("");
+    },
+    onError: (err: any) => toast({ title: "Ошибка", description: err.message, variant: "destructive" }),
+  });
+
   const shopReviewedShopIds = new Set((myReviews || []).filter((r) => !r.productId).map((r) => r.shopId));
   const productReviewMap = new Map<string, Review>();
   (myReviews || []).filter((r) => r.productId).forEach((r) => {
@@ -846,6 +864,115 @@ export default function Account() {
                   </div>
                 </>
               )}
+
+              {/* Change password */}
+              <Separator />
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-sm font-medium flex items-center gap-1.5">
+                    <Lock className="w-4 h-4 text-primary" /> Пароль
+                  </p>
+                  {!showPasswordForm && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-xs"
+                      onClick={() => setShowPasswordForm(true)}
+                      data-testid="button-change-password-open"
+                    >
+                      Изменить пароль
+                    </Button>
+                  )}
+                </div>
+                {showPasswordForm && (
+                  <div className="space-y-3 mt-3">
+                    <div className="relative">
+                      <Input
+                        type={showPwCurrent ? "text" : "password"}
+                        placeholder="Текущий пароль"
+                        value={pwCurrent}
+                        onChange={(e) => setPwCurrent(e.target.value)}
+                        data-testid="input-current-password"
+                        className="pr-10"
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        onClick={() => setShowPwCurrent((v) => !v)}
+                        tabIndex={-1}
+                      >
+                        {showPwCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    <div className="relative">
+                      <Input
+                        type={showPwNew ? "text" : "password"}
+                        placeholder="Новый пароль (не менее 6 символов)"
+                        value={pwNew}
+                        onChange={(e) => setPwNew(e.target.value)}
+                        data-testid="input-new-password"
+                        className="pr-10"
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        onClick={() => setShowPwNew((v) => !v)}
+                        tabIndex={-1}
+                      >
+                        {showPwNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    <div className="relative">
+                      <Input
+                        type={showPwConfirm ? "text" : "password"}
+                        placeholder="Подтвердите новый пароль"
+                        value={pwConfirm}
+                        onChange={(e) => setPwConfirm(e.target.value)}
+                        data-testid="input-confirm-password"
+                        className="pr-10"
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        onClick={() => setShowPwConfirm((v) => !v)}
+                        tabIndex={-1}
+                      >
+                        {showPwConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    {pwNew && pwConfirm && pwNew !== pwConfirm && (
+                      <p className="text-xs text-destructive">Пароли не совпадают</p>
+                    )}
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          if (pwNew !== pwConfirm) {
+                            toast({ title: "Пароли не совпадают", variant: "destructive" });
+                            return;
+                          }
+                          changePasswordMutation.mutate();
+                        }}
+                        disabled={changePasswordMutation.isPending || !pwCurrent || !pwNew || !pwConfirm}
+                        data-testid="button-change-password-submit"
+                      >
+                        {changePasswordMutation.isPending ? "Сохранение..." : "Сохранить пароль"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setShowPasswordForm(false);
+                          setPwCurrent(""); setPwNew(""); setPwConfirm("");
+                        }}
+                        data-testid="button-change-password-cancel"
+                      >
+                        Отмена
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* Telegram notifications block — visible to all roles */}
               <Separator />
