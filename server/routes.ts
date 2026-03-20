@@ -1159,8 +1159,18 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   app.patch("/api/admin/products/:id", requireRole("admin"), async (req, res) => {
-    const p = await storage.updateProduct(req.params.id, req.body);
-    res.json(p);
+    try {
+      const { price, discountPercent, assemblyTime, ...rest } = req.body;
+      const updateData: Record<string, any> = { ...rest };
+      if (price !== undefined) updateData.price = String(price);
+      if (discountPercent !== undefined) updateData.discountPercent = Number(discountPercent);
+      if (assemblyTime !== undefined) updateData.assemblyTime = Number(assemblyTime);
+      const p = await storage.updateProduct(req.params.id, updateData);
+      res.json(p);
+    } catch (e: any) {
+      console.error("[admin/products PATCH] error:", e?.message || e);
+      res.status(500).json({ error: e?.message || "Ошибка обновления товара" });
+    }
   });
 
   app.delete("/api/admin/products/:id", requireRole("admin"), async (req, res) => {

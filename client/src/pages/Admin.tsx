@@ -346,6 +346,9 @@ export default function Admin() {
       setEditProductId(null);
       qc.invalidateQueries({ queryKey: ["/api/admin/products"] });
     },
+    onError: (err: any) => {
+      toast({ title: "Ошибка", description: err?.message || "Не удалось сохранить товар", variant: "destructive" });
+    },
   });
 
   const adminToggleProductMutation = useMutation({
@@ -957,7 +960,7 @@ export default function Admin() {
                             composition: p.composition || "",
                             assemblyTime: p.assemblyTime?.toString() || "",
                             discountPercent: p.discountPercent?.toString() || "0",
-                            categoryId: p.categoryId || "",
+                            categoryId: p.categoryId || "__none__",
                             type: p.type || "bouquet",
                             inStock: p.inStock ? "true" : "false",
                             isActive: p.isActive ? "true" : "false",
@@ -983,10 +986,10 @@ export default function Admin() {
                             <div className="grid grid-cols-2 gap-2">
                               <div>
                                 <Label>Категория</Label>
-                                <Select value={editProductData.categoryId || ""} onValueChange={(v) => setEditProductData({ ...editProductData, categoryId: v })}>
+                                <Select value={editProductData.categoryId || "__none__"} onValueChange={(v) => setEditProductData({ ...editProductData, categoryId: v })}>
                                   <SelectTrigger><SelectValue placeholder="Без категории" /></SelectTrigger>
                                   <SelectContent>
-                                    <SelectItem value="">Без категории</SelectItem>
+                                    <SelectItem value="__none__">Без категории</SelectItem>
                                     {categories?.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                                   </SelectContent>
                                 </Select>
@@ -1040,15 +1043,19 @@ export default function Admin() {
                               </div>
                             </div>
                             <Button onClick={() => {
+                              const catId = editProductData.categoryId;
                               const data: Record<string, any> = {
-                                ...editProductData,
-                                price: editProductData.price ? parseInt(editProductData.price) : undefined,
+                                name: editProductData.name,
+                                description: editProductData.description || null,
+                                composition: editProductData.composition || null,
+                                type: editProductData.type || "bouquet",
+                                price: editProductData.price || "0",
                                 discountPercent: editProductData.discountPercent ? parseInt(editProductData.discountPercent) : 0,
-                                assemblyTime: editProductData.assemblyTime ? parseInt(editProductData.assemblyTime) : undefined,
+                                assemblyTime: editProductData.assemblyTime ? parseInt(editProductData.assemblyTime) : null,
                                 inStock: editProductData.inStock === "true",
                                 isActive: editProductData.isActive === "true",
                                 isRecommended: editProductData.isRecommended === "true",
-                                categoryId: editProductData.categoryId || null,
+                                categoryId: (!catId || catId === "__none__") ? null : catId,
                                 tags: editProductData.tags ? editProductData.tags.split(",").map((t: string) => t.trim()).filter(Boolean) : [],
                               };
                               adminEditProductMutation.mutate({ id: p.id, data });
