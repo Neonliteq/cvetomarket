@@ -156,9 +156,13 @@ export default function Checkout() {
       });
     },
     onSuccess: (data) => {
+      clearCart();
+      if (data.paymentUrl) {
+        window.location.href = data.paymentUrl;
+        return;
+      }
       setOrderId(data.order?.id);
       setSuccess(true);
-      clearCart();
     },
     onError: (error: any) => {
       let msg = "Попробуйте ещё раз";
@@ -331,7 +335,7 @@ export default function Checkout() {
                       <FormMessage />
                     </FormItem>
                   )} />
-                  <p className="text-xs text-muted-foreground">Тестовый режим оплаты. Реальные деньги не списываются.</p>
+                  <p className="text-xs text-muted-foreground">Оплата через защищённый платёжный сервис ROBOKASSA.</p>
                 </CardContent>
               </Card>
 

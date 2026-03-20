@@ -101,6 +101,8 @@ export const orders = pgTable("orders", {
   recipientPhone: text("recipient_phone").notNull(),
   comment: text("comment"),
   paymentMethod: text("payment_method").notNull().default("card"),
+  paymentStatus: text("payment_status").notNull().default("pending"),
+  paymentId: text("payment_id"),
   totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
   deliveryCost: decimal("delivery_cost", { precision: 10, scale: 2 }).default("300"),
   platformCommission: decimal("platform_commission", { precision: 10, scale: 2 }).default("0"),

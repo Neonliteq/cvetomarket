@@ -532,6 +532,18 @@ export default function Account() {
     }
   }, [authLoading, user, navigate]);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const payment = params.get("payment");
+    if (payment === "success") {
+      toast({ title: "Оплата прошла успешно", description: "Магазин получил ваш заказ и приступит к сборке." });
+      window.history.replaceState({}, "", "/account");
+    } else if (payment === "failed") {
+      toast({ title: "Оплата не завершена", description: "Попробуйте оплатить заказ позже через службу поддержки.", variant: "destructive" });
+      window.history.replaceState({}, "", "/account");
+    }
+  }, []);
+
   if (authLoading) return null;
   if (!user) return null;
 

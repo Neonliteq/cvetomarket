@@ -24,7 +24,7 @@ A full-featured flower marketplace (маркетплейс цветочных м
 - "Chat with seller" button on product and shop pages
 - Review and rating system for products and shops
 - Platform commission calculation (configurable via admin panel)
-- Test payment mode (card/cash)
+- ROBOKASSA payment integration (card → redirect → callback → order confirmed)
 - User blocking (blocked users cannot log in)
 - Shop workers: owners can add/remove workers by email; workers access products/orders but not settings or worker management
 
@@ -108,6 +108,16 @@ When a buyer adds a non-addon product to cart, `AddonSuggestionDialog` pops up s
 - Object storage integration files: `server/replit_integrations/object_storage/`
 - Frontend upload code unchanged — still posts FormData to `POST /api/upload`, gets `{ urls: ["/objects/..."] }` response
 - Static product images in `client/public/images/` (AI-generated seed data)
+
+## ROBOKASSA Payment Integration
+- Credentials in env vars: `ROBOKASSA_LOGIN`, `ROBOKASSA_PASSWORD1`, `ROBOKASSA_PASSWORD2`, `ROBOKASSA_IS_TEST` (set to "0" for production, any other value = test mode)
+- Flow: POST /api/orders → returns `{ order, paymentUrl }` for card payments → frontend redirects to ROBOKASSA
+- ROBOKASSA calls POST /api/payment/robokassa/result (ResultURL) with MD5 signature → verifies, marks order paid, notifies shop
+- ROBOKASSA redirects to GET /api/payment/robokassa/success → /account?payment=success, or /api/payment/robokassa/fail → /account?payment=failed
+- `InvId` = `order.orderNumber` (serial integer); Signature = MD5(Login:OutSum:InvId:Password1)
+- If ROBOKASSA is not configured (env vars missing), card orders are treated as paid immediately (fallback)
+- Cash orders bypass ROBOKASSA entirely and notify the shop immediately
+- New columns: orders.payment_status ('pending'|'paid'|'cash'|'failed'), orders.payment_id
 
 ## Running
 - Development: `npm run dev` (starts Express + Vite on port 5000)

@@ -13,6 +13,7 @@ import { objectStorageClient, ObjectStorageService } from "./replit_integrations
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { sendTelegramMessage, generateLinkToken, consumeLinkToken, getBotUsername, ORDER_STATUS_MESSAGES, registerWebhook } from "./telegram";
 import { sendPasswordResetEmail } from "./resend";
+import { buildPaymentUrl, verifyResultSignature, isRobokassaConfigured } from "./robokassa";
 
 function parseObjPath(p: string): { bucketName: string; objectName: string } {
   if (!p.startsWith("/")) p = `/${p}`;
@@ -562,6 +563,32 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.json(result);
   });
 
+  async function notifyShopNewOrder(shopId: string, totalAmount: number) {
+    const shopData = await storage.getShop(shopId);
+    if (!shopData) return;
+    const notifText = `Сумма: ${totalAmount.toLocaleString("ru-RU")} ₽`;
+    const recipientIds = new Set<string>([shopData.ownerId]);
+    const workers = await storage.getShopWorkers(shopData.id);
+    workers.forEach((w) => recipientIds.add(w.userId));
+    for (const recipientId of recipientIds) {
+      await storage.createNotification({
+        userId: recipientId,
+        type: "order_new",
+        title: "Новый заказ",
+        text: notifText,
+        link: "/shop-dashboard",
+        isRead: false,
+      });
+      const recipient = await storage.getUser(recipientId);
+      if (recipient?.telegramChatId) {
+        await sendTelegramMessage(
+          recipient.telegramChatId,
+          `🛍 <b>Новый заказ в магазине «${shopData.name}»</b>\n\nСумма: <b>${totalAmount.toLocaleString("ru-RU")} ₽</b>\n\nОткройте панель управления, чтобы подтвердить заказ.`
+        );
+      }
+    }
+  }
+
   app.post("/api/orders", requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
@@ -595,6 +622,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         ? Number(shopForCommission.commissionRate)
         : (settings ? Number(settings.commissionRate) : 10);
       const commission = (finalAmount * effectiveRate) / 100;
+
+      const paymentMethod: string = orderData.paymentMethod || "card";
+      const isCardPayment = paymentMethod === "card";
+      const paymentStatus = isCardPayment ? "pending" : "cash";
+
       const order = await storage.createOrder({
         ...orderData,
         shopId,
@@ -603,7 +635,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         deliveryCost: deliveryCost.toString(),
         platformCommission: commission.toString(),
         bonusUsed,
+        paymentStatus,
       });
+
       if (bonusUsed > 0) {
         await storage.addBonusTransaction(userId, -bonusUsed, "order_spend", `Списание за заказ #${order.id.slice(0, 8)}`);
       }
@@ -617,35 +651,70 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           price: item.price.toString(),
         })));
       }
-      // Notify shop owner and workers about new order
-      const shopData = await storage.getShop(shopId);
-      if (shopData) {
-        const notifText = `Сумма: ${Number(totalAmount).toLocaleString("ru-RU")} ₽`;
-        const recipientIds = new Set<string>([shopData.ownerId]);
-        const workers = await storage.getShopWorkers(shopData.id);
-        workers.forEach((w) => recipientIds.add(w.userId));
-        for (const recipientId of recipientIds) {
-          await storage.createNotification({
-            userId: recipientId,
-            type: "order_new",
-            title: "Новый заказ",
-            text: notifText,
-            link: "/shop-dashboard",
-            isRead: false,
-          });
-          const recipient = await storage.getUser(recipientId);
-          if (recipient?.telegramChatId) {
-            await sendTelegramMessage(
-              recipient.telegramChatId,
-              `🛍 <b>Новый заказ в магазине «${shopData.name}»</b>\n\nСумма: <b>${Number(totalAmount).toLocaleString("ru-RU")} ₽</b>\n\nОткройте панель управления, чтобы подтвердить заказ.`
-            );
-          }
-        }
+
+      if (!isCardPayment) {
+        await notifyShopNewOrder(shopId, Number(totalAmount));
+        return res.json({ order });
       }
-      res.json({ order });
+
+      // Card payment — generate ROBOKASSA URL
+      if (!isRobokassaConfigured()) {
+        // Fallback: treat as paid immediately if ROBOKASSA is not configured
+        await storage.updatePaymentStatus(order.id, "paid");
+        await notifyShopNewOrder(shopId, Number(totalAmount));
+        return res.json({ order });
+      }
+
+      const buyer = await storage.getUser(userId);
+      const paymentUrl = buildPaymentUrl({
+        outSum: finalAmount,
+        invId: order.orderNumber,
+        description: `Заказ #${order.orderNumber} — ЦветоМаркет`,
+        email: buyer?.email,
+      });
+      res.json({ order, paymentUrl });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
+  });
+
+  // ROBOKASSA ResultURL — called by ROBOKASSA server after payment
+  app.post("/api/payment/robokassa/result", async (req, res) => {
+    try {
+      const { OutSum, InvId, SignatureValue } = req.body;
+      if (!OutSum || !InvId || !SignatureValue) {
+        return res.status(400).send("bad request");
+      }
+      if (!verifyResultSignature({ OutSum, InvId, SignatureValue })) {
+        console.error("[robokassa/result] invalid signature for InvId", InvId);
+        return res.status(400).send("bad sign");
+      }
+      const order = await storage.getOrderByNumber(Number(InvId));
+      if (!order) {
+        console.error("[robokassa/result] order not found for InvId", InvId);
+        return res.status(404).send("order not found");
+      }
+      if (order.paymentStatus !== "paid") {
+        await storage.updatePaymentStatus(order.id, "paid", `robokassa:${InvId}`);
+        await notifyShopNewOrder(order.shopId, Number(order.totalAmount));
+      }
+      res.send(`OK${InvId}`);
+    } catch (e: any) {
+      console.error("[robokassa/result] error:", e.message);
+      res.status(500).send("error");
+    }
+  });
+
+  // ROBOKASSA SuccessURL — browser redirect after successful payment
+  app.get("/api/payment/robokassa/success", (req, res) => {
+    const invId = req.query.InvId || "";
+    res.redirect(`/account?payment=success&inv=${invId}`);
+  });
+
+  // ROBOKASSA FailURL — browser redirect after failed payment
+  app.get("/api/payment/robokassa/fail", (req, res) => {
+    const invId = req.query.InvId || "";
+    res.redirect(`/account?payment=failed&inv=${invId}`);
   });
 
   app.patch("/api/orders/:id/status", requireRole("shop", "admin"), async (req, res) => {

@@ -54,11 +54,13 @@ export interface IStorage {
 
   // Orders
   getOrder(id: string): Promise<Order | undefined>;
+  getOrderByNumber(orderNumber: number): Promise<Order | undefined>;
   getOrdersByBuyer(buyerId: string): Promise<Order[]>;
   getOrdersByShop(shopId: string): Promise<Order[]>;
   getAllOrders(): Promise<Order[]>;
   createOrder(order: InsertOrder): Promise<Order>;
   updateOrderStatus(id: string, status: string, assemblyPhotoUrl?: string): Promise<Order | undefined>;
+  updatePaymentStatus(id: string, paymentStatus: string, paymentId?: string): Promise<Order | undefined>;
 
   // Order Items
   getOrderItems(orderId: string): Promise<OrderItem[]>;
@@ -252,6 +254,16 @@ export class DbStorage implements IStorage {
 
   async getOrder(id: string) {
     const [o] = await db.select().from(orders).where(eq(orders.id, id));
+    return o;
+  }
+  async getOrderByNumber(orderNumber: number) {
+    const [o] = await db.select().from(orders).where(eq(orders.orderNumber, orderNumber));
+    return o;
+  }
+  async updatePaymentStatus(id: string, paymentStatus: string, paymentId?: string) {
+    const update: any = { paymentStatus };
+    if (paymentId !== undefined) update.paymentId = paymentId;
+    const [o] = await db.update(orders).set(update).where(eq(orders.id, id)).returning();
     return o;
   }
   async getOrdersByBuyer(buyerId: string) {
