@@ -133,7 +133,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     if (!userId) return res.json({ user: null });
     const user = await storage.getUser(userId);
     if (!user) return res.json({ user: null });
-    const { password: _, ...safe } = user;
+    const { password: _, adminNotes: _notes, ...safe } = user;
     res.json({ user: safe });
   });
 

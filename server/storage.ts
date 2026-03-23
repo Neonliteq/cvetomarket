@@ -545,15 +545,14 @@ export class DbStorage implements IStorage {
         : null;
       const registeredDaysAgo = u.createdAt ? now - new Date(u.createdAt).getTime() : Infinity;
 
+      const lastOrderAge = lastOrderAt ? now - lastOrderAt.getTime() : Infinity;
       let segment: CRMSegment = "new";
       if (ltv > 10000) {
         segment = "vip";
-      } else if (orderCount === 0 && registeredDaysAgo > thirtyDays) {
+      } else if ((orderCount === 0 && registeredDaysAgo > thirtyDays) || lastOrderAge > sixtyDays) {
         segment = "churned";
       } else if (orderCount === 0 || (orderCount === 1 && registeredDaysAgo < thirtyDays)) {
         segment = "new";
-      } else if (lastOrderAt && (now - lastOrderAt.getTime()) > sixtyDays) {
-        segment = "churned";
       } else if (orderCount >= 2) {
         segment = "active";
       }
