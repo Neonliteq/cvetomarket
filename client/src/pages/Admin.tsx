@@ -212,7 +212,6 @@ export default function Admin() {
   const [crmCityFilter, setCrmCityFilter] = useState("all");
   const [crmSelectedCustomer, setCrmSelectedCustomer] = useState<CRMCustomer | null>(null);
   const [crmNotes, setCrmNotes] = useState("");
-  const [crmNotesEditing, setCrmNotesEditing] = useState(false);
   const [crmGrantAmount, setCrmGrantAmount] = useState("");
   const [crmGrantDesc, setCrmGrantDesc] = useState("");
   const [crmGrantOpen, setCrmGrantOpen] = useState(false);
@@ -274,7 +273,6 @@ export default function Admin() {
       apiRequest("PATCH", `/api/admin/crm/customers/${id}/notes`, { notes }),
     onSuccess: () => {
       toast({ title: "Заметка сохранена" });
-      setCrmNotesEditing(false);
       qc.invalidateQueries({ queryKey: ["/api/admin/crm/customers"] });
     },
     onError: () => toast({ title: "Ошибка сохранения", variant: "destructive" }),
@@ -1837,10 +1835,11 @@ export default function Admin() {
                           <tr>
                             <th className="text-left px-4 py-2 font-medium">Покупатель</th>
                             <th className="text-left px-4 py-2 font-medium hidden sm:table-cell">Сегмент</th>
+                            <th className="text-left px-4 py-2 font-medium hidden lg:table-cell">Телефон</th>
                             <th className="text-right px-4 py-2 font-medium hidden md:table-cell">Заказов</th>
                             <th className="text-right px-4 py-2 font-medium">LTV</th>
                             <th className="text-right px-4 py-2 font-medium hidden lg:table-cell">Бонусы</th>
-                            <th className="text-left px-4 py-2 font-medium hidden xl:table-cell">Город</th>
+                            <th className="text-right px-4 py-2 font-medium hidden xl:table-cell">Посл. заказ</th>
                             <th className="px-4 py-2"></th>
                           </tr>
                         </thead>
@@ -1852,7 +1851,6 @@ export default function Admin() {
                               onClick={() => {
                                 setCrmSelectedCustomer(c);
                                 setCrmNotes(c.adminNotes || "");
-                                setCrmNotesEditing(false);
                                 setCrmGrantOpen(false);
                                 setCrmGrantAmount("");
                                 setCrmGrantDesc("");
@@ -1868,17 +1866,20 @@ export default function Admin() {
                                   {CRM_SEGMENT_LABELS[c.segment]}
                                 </span>
                               </td>
+                              <td className="px-4 py-3 text-xs text-muted-foreground hidden lg:table-cell">{c.phone || "—"}</td>
                               <td className="px-4 py-3 text-right hidden md:table-cell">{c.orderCount}</td>
                               <td className="px-4 py-3 text-right font-medium">{c.ltv.toLocaleString("ru")} ₽</td>
                               <td className="px-4 py-3 text-right hidden lg:table-cell">{c.bonusBalance}</td>
-                              <td className="px-4 py-3 text-muted-foreground text-xs hidden xl:table-cell">{c.cityName || "—"}</td>
+                              <td className="px-4 py-3 text-right text-xs text-muted-foreground hidden xl:table-cell">
+                                {c.lastOrderAt ? format(new Date(c.lastOrderAt), "d MMM yyyy", { locale: ru }) : "—"}
+                              </td>
                               <td className="px-4 py-3 text-right">
                                 <ChevronRight className="w-4 h-4 text-muted-foreground ml-auto" />
                               </td>
                             </tr>
                           ))}
                           {filteredCRM.length === 0 && (
-                            <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">Покупателей нет</td></tr>
+                            <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">Покупателей нет</td></tr>
                           )}
                         </tbody>
                       </table>
@@ -2002,46 +2003,28 @@ export default function Admin() {
 
                   <Separator className="mb-4" />
 
-                  {/* Admin notes */}
+                  {/* Admin notes (autosave on blur) */}
                   <div className="mb-4">
                     <div className="flex items-center justify-between mb-2">
                       <h4 className="text-sm font-semibold flex items-center gap-1.5">
                         <StickyNote className="w-4 h-4" /> Заметки
                       </h4>
-                      {!crmNotesEditing && (
-                        <Button size="sm" variant="ghost" onClick={() => setCrmNotesEditing(true)} data-testid="button-crm-edit-notes">
-                          <Edit className="w-3.5 h-3.5" />
-                        </Button>
+                      {saveNotesMutation.isPending && (
+                        <span className="text-xs text-muted-foreground">Сохранение...</span>
                       )}
                     </div>
-                    {crmNotesEditing ? (
-                      <div className="space-y-2">
-                        <Textarea
-                          value={crmNotes}
-                          onChange={(e) => setCrmNotes(e.target.value)}
-                          rows={3}
-                          placeholder="Напишите заметку об этом покупателе..."
-                          data-testid="textarea-crm-notes"
-                        />
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            onClick={() => saveNotesMutation.mutate({ id: crmSelectedCustomer.id, notes: crmNotes })}
-                            disabled={saveNotesMutation.isPending}
-                            data-testid="button-crm-save-notes"
-                          >
-                            {saveNotesMutation.isPending ? "Сохраняем..." : "Сохранить"}
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={() => { setCrmNotesEditing(false); setCrmNotes(crmSelectedCustomer.adminNotes || ""); }}>
-                            Отмена
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">
-                        {crmNotes || "Заметок нет"}
-                      </p>
-                    )}
+                    <Textarea
+                      value={crmNotes}
+                      onChange={(e) => setCrmNotes(e.target.value)}
+                      onBlur={() => {
+                        if (crmNotes !== (crmSelectedCustomer.adminNotes || "")) {
+                          saveNotesMutation.mutate({ id: crmSelectedCustomer.id, notes: crmNotes });
+                        }
+                      }}
+                      rows={3}
+                      placeholder="Напишите заметку об этом покупателе..."
+                      data-testid="textarea-crm-notes"
+                    />
                   </div>
 
                   <Separator className="mb-4" />
