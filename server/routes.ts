@@ -15,6 +15,11 @@ import { sendTelegramMessage, generateLinkToken, consumeLinkToken, getBotUsernam
 import { sendPasswordResetEmail } from "./resend";
 import { buildPaymentUrl, verifyResultSignature, isRobokassaConfigured } from "./robokassa";
 
+function toSafeUser(user: Record<string, unknown>) {
+  const { password: _pw, adminNotes: _notes, ...safe } = user;
+  return safe;
+}
+
 function parseObjPath(p: string): { bucketName: string; objectName: string } {
   if (!p.startsWith("/")) p = `/${p}`;
   const parts = p.split("/");
@@ -133,8 +138,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     if (!userId) return res.json({ user: null });
     const user = await storage.getUser(userId);
     if (!user) return res.json({ user: null });
-    const { password: _, adminNotes: _notes, ...safe } = user;
-    res.json({ user: safe });
+    res.json({ user: toSafeUser(user as Record<string, unknown>) });
   });
 
   app.post("/api/auth/register", async (req, res) => {
@@ -168,8 +172,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         });
       }
       (req.session as any).userId = user.id;
-      const { password: _, ...safe } = user;
-      res.json({ user: safe });
+      res.json({ user: toSafeUser(user as Record<string, unknown>) });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
@@ -184,8 +187,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!match) return res.status(401).json({ error: "Неверный email или пароль" });
       if (user.isBlocked) return res.status(403).json({ error: "Ваш аккаунт заблокирован" });
       (req.session as any).userId = user.id;
-      const { password: _, ...safe } = user;
-      res.json({ user: safe });
+      res.json({ user: toSafeUser(user as Record<string, unknown>) });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
@@ -269,8 +271,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     if (buyerCity !== undefined) updates.buyerCity = buyerCity;
     const updated = await storage.updateUser(userId, updates);
     if (!updated) return res.status(500).json({ error: "Failed to update" });
-    const { password: _, ...safe } = updated;
-    res.json({ user: safe });
+    res.json({ user: toSafeUser(updated as Record<string, unknown>) });
   });
 
   app.post("/api/auth/change-password", requireAuth, async (req, res) => {
@@ -1113,8 +1114,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     if (!targetUser) return res.status(404).json({ error: "User not found" });
     const updated = await storage.updateUser(req.params.id, { isBlocked: !targetUser.isBlocked });
     if (!updated) return res.status(500).json({ error: "Failed to update user" });
-    const { password: _, ...safe } = updated;
-    res.json(safe);
+    res.json(toSafeUser(updated as Record<string, unknown>));
   });
 
   app.delete("/api/admin/users/:id", requireRole("admin"), async (req, res) => {
