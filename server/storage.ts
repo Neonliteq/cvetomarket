@@ -542,14 +542,12 @@ export class DbStorage implements IStorage {
       let segment: CRMSegment;
       if (totalSpent > 10000) {
         segment = "vip";
-      } else if (orderCount === 0 && registeredDaysAgo < thirtyDays) {
+      } else if ((orderCount === 0 || orderCount === 1) && registeredDaysAgo < thirtyDays) {
         segment = "new";
-      } else if (orderCount === 1 && registeredDaysAgo < thirtyDays) {
-        segment = "new";
-      } else if (orderCount === 0 || lastOrderAge > sixtyDays) {
-        segment = "churned";
-      } else {
+      } else if (orderCount >= 2 && lastOrderAge <= sixtyDays) {
         segment = "active";
+      } else {
+        segment = "churned";
       }
 
       return {
