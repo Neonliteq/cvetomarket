@@ -313,6 +313,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.get("/api/categories", async (_req, res) => {
     res.json(await storage.getCategories());
   });
+  app.get("/api/categories/popular", async (_req, res) => {
+    res.json(await storage.getCategoriesWithProductCount());
+  });
   app.post("/api/categories", requireRole("admin"), async (req, res) => {
     const cat = await storage.createCategory(req.body);
     res.json(cat);

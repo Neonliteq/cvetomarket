@@ -87,6 +87,7 @@ export interface IStorage {
 
   // Categories
   getCategories(): Promise<Category[]>;
+  getCategoriesWithProductCount(): Promise<(Category & { productCount: number })[]>;
   createCategory(cat: InsertCategory): Promise<Category>;
   deleteCategory(id: string): Promise<void>;
 
@@ -365,6 +366,20 @@ export class DbStorage implements IStorage {
 
   async getCategories() {
     return db.select().from(categories).orderBy(categories.name);
+  }
+  async getCategoriesWithProductCount() {
+    const rows = await db
+      .select({
+        id: categories.id,
+        name: categories.name,
+        slug: categories.slug,
+        productCount: sql<number>`COALESCE(COUNT(${products.id}), 0)`,
+      })
+      .from(categories)
+      .leftJoin(products, and(eq(products.categoryId, categories.id), eq(products.isActive, true), eq(products.inStock, true)))
+      .groupBy(categories.id, categories.name, categories.slug)
+      .orderBy(sql`COUNT(${products.id}) DESC`, categories.name);
+    return rows as (Category & { productCount: number })[];
   }
   async createCategory(data: InsertCategory) {
     const [c] = await db.insert(categories).values(data).returning();

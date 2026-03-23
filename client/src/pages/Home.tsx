@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, Truck, Shield, Clock, Star, Cake, Heart, Flower2, Gem, Leaf, Building2, Search } from "lucide-react";
+import { ArrowRight, Truck, Shield, Clock, Star, Cake, Heart, Flower2, Gem, Leaf, Building2, Search, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -9,6 +9,17 @@ import { Input } from "@/components/ui/input";
 import { ProductCard } from "@/components/ProductCard";
 import { ShopCard } from "@/components/ShopCard";
 import type { Product, Shop, Category } from "@shared/schema";
+
+type CategoryWithCount = Category & { productCount: number };
+
+const SLUG_ICONS: Record<string, LucideIcon> = {
+  birthday: Cake,
+  romance: Heart,
+  march8: Flower2,
+  wedding: Gem,
+  sympathy: Leaf,
+  corporate: Building2,
+};
 
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -27,18 +38,9 @@ export default function Home() {
   const { data: shops, isLoading: loadingShops } = useQuery<(Shop & { cityName?: string })[]>({
     queryKey: ["/api/shops/all"],
   });
-  const { data: categories } = useQuery<Category[]>({
-    queryKey: ["/api/categories"],
+  const { data: popularCategories, isLoading: loadingCategories } = useQuery<CategoryWithCount[]>({
+    queryKey: ["/api/categories/popular"],
   });
-
-  const occasions = [
-    { label: "День рождения", Icon: Cake, slug: "birthday" },
-    { label: "Романтика", Icon: Heart, slug: "romance" },
-    { label: "8 марта", Icon: Flower2, slug: "march8" },
-    { label: "Свадьба", Icon: Gem, slug: "wedding" },
-    { label: "Сочувствие", Icon: Leaf, slug: "sympathy" },
-    { label: "Корпоратив", Icon: Building2, slug: "corporate" },
-  ];
 
   return (
     <div className="min-h-screen">
@@ -128,22 +130,40 @@ export default function Home() {
               <h2 className="text-2xl font-bold">По поводу</h2>
               <p className="text-muted-foreground text-sm mt-1">Найдите букет для любого случая</p>
             </div>
+            <Link href="/catalog">
+              <Button variant="ghost" size="sm" className="text-xs">
+                Все категории <ArrowRight className="w-3.5 h-3.5 ml-1" />
+              </Button>
+            </Link>
           </div>
-          <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
-            {occasions.map((o) => (
-              <Link key={o.slug} href={`/catalog?category=${o.slug}`}>
-                <div
-                  className="hover-elevate cursor-pointer rounded-md border border-border bg-card p-3 flex flex-col items-center gap-2 text-center transition-colors"
-                  data-testid={`button-occasion-${o.slug}`}
-                >
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                    <o.Icon className="w-4 h-4 text-primary" />
-                  </div>
-                  <span className="text-xs font-medium leading-tight">{o.label}</span>
-                </div>
-              </Link>
-            ))}
-          </div>
+          {loadingCategories ? (
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+              {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-md" />)}
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+              {(popularCategories ?? []).slice(0, 6).map((cat) => {
+                const Icon = SLUG_ICONS[cat.slug] ?? Flower2;
+                const count = Number(cat.productCount);
+                return (
+                  <Link key={cat.slug} href={`/catalog?category=${cat.slug}`}>
+                    <div
+                      className="hover-elevate cursor-pointer rounded-md border border-border bg-card p-3 flex flex-col items-center gap-2 text-center transition-colors"
+                      data-testid={`button-occasion-${cat.slug}`}
+                    >
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Icon className="w-4 h-4 text-primary" />
+                      </div>
+                      <span className="text-xs font-medium leading-tight">{cat.name}</span>
+                      {count > 0 && (
+                        <span className="text-[10px] text-muted-foreground">{count} {count === 1 ? "товар" : count < 5 ? "товара" : "товаров"}</span>
+                      )}
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
         </section>
 
         <section>
