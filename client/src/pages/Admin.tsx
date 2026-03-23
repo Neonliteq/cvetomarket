@@ -57,7 +57,7 @@ const CRM_SEGMENT_LABELS: Record<CRMSegment, string> = {
   new: "Новый",
   active: "Активный",
   vip: "VIP",
-  churned: "Отток",
+  churned: "Не заходил",
 };
 const CRM_SEGMENT_COLORS: Record<CRMSegment, string> = {
   new: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
@@ -212,6 +212,7 @@ export default function Admin() {
   const [crmCityFilter, setCrmCityFilter] = useState("all");
   const [crmSelectedCustomer, setCrmSelectedCustomer] = useState<CRMCustomer | null>(null);
   const [crmNotes, setCrmNotes] = useState("");
+  const [crmNotesSaved, setCrmNotesSaved] = useState("");
   const [crmGrantAmount, setCrmGrantAmount] = useState("");
   const [crmGrantDesc, setCrmGrantDesc] = useState("");
   const [crmGrantOpen, setCrmGrantOpen] = useState(false);
@@ -271,8 +272,9 @@ export default function Admin() {
   const saveNotesMutation = useMutation({
     mutationFn: ({ id, notes }: { id: string; notes: string }) =>
       apiRequest("PATCH", `/api/admin/crm/customers/${id}/notes`, { notes }),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       toast({ title: "Заметка сохранена" });
+      setCrmNotesSaved(variables.notes);
       qc.invalidateQueries({ queryKey: ["/api/admin/crm/customers"] });
     },
     onError: () => toast({ title: "Ошибка сохранения", variant: "destructive" }),
@@ -1851,6 +1853,7 @@ export default function Admin() {
                               onClick={() => {
                                 setCrmSelectedCustomer(c);
                                 setCrmNotes(c.adminNotes || "");
+                                setCrmNotesSaved(c.adminNotes || "");
                                 setCrmGrantOpen(false);
                                 setCrmGrantAmount("");
                                 setCrmGrantDesc("");
@@ -2017,7 +2020,7 @@ export default function Admin() {
                       value={crmNotes}
                       onChange={(e) => setCrmNotes(e.target.value)}
                       onBlur={() => {
-                        if (crmNotes !== (crmSelectedCustomer.adminNotes || "")) {
+                        if (crmNotes !== crmNotesSaved) {
                           saveNotesMutation.mutate({ id: crmSelectedCustomer.id, notes: crmNotes });
                         }
                       }}
