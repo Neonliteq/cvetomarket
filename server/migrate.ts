@@ -33,6 +33,10 @@ export async function runMigrations() {
       ON CONFLICT (name) DO NOTHING;
     `);
 
+    await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS admin_notes text;
+    `);
+
     console.log("[migrate] Schema up to date");
   } catch (err) {
     console.error("[migrate] Migration error:", err);

@@ -1504,24 +1504,21 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  app.get("/api/admin/crm/customers/:id/orders", requireRole("admin"), async (req, res) => {
+  app.get("/api/admin/crm/customers/:id", requireRole("admin"), async (req, res) => {
     try {
-      const orderList = await storage.getOrdersByBuyer(req.params.id);
-      const enriched = await Promise.all(orderList.map(async (o) => {
+      const uid = req.params.id;
+      const [orderList, reviewList, bonusData] = await Promise.all([
+        storage.getOrdersByBuyer(uid),
+        storage.getReviewsByBuyer(uid),
+        storage.getBonusTransactions(uid),
+      ]);
+      const enrichedOrders = await Promise.all(orderList.map(async (o) => {
         const items = await storage.getOrderItems(o.id);
         const shop = o.shopId ? await storage.getShop(o.shopId) : null;
         return { ...o, items, shopName: shop?.name || "" };
       }));
-      res.json(enriched);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
-    }
-  });
-
-  app.get("/api/admin/crm/customers/:id/reviews", requireRole("admin"), async (req, res) => {
-    try {
-      const reviewList = await storage.getReviewsByBuyer(req.params.id);
-      res.json(reviewList);
+      const bonusBalance = await storage.getBonusBalance(uid);
+      res.json({ orders: enrichedOrders, reviews: reviewList, bonusTransactions: bonusData, bonusBalance });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }

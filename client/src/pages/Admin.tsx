@@ -42,8 +42,15 @@ type CRMCustomer = {
   ltv: number;
   lastOrderAt: string | null;
   segment: CRMSegment;
+  cityName: string | null;
   adminNotes: string | null;
   createdAt: string | null;
+};
+type CRMProfile = {
+  orders: any[];
+  reviews: any[];
+  bonusTransactions: any[];
+  bonusBalance: number;
 };
 
 const CRM_SEGMENT_LABELS: Record<CRMSegment, string> = {
@@ -202,9 +209,13 @@ export default function Admin() {
   const [financePeriod, setFinancePeriod] = useState("month");
   const [crmSearch, setCrmSearch] = useState("");
   const [crmSegmentFilter, setCrmSegmentFilter] = useState("all");
+  const [crmCityFilter, setCrmCityFilter] = useState("all");
   const [crmSelectedCustomer, setCrmSelectedCustomer] = useState<CRMCustomer | null>(null);
   const [crmNotes, setCrmNotes] = useState("");
   const [crmNotesEditing, setCrmNotesEditing] = useState(false);
+  const [crmGrantAmount, setCrmGrantAmount] = useState("");
+  const [crmGrantDesc, setCrmGrantDesc] = useState("");
+  const [crmGrantOpen, setCrmGrantOpen] = useState(false);
 
   const isAdmin = !!user && user.role === "admin";
 
@@ -252,14 +263,9 @@ export default function Admin() {
     queryKey: ["/api/admin/crm/customers"],
     enabled: isAdmin,
   });
-  const { data: crmCustomerOrders, isLoading: loadingCrmOrders } = useQuery<any[]>({
-    queryKey: ["/api/admin/crm/customers", crmSelectedCustomer?.id, "orders"],
-    queryFn: () => fetch(`/api/admin/crm/customers/${crmSelectedCustomer!.id}/orders`, { credentials: "include" }).then((r) => r.json()),
-    enabled: isAdmin && !!crmSelectedCustomer,
-  });
-  const { data: crmCustomerReviews, isLoading: loadingCrmReviews } = useQuery<any[]>({
-    queryKey: ["/api/admin/crm/customers", crmSelectedCustomer?.id, "reviews"],
-    queryFn: () => fetch(`/api/admin/crm/customers/${crmSelectedCustomer!.id}/reviews`, { credentials: "include" }).then((r) => r.json()),
+  const { data: crmProfile, isLoading: loadingCrmProfile } = useQuery<CRMProfile>({
+    queryKey: ["/api/admin/crm/customers", crmSelectedCustomer?.id, "profile"],
+    queryFn: () => fetch(`/api/admin/crm/customers/${crmSelectedCustomer!.id}`, { credentials: "include" }).then((r) => r.json()),
     enabled: isAdmin && !!crmSelectedCustomer,
   });
 
@@ -272,6 +278,28 @@ export default function Admin() {
       qc.invalidateQueries({ queryKey: ["/api/admin/crm/customers"] });
     },
     onError: () => toast({ title: "Ошибка сохранения", variant: "destructive" }),
+  });
+
+  const crmGrantBonusMutation = useMutation({
+    mutationFn: ({ userId, amount, description }: { userId: string; amount: number; description: string }) =>
+      apiRequest("POST", "/api/admin/bonuses/grant", { userId, amount, description }),
+    onSuccess: () => {
+      toast({ title: "Бонусы начислены" });
+      if (crmSelectedCustomer) {
+        qc.invalidateQueries({ queryKey: ["/api/admin/crm/customers", crmSelectedCustomer.id, "profile"] });
+        qc.invalidateQueries({ queryKey: ["/api/admin/crm/customers"] });
+      }
+    },
+    onError: () => toast({ title: "Ошибка начисления", variant: "destructive" }),
+  });
+
+  const crmBlockMutation = useMutation({
+    mutationFn: (id: string) => apiRequest("PATCH", `/api/admin/users/${id}/block`, {}),
+    onSuccess: () => {
+      toast({ title: "Статус пользователя обновлён" });
+      qc.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      qc.invalidateQueries({ queryKey: ["/api/admin/crm/customers"] });
+    },
   });
 
   const moderateShopMutation = useMutation({
@@ -1752,115 +1780,126 @@ export default function Admin() {
 
         {/* ==================== CRM ==================== */}
         <TabsContent value="crm">
-          <div className="flex flex-wrap gap-3 mb-4 items-center">
-            <div className="relative flex-1 min-w-48">
-              <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-muted-foreground" />
-              <Input
-                className="pl-8"
-                placeholder="Поиск по имени или email..."
-                value={crmSearch}
-                onChange={(e) => setCrmSearch(e.target.value)}
-                data-testid="input-crm-search"
-              />
-            </div>
-            <Select value={crmSegmentFilter} onValueChange={setCrmSegmentFilter}>
-              <SelectTrigger className="w-44" data-testid="select-crm-segment">
-                <SelectValue placeholder="Все сегменты" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Все сегменты</SelectItem>
-                <SelectItem value="new">Новые</SelectItem>
-                <SelectItem value="active">Активные</SelectItem>
-                <SelectItem value="vip">VIP</SelectItem>
-                <SelectItem value="churned">Отток</SelectItem>
-              </SelectContent>
-            </Select>
-            <span className="text-sm text-muted-foreground">
-              {crmCustomers
-                ? `${(crmCustomers || []).filter((c) => {
-                    const q = crmSearch.toLowerCase();
-                    const matchSearch = !q || c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q);
-                    const matchSeg = crmSegmentFilter === "all" || c.segment === crmSegmentFilter;
-                    return matchSearch && matchSeg;
-                  }).length} покупателей`
-                : ""}
-            </span>
-          </div>
-          {loadingCRM ? (
-            <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-14 rounded-lg" />)}</div>
-          ) : (
-            <div className="rounded-lg border overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/50">
-                    <tr>
-                      <th className="text-left px-4 py-2 font-medium">Покупатель</th>
-                      <th className="text-left px-4 py-2 font-medium hidden sm:table-cell">Сегмент</th>
-                      <th className="text-right px-4 py-2 font-medium hidden md:table-cell">Заказов</th>
-                      <th className="text-right px-4 py-2 font-medium">LTV</th>
-                      <th className="text-right px-4 py-2 font-medium hidden lg:table-cell">Бонусы</th>
-                      <th className="text-right px-4 py-2 font-medium hidden xl:table-cell">Регистрация</th>
-                      <th className="px-4 py-2"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(crmCustomers || [])
-                      .filter((c) => {
-                        const q = crmSearch.toLowerCase();
-                        const matchSearch = !q || c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q);
-                        const matchSeg = crmSegmentFilter === "all" || c.segment === crmSegmentFilter;
-                        return matchSearch && matchSeg;
-                      })
-                      .map((c) => (
-                        <tr
-                          key={c.id}
-                          className="border-t hover:bg-muted/30 cursor-pointer transition-colors"
-                          onClick={() => {
-                            setCrmSelectedCustomer(c);
-                            setCrmNotes(c.adminNotes || "");
-                            setCrmNotesEditing(false);
-                          }}
-                          data-testid={`row-crm-customer-${c.id}`}
-                        >
-                          <td className="px-4 py-3">
-                            <div className="font-medium">{c.name}</div>
-                            <div className="text-xs text-muted-foreground">{c.email}</div>
-                          </td>
-                          <td className="px-4 py-3 hidden sm:table-cell">
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${CRM_SEGMENT_COLORS[c.segment]}`}>
-                              {CRM_SEGMENT_LABELS[c.segment]}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-right hidden md:table-cell">{c.orderCount}</td>
-                          <td className="px-4 py-3 text-right font-medium">{c.ltv.toLocaleString("ru")} ₽</td>
-                          <td className="px-4 py-3 text-right hidden lg:table-cell">{c.bonusBalance}</td>
-                          <td className="px-4 py-3 text-right text-muted-foreground text-xs hidden xl:table-cell">
-                            {c.createdAt ? format(new Date(c.createdAt), "d MMM yyyy", { locale: ru }) : "—"}
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            <ChevronRight className="w-4 h-4 text-muted-foreground ml-auto" />
-                          </td>
-                        </tr>
-                      ))}
-                    {(crmCustomers || []).length === 0 && (
-                      <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">Покупателей нет</td></tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
+          {(() => {
+            const crmCities = Array.from(new Set((crmCustomers || []).map((c) => c.cityName).filter(Boolean))) as string[];
+            const filteredCRM = (crmCustomers || []).filter((c) => {
+              const q = crmSearch.toLowerCase();
+              const matchSearch = !q || c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q);
+              const matchSeg = crmSegmentFilter === "all" || c.segment === crmSegmentFilter;
+              const matchCity = crmCityFilter === "all" || c.cityName === crmCityFilter;
+              return matchSearch && matchSeg && matchCity;
+            });
+            return (
+              <>
+                <div className="flex flex-wrap gap-3 mb-4 items-center">
+                  <div className="relative flex-1 min-w-48">
+                    <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      className="pl-8"
+                      placeholder="Поиск по имени или email..."
+                      value={crmSearch}
+                      onChange={(e) => setCrmSearch(e.target.value)}
+                      data-testid="input-crm-search"
+                    />
+                  </div>
+                  <Select value={crmSegmentFilter} onValueChange={setCrmSegmentFilter}>
+                    <SelectTrigger className="w-40" data-testid="select-crm-segment">
+                      <SelectValue placeholder="Все сегменты" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Все сегменты</SelectItem>
+                      <SelectItem value="new">Новые</SelectItem>
+                      <SelectItem value="active">Активные</SelectItem>
+                      <SelectItem value="vip">VIP</SelectItem>
+                      <SelectItem value="churned">Отток</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {crmCities.length > 0 && (
+                    <Select value={crmCityFilter} onValueChange={setCrmCityFilter}>
+                      <SelectTrigger className="w-44" data-testid="select-crm-city">
+                        <SelectValue placeholder="Все города" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Все города</SelectItem>
+                        {crmCities.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  )}
+                  <span className="text-sm text-muted-foreground">{filteredCRM.length} покупателей</span>
+                </div>
+                {loadingCRM ? (
+                  <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-14 rounded-lg" />)}</div>
+                ) : (
+                  <div className="rounded-lg border overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-muted/50">
+                          <tr>
+                            <th className="text-left px-4 py-2 font-medium">Покупатель</th>
+                            <th className="text-left px-4 py-2 font-medium hidden sm:table-cell">Сегмент</th>
+                            <th className="text-right px-4 py-2 font-medium hidden md:table-cell">Заказов</th>
+                            <th className="text-right px-4 py-2 font-medium">LTV</th>
+                            <th className="text-right px-4 py-2 font-medium hidden lg:table-cell">Бонусы</th>
+                            <th className="text-left px-4 py-2 font-medium hidden xl:table-cell">Город</th>
+                            <th className="px-4 py-2"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredCRM.map((c) => (
+                            <tr
+                              key={c.id}
+                              className="border-t hover:bg-muted/30 cursor-pointer transition-colors"
+                              onClick={() => {
+                                setCrmSelectedCustomer(c);
+                                setCrmNotes(c.adminNotes || "");
+                                setCrmNotesEditing(false);
+                                setCrmGrantOpen(false);
+                                setCrmGrantAmount("");
+                                setCrmGrantDesc("");
+                              }}
+                              data-testid={`row-crm-customer-${c.id}`}
+                            >
+                              <td className="px-4 py-3">
+                                <div className="font-medium">{c.name}</div>
+                                <div className="text-xs text-muted-foreground">{c.email}</div>
+                              </td>
+                              <td className="px-4 py-3 hidden sm:table-cell">
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${CRM_SEGMENT_COLORS[c.segment]}`}>
+                                  {CRM_SEGMENT_LABELS[c.segment]}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-right hidden md:table-cell">{c.orderCount}</td>
+                              <td className="px-4 py-3 text-right font-medium">{c.ltv.toLocaleString("ru")} ₽</td>
+                              <td className="px-4 py-3 text-right hidden lg:table-cell">{c.bonusBalance}</td>
+                              <td className="px-4 py-3 text-muted-foreground text-xs hidden xl:table-cell">{c.cityName || "—"}</td>
+                              <td className="px-4 py-3 text-right">
+                                <ChevronRight className="w-4 h-4 text-muted-foreground ml-auto" />
+                              </td>
+                            </tr>
+                          ))}
+                          {filteredCRM.length === 0 && (
+                            <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">Покупателей нет</td></tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </>
+            );
+          })()}
 
           {/* Customer Profile Sheet */}
-          <Sheet open={!!crmSelectedCustomer} onOpenChange={(open) => { if (!open) setCrmSelectedCustomer(null); }}>
+          <Sheet open={!!crmSelectedCustomer} onOpenChange={(open) => { if (!open) { setCrmSelectedCustomer(null); setCrmGrantOpen(false); } }}>
             <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
               {crmSelectedCustomer && (
                 <>
                   <SheetHeader className="mb-4">
-                    <SheetTitle>{crmSelectedCustomer.name}</SheetTitle>
+                    <SheetTitle data-testid="text-crm-customer-name">{crmSelectedCustomer.name}</SheetTitle>
                     <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
                       <span>{crmSelectedCustomer.email}</span>
                       {crmSelectedCustomer.phone && <span>· {crmSelectedCustomer.phone}</span>}
+                      {crmSelectedCustomer.cityName && <span>· {crmSelectedCustomer.cityName}</span>}
                     </div>
                     <div className="flex flex-wrap gap-2 mt-1">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${CRM_SEGMENT_COLORS[crmSelectedCustomer.segment]}`}>
@@ -1875,11 +1914,11 @@ export default function Admin() {
                   </SheetHeader>
 
                   {/* Stats row */}
-                  <div className="grid grid-cols-3 gap-3 mb-5">
+                  <div className="grid grid-cols-3 gap-3 mb-4">
                     {[
                       { label: "Заказов", value: crmSelectedCustomer.orderCount },
                       { label: "LTV", value: `${crmSelectedCustomer.ltv.toLocaleString("ru")} ₽` },
-                      { label: "Бонусов", value: crmSelectedCustomer.bonusBalance },
+                      { label: "Бонусов", value: loadingCrmProfile ? "..." : (crmProfile?.bonusBalance ?? crmSelectedCustomer.bonusBalance) },
                     ].map((s) => (
                       <div key={s.label} className="rounded-lg border p-3 text-center">
                         <div className="text-xs text-muted-foreground">{s.label}</div>
@@ -1888,10 +1927,83 @@ export default function Admin() {
                     ))}
                   </div>
 
+                  {/* Quick actions */}
+                  <div className="flex gap-2 mb-4">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5 flex-1"
+                      onClick={() => setCrmGrantOpen((o) => !o)}
+                      data-testid="button-crm-grant-bonus"
+                    >
+                      <Gift className="w-3.5 h-3.5" /> Начислить бонусы
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5 flex-1 text-red-600 border-red-200 hover:bg-red-50"
+                      onClick={() => {
+                        const u = users?.find((u) => u.id === crmSelectedCustomer.id);
+                        crmBlockMutation.mutate(crmSelectedCustomer.id);
+                        if (u) toast({ title: u.isBlocked ? "Пользователь разблокирован" : "Пользователь заблокирован" });
+                      }}
+                      disabled={crmBlockMutation.isPending}
+                      data-testid="button-crm-block"
+                    >
+                      <Ban className="w-3.5 h-3.5" />
+                      {users?.find((u) => u.id === crmSelectedCustomer.id)?.isBlocked ? "Разблокировать" : "Заблокировать"}
+                    </Button>
+                  </div>
+
+                  {/* Grant bonus inline form */}
+                  {crmGrantOpen && (
+                    <div className="border rounded-lg p-3 mb-4 space-y-2 bg-muted/30">
+                      <p className="text-xs font-medium">Начислить бонусы покупателю</p>
+                      <div className="flex gap-2">
+                        <Input
+                          type="number"
+                          min={1}
+                          placeholder="Сумма"
+                          value={crmGrantAmount}
+                          onChange={(e) => setCrmGrantAmount(e.target.value)}
+                          className="w-24"
+                          data-testid="input-crm-grant-amount"
+                        />
+                        <Input
+                          placeholder="Причина"
+                          value={crmGrantDesc}
+                          onChange={(e) => setCrmGrantDesc(e.target.value)}
+                          className="flex-1"
+                          data-testid="input-crm-grant-desc"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          disabled={!crmGrantAmount || Number(crmGrantAmount) <= 0 || crmGrantBonusMutation.isPending}
+                          onClick={() => {
+                            crmGrantBonusMutation.mutate({
+                              userId: crmSelectedCustomer.id,
+                              amount: Number(crmGrantAmount),
+                              description: crmGrantDesc || "Начисление администратором",
+                            });
+                            setCrmGrantAmount("");
+                            setCrmGrantDesc("");
+                            setCrmGrantOpen(false);
+                          }}
+                          data-testid="button-crm-grant-confirm"
+                        >
+                          {crmGrantBonusMutation.isPending ? "Начисляем..." : "Начислить"}
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => setCrmGrantOpen(false)}>Отмена</Button>
+                      </div>
+                    </div>
+                  )}
+
                   <Separator className="mb-4" />
 
                   {/* Admin notes */}
-                  <div className="mb-5">
+                  <div className="mb-4">
                     <div className="flex items-center justify-between mb-2">
                       <h4 className="text-sm font-semibold flex items-center gap-1.5">
                         <StickyNote className="w-4 h-4" /> Заметки
@@ -1927,7 +2039,7 @@ export default function Admin() {
                       </div>
                     ) : (
                       <p className="text-sm text-muted-foreground">
-                        {crmSelectedCustomer.adminNotes || "Заметок нет"}
+                        {crmNotes || "Заметок нет"}
                       </p>
                     )}
                   </div>
@@ -1935,21 +2047,21 @@ export default function Admin() {
                   <Separator className="mb-4" />
 
                   {/* Orders */}
-                  <div className="mb-5">
+                  <div className="mb-4">
                     <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
                       <Package className="w-4 h-4" /> История заказов
                     </h4>
-                    {loadingCrmOrders ? (
+                    {loadingCrmProfile ? (
                       <div className="space-y-2">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-12 rounded" />)}</div>
-                    ) : !crmCustomerOrders?.length ? (
+                    ) : !crmProfile?.orders?.length ? (
                       <p className="text-sm text-muted-foreground">Заказов нет</p>
                     ) : (
-                      <div className="space-y-2 max-h-64 overflow-y-auto">
-                        {crmCustomerOrders.map((o: any) => (
+                      <div className="space-y-2 max-h-52 overflow-y-auto">
+                        {crmProfile.orders.map((o: any) => (
                           <div key={o.id} className="flex items-center justify-between text-xs border rounded p-2.5" data-testid={`crm-order-${o.id}`}>
                             <div>
                               <span className="font-medium">#{o.orderNumber || o.id.slice(-6)}</span>
-                              <span className="ml-2 text-muted-foreground">{o.shopName}</span>
+                              {o.shopName && <span className="ml-2 text-muted-foreground">{o.shopName}</span>}
                               {o.createdAt && (
                                 <span className="ml-2 text-muted-foreground">
                                   {format(new Date(o.createdAt), "d MMM yyyy", { locale: ru })}
@@ -1970,20 +2082,52 @@ export default function Admin() {
 
                   <Separator className="mb-4" />
 
+                  {/* Bonus history */}
+                  <div className="mb-4">
+                    <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+                      <Gift className="w-4 h-4" /> История бонусов
+                    </h4>
+                    {loadingCrmProfile ? (
+                      <div className="space-y-2">{Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-8 rounded" />)}</div>
+                    ) : !crmProfile?.bonusTransactions?.length ? (
+                      <p className="text-sm text-muted-foreground">Операций нет</p>
+                    ) : (
+                      <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                        {crmProfile.bonusTransactions.map((t: any) => (
+                          <div key={t.id} className="flex justify-between items-center text-xs border rounded p-2" data-testid={`crm-bonus-txn-${t.id}`}>
+                            <div>
+                              <span className="font-medium">{t.description || BONUS_REASON_LABELS[t.reason] || t.reason}</span>
+                              {t.createdAt && (
+                                <span className="ml-2 text-muted-foreground">
+                                  {format(new Date(t.createdAt), "d MMM yyyy", { locale: ru })}
+                                </span>
+                              )}
+                            </div>
+                            <Badge variant={t.amount > 0 ? "default" : "destructive"} className="shrink-0 ml-2 text-xs">
+                              {t.amount > 0 ? "+" : ""}{t.amount}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <Separator className="mb-4" />
+
                   {/* Reviews */}
                   <div>
                     <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
                       <Star className="w-4 h-4" /> Отзывы
                     </h4>
-                    {loadingCrmReviews ? (
+                    {loadingCrmProfile ? (
                       <div className="space-y-2">{Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-10 rounded" />)}</div>
-                    ) : !crmCustomerReviews?.length ? (
+                    ) : !crmProfile?.reviews?.length ? (
                       <p className="text-sm text-muted-foreground">Отзывов нет</p>
                     ) : (
                       <div className="space-y-2 max-h-48 overflow-y-auto">
-                        {crmCustomerReviews.map((r: any) => (
+                        {crmProfile.reviews.map((r: any) => (
                           <div key={r.id} className="flex gap-2 text-xs border rounded p-2.5" data-testid={`crm-review-${r.id}`}>
-                            <div className="flex items-center gap-1 shrink-0">
+                            <div className="flex items-center gap-0.5 shrink-0">
                               {Array.from({ length: 5 }).map((_, i) => (
                                 <Star key={i} className={`w-3 h-3 ${i < r.rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground"}`} />
                               ))}

@@ -28,6 +28,7 @@ export type CRMCustomer = {
   ltv: number;
   lastOrderAt: Date | null;
   segment: CRMSegment;
+  cityName: string | null;
   adminNotes: string | null;
   createdAt: Date | null;
 };
@@ -525,8 +526,11 @@ export class DbStorage implements IStorage {
   async getCRMCustomers(): Promise<CRMCustomer[]> {
     const buyers = await db.select().from(users).where(eq(users.role, "buyer")).orderBy(desc(users.createdAt));
     const allOrders = await db.select().from(orders);
+    const allCities = await this.getCities();
+    const cityMap = Object.fromEntries(allCities.map((c) => [c.id, c.name]));
     const now = Date.now();
-    const ninetyDays = 90 * 24 * 60 * 60 * 1000;
+    const sixtyDays = 60 * 24 * 60 * 60 * 1000;
+    const thirtyDays = 30 * 24 * 60 * 60 * 1000;
 
     return buyers.map((u) => {
       const userOrders = allOrders.filter((o) => o.buyerId === u.id && o.status !== "cancelled");
@@ -539,13 +543,14 @@ export class DbStorage implements IStorage {
             return !latest || d > latest ? d : latest;
           }, null)
         : null;
+      const registeredDaysAgo = u.createdAt ? now - new Date(u.createdAt).getTime() : Infinity;
 
       let segment: CRMSegment = "new";
-      if (orderCount >= 5 || ltv >= 15000) {
+      if (ltv > 10000) {
         segment = "vip";
-      } else if (orderCount === 0) {
+      } else if (orderCount === 0 || (orderCount === 1 && registeredDaysAgo < thirtyDays)) {
         segment = "new";
-      } else if (lastOrderAt && (now - lastOrderAt.getTime()) > ninetyDays) {
+      } else if (lastOrderAt && (now - lastOrderAt.getTime()) > sixtyDays) {
         segment = "churned";
       } else if (orderCount >= 2) {
         segment = "active";
@@ -561,14 +566,15 @@ export class DbStorage implements IStorage {
         ltv,
         lastOrderAt,
         segment,
-        adminNotes: (u as any).adminNotes ?? null,
+        cityName: u.buyerCity ? u.buyerCity : null,
+        adminNotes: u.adminNotes ?? null,
         createdAt: u.createdAt,
       };
     });
   }
 
   async updateUserAdminNotes(userId: string, notes: string): Promise<void> {
-    await db.update(users).set({ adminNotes: notes } as any).where(eq(users.id, userId));
+    await db.update(users).set({ adminNotes: notes }).where(eq(users.id, userId));
   }
 }
 
