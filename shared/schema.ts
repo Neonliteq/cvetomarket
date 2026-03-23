@@ -22,6 +22,7 @@ export const users = pgTable("users", {
   bonusBalance: integer("bonus_balance").default(0),
   referralCode: text("referral_code").unique(),
   referredBy: varchar("referred_by"),
+  adminNotes: text("admin_notes"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

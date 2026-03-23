@@ -1494,5 +1494,48 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.json({ balance, transactions });
   });
 
+  // ---- ADMIN CRM ----
+  app.get("/api/admin/crm/customers", requireRole("admin"), async (_req, res) => {
+    try {
+      const customers = await storage.getCRMCustomers();
+      res.json(customers);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get("/api/admin/crm/customers/:id/orders", requireRole("admin"), async (req, res) => {
+    try {
+      const orderList = await storage.getOrdersByBuyer(req.params.id);
+      const enriched = await Promise.all(orderList.map(async (o) => {
+        const items = await storage.getOrderItems(o.id);
+        const shop = o.shopId ? await storage.getShop(o.shopId) : null;
+        return { ...o, items, shopName: shop?.name || "" };
+      }));
+      res.json(enriched);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get("/api/admin/crm/customers/:id/reviews", requireRole("admin"), async (req, res) => {
+    try {
+      const reviewList = await storage.getReviewsByBuyer(req.params.id);
+      res.json(reviewList);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.patch("/api/admin/crm/customers/:id/notes", requireRole("admin"), async (req, res) => {
+    try {
+      const { notes } = req.body;
+      await storage.updateUserAdminNotes(req.params.id, notes ?? "");
+      res.json({ ok: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   return httpServer;
 }

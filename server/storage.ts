@@ -17,6 +17,21 @@ import {
 import { db } from "./db";
 import { eq, desc, and, or, inArray, sql } from "drizzle-orm";
 
+export type CRMSegment = "new" | "active" | "vip" | "churned";
+export type CRMCustomer = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  bonusBalance: number;
+  orderCount: number;
+  ltv: number;
+  lastOrderAt: Date | null;
+  segment: CRMSegment;
+  adminNotes: string | null;
+  createdAt: Date | null;
+};
+
 export interface IStorage {
   // Users
   getUser(id: string): Promise<User | undefined>;
@@ -121,6 +136,11 @@ export interface IStorage {
   addBonusTransaction(userId: string, amount: number, reason: string, description: string, expiresAt?: Date): Promise<BonusTransaction>;
   getUserByReferralCode(code: string): Promise<User | undefined>;
   getReferralCode(userId: string): Promise<string>;
+
+  // CRM
+  getCRMCustomers(): Promise<CRMCustomer[]>;
+  updateUserAdminNotes(userId: string, notes: string): Promise<void>;
+  getUserById(id: string): Promise<User | undefined>;
 }
 
 export class DbStorage implements IStorage {
@@ -496,6 +516,59 @@ export class DbStorage implements IStorage {
       }
     }
     throw new Error("Failed to generate unique referral code");
+  }
+
+  async getUserById(id: string): Promise<User | undefined> {
+    return this.getUser(id);
+  }
+
+  async getCRMCustomers(): Promise<CRMCustomer[]> {
+    const buyers = await db.select().from(users).where(eq(users.role, "buyer")).orderBy(desc(users.createdAt));
+    const allOrders = await db.select().from(orders);
+    const now = Date.now();
+    const ninetyDays = 90 * 24 * 60 * 60 * 1000;
+
+    return buyers.map((u) => {
+      const userOrders = allOrders.filter((o) => o.buyerId === u.id && o.status !== "cancelled");
+      const orderCount = userOrders.length;
+      const ltv = userOrders.reduce((sum, o) => sum + parseFloat(o.totalAmount || "0"), 0);
+      const lastOrderAt = userOrders.length > 0
+        ? userOrders.reduce<Date | null>((latest, o) => {
+            if (!o.createdAt) return latest;
+            const d = new Date(o.createdAt);
+            return !latest || d > latest ? d : latest;
+          }, null)
+        : null;
+
+      let segment: CRMSegment = "new";
+      if (orderCount >= 5 || ltv >= 15000) {
+        segment = "vip";
+      } else if (orderCount === 0) {
+        segment = "new";
+      } else if (lastOrderAt && (now - lastOrderAt.getTime()) > ninetyDays) {
+        segment = "churned";
+      } else if (orderCount >= 2) {
+        segment = "active";
+      }
+
+      return {
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        phone: u.phone ?? null,
+        bonusBalance: u.bonusBalance ?? 0,
+        orderCount,
+        ltv,
+        lastOrderAt,
+        segment,
+        adminNotes: (u as any).adminNotes ?? null,
+        createdAt: u.createdAt,
+      };
+    });
+  }
+
+  async updateUserAdminNotes(userId: string, notes: string): Promise<void> {
+    await db.update(users).set({ adminNotes: notes } as any).where(eq(users.id, userId));
   }
 }
 
