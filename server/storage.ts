@@ -25,10 +25,10 @@ export type CRMCustomer = {
   phone: string | null;
   bonusBalance: number;
   orderCount: number;
-  ltv: number;
+  totalSpent: number;
   lastOrderAt: Date | null;
   segment: CRMSegment;
-  cityName: string | null;
+  city: string | null;
   adminNotes: string | null;
   createdAt: Date | null;
 };
@@ -141,7 +141,6 @@ export interface IStorage {
   // CRM
   getCRMCustomers(): Promise<CRMCustomer[]>;
   updateUserAdminNotes(userId: string, notes: string): Promise<void>;
-  getUserById(id: string): Promise<User | undefined>;
 }
 
 export class DbStorage implements IStorage {
@@ -519,15 +518,9 @@ export class DbStorage implements IStorage {
     throw new Error("Failed to generate unique referral code");
   }
 
-  async getUserById(id: string): Promise<User | undefined> {
-    return this.getUser(id);
-  }
-
   async getCRMCustomers(): Promise<CRMCustomer[]> {
     const buyers = await db.select().from(users).where(eq(users.role, "buyer")).orderBy(desc(users.createdAt));
     const allOrders = await db.select().from(orders);
-    const allCities = await this.getCities();
-    const cityMap = Object.fromEntries(allCities.map((c) => [c.id, c.name]));
     const now = Date.now();
     const sixtyDays = 60 * 24 * 60 * 60 * 1000;
     const thirtyDays = 30 * 24 * 60 * 60 * 1000;
@@ -535,7 +528,7 @@ export class DbStorage implements IStorage {
     return buyers.map((u) => {
       const userOrders = allOrders.filter((o) => o.buyerId === u.id && o.status !== "cancelled");
       const orderCount = userOrders.length;
-      const ltv = userOrders.reduce((sum, o) => sum + parseFloat(o.totalAmount || "0"), 0);
+      const totalSpent = userOrders.reduce((sum, o) => sum + parseFloat(o.totalAmount || "0"), 0);
       const lastOrderAt = userOrders.length > 0
         ? userOrders.reduce<Date | null>((latest, o) => {
             if (!o.createdAt) return latest;
@@ -544,16 +537,18 @@ export class DbStorage implements IStorage {
           }, null)
         : null;
       const registeredDaysAgo = u.createdAt ? now - new Date(u.createdAt).getTime() : Infinity;
-
       const lastOrderAge = lastOrderAt ? now - lastOrderAt.getTime() : Infinity;
-      let segment: CRMSegment = "new";
-      if (ltv > 10000) {
+
+      let segment: CRMSegment;
+      if (totalSpent > 10000) {
         segment = "vip";
-      } else if ((orderCount === 0 && registeredDaysAgo > thirtyDays) || lastOrderAge > sixtyDays) {
-        segment = "churned";
-      } else if (orderCount === 0 || (orderCount === 1 && registeredDaysAgo < thirtyDays)) {
+      } else if (orderCount === 0 && registeredDaysAgo < thirtyDays) {
         segment = "new";
-      } else if (orderCount >= 2) {
+      } else if (orderCount === 1 && registeredDaysAgo < thirtyDays) {
+        segment = "new";
+      } else if (orderCount === 0 || lastOrderAge > sixtyDays) {
+        segment = "churned";
+      } else {
         segment = "active";
       }
 
@@ -564,10 +559,10 @@ export class DbStorage implements IStorage {
         phone: u.phone ?? null,
         bonusBalance: u.bonusBalance ?? 0,
         orderCount,
-        ltv,
+        totalSpent,
         lastOrderAt,
         segment,
-        cityName: u.buyerCity ? u.buyerCity : null,
+        city: u.buyerCity ?? null,
         adminNotes: u.adminNotes ?? null,
         createdAt: u.createdAt,
       };

@@ -39,10 +39,10 @@ type CRMCustomer = {
   phone: string | null;
   bonusBalance: number;
   orderCount: number;
-  ltv: number;
+  totalSpent: number;
   lastOrderAt: string | null;
   segment: CRMSegment;
-  cityName: string | null;
+  city: string | null;
   adminNotes: string | null;
   createdAt: string | null;
 };
@@ -1781,12 +1781,12 @@ export default function Admin() {
         {/* ==================== CRM ==================== */}
         <TabsContent value="crm">
           {(() => {
-            const crmCities = Array.from(new Set((crmCustomers || []).map((c) => c.cityName).filter(Boolean))) as string[];
+            const crmCities = Array.from(new Set((crmCustomers || []).map((c) => c.city).filter(Boolean))) as string[];
             const filteredCRM = (crmCustomers || []).filter((c) => {
               const q = crmSearch.toLowerCase();
               const matchSearch = !q || c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q);
               const matchSeg = crmSegmentFilter === "all" || c.segment === crmSegmentFilter;
-              const matchCity = crmCityFilter === "all" || c.cityName === crmCityFilter;
+              const matchCity = crmCityFilter === "all" || c.city === crmCityFilter;
               return matchSearch && matchSeg && matchCity;
             });
             return (
@@ -1871,7 +1871,7 @@ export default function Admin() {
                               </td>
                               <td className="px-4 py-3 text-xs text-muted-foreground hidden lg:table-cell">{c.phone || "—"}</td>
                               <td className="px-4 py-3 text-right hidden md:table-cell">{c.orderCount}</td>
-                              <td className="px-4 py-3 text-right font-medium">{c.ltv.toLocaleString("ru")} ₽</td>
+                              <td className="px-4 py-3 text-right font-medium">{c.totalSpent.toLocaleString("ru")} ₽</td>
                               <td className="px-4 py-3 text-right hidden lg:table-cell">{c.bonusBalance}</td>
                               <td className="px-4 py-3 text-right text-xs text-muted-foreground hidden xl:table-cell">
                                 {c.lastOrderAt ? format(new Date(c.lastOrderAt), "d MMM yyyy", { locale: ru }) : "—"}
@@ -1903,7 +1903,7 @@ export default function Admin() {
                     <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
                       <span>{crmSelectedCustomer.email}</span>
                       {crmSelectedCustomer.phone && <span>· {crmSelectedCustomer.phone}</span>}
-                      {crmSelectedCustomer.cityName && <span>· {crmSelectedCustomer.cityName}</span>}
+                      {crmSelectedCustomer.city && <span>· {crmSelectedCustomer.city}</span>}
                     </div>
                     <div className="flex flex-wrap gap-2 mt-1">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${CRM_SEGMENT_COLORS[crmSelectedCustomer.segment]}`}>
@@ -1921,7 +1921,7 @@ export default function Admin() {
                   <div className="grid grid-cols-3 gap-3 mb-4">
                     {[
                       { label: "Заказов", value: crmSelectedCustomer.orderCount },
-                      { label: "LTV", value: `${crmSelectedCustomer.ltv.toLocaleString("ru")} ₽` },
+                      { label: "LTV", value: `${crmSelectedCustomer.totalSpent.toLocaleString("ru")} ₽` },
                       { label: "Бонусов", value: loadingCrmProfile ? "..." : (crmProfile?.bonusBalance ?? crmSelectedCustomer.bonusBalance) },
                     ].map((s) => (
                       <div key={s.label} className="rounded-lg border p-3 text-center">
