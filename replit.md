@@ -103,11 +103,23 @@ When a buyer adds a non-addon product to cart, `AddonSuggestionDialog` pops up s
 - Shopping cart can only contain items from one shop at a time
 
 ## Images / File Uploads
-- **Cloud storage**: All user-uploaded images (products, shop logos/covers, avatars, order assembly photos) are stored in Replit Object Storage (Google Cloud Storage via `@google-cloud/storage`)
-- Backend uses multer memoryStorage → uploads buffer to GCS bucket → returns `/objects/uploads/{filename}` URL
-- Object storage integration files: `server/replit_integrations/object_storage/`
+- **Cloud storage**: All user-uploaded images stored in Reg.ru Object Storage (S3-compatible via `@aws-sdk/client-s3`, endpoint `https://s3.regru.ru`)
+- Backend uses multer memoryStorage → uploads buffer to S3 → returns `/objects/uploads/{filename}` URL
+- Object storage adapter: `server/replit_integrations/object_storage/` (replaced GCS with S3 adapter)
+- Upload endpoint: `POST /api/upload`; files served at `/objects/*` through Express
+- S3 env vars: `REGRU_S3_ACCESS_KEY`, `REGRU_S3_SECRET_KEY`, `REGRU_S3_BUCKET`, `REGRU_S3_ENDPOINT`, `REGRU_S3_REGION`
+- If `REGRU_S3_ACCESS_KEY` is not set (Replit dev without S3), upload is skipped gracefully with a warning
 - Frontend upload code unchanged — still posts FormData to `POST /api/upload`, gets `{ urls: ["/objects/..."] }` response
 - Static product images in `client/public/images/` (AI-generated seed data)
+
+## Deployment (Reg.ru VPS)
+- Full deployment scripts in `deploy/` directory
+- `deploy/setup.sh` — first-time Ubuntu 22.04 server setup (Node.js 20, PostgreSQL 15, Nginx, PM2, Certbot)
+- `deploy/nginx.conf` — Nginx reverse proxy config with gzip, security headers, WebSocket support
+- `deploy/ecosystem.config.js` — PM2 cluster config (max instances, 512MB memory limit)
+- `deploy/deploy.sh` — update script: git pull → npm ci → build → db:push → pm2 reload
+- `deploy/.env.example` — all environment variables template
+- `deploy/README.md` — step-by-step deployment guide in Russian
 
 ## ROBOKASSA Payment Integration
 - Credentials in env vars: `ROBOKASSA_LOGIN`, `ROBOKASSA_PASSWORD1`, `ROBOKASSA_PASSWORD2`, `ROBOKASSA_IS_TEST` (set to "0" for production, any other value = test mode)
