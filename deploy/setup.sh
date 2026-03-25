@@ -52,7 +52,6 @@ echo "=========================================="
 echo " Шаг 4: Установка PM2"
 echo "=========================================="
 npm install -g pm2
-pm2 startup systemd -u root --hp /root
 pm2 --version
 
 echo "=========================================="
@@ -110,6 +109,13 @@ echo " Шаг 8: Создание директории приложения"
 echo "=========================================="
 mkdir -p "${APP_DIR}"
 chown -R ${APP_USER}:${APP_USER} "${APP_DIR}"
+
+echo "=========================================="
+echo " Шаг 8б: Настройка PM2 под пользователем ${APP_USER}"
+echo "=========================================="
+# PM2 autostart от имени пользователя приложения, не от root
+sudo -u ${APP_USER} pm2 startup systemd -u ${APP_USER} --hp /home/${APP_USER} || true
+env PATH=$PATH:/usr/bin pm2 startup systemd -u ${APP_USER} --hp /home/${APP_USER} | tail -1 | bash || true
 
 echo "=========================================="
 echo " Шаг 9: Настройка брандмауэра (ufw)"

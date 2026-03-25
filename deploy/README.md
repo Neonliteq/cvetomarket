@@ -181,7 +181,7 @@ nginx -t && systemctl reload nginx
 
 ```bash
 cd /var/www/cvetomarket
-bash deploy/deploy.sh
+sudo -u cvetomarket bash deploy/deploy.sh
 ```
 
 Скрипт выполнит:

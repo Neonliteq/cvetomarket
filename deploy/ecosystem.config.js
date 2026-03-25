@@ -12,6 +12,10 @@ module.exports = {
       watch: false,
       max_memory_restart: "512M",
 
+      // Run as the dedicated app user, not root
+      uid: "cvetomarket",
+      gid: "cvetomarket",
+
       env: {
         NODE_ENV: "production",
         PORT: 5000,
