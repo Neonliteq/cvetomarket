@@ -21,8 +21,8 @@ echo "=========================================="
 echo "[1/6] Получение последних изменений из Git..."
 git pull origin main
 
-echo "[2/6] Установка зависимостей..."
-npm ci --omit=dev
+echo "[2/6] Установка всех зависимостей (включая dev для сборки)..."
+npm ci
 
 echo "[3/6] Сборка приложения..."
 npm run build
@@ -30,10 +30,12 @@ npm run build
 echo "[4/6] Применение миграций базы данных..."
 npm run db:push
 
-echo "[5/6] Создание директории для логов..."
+echo "[5/6] Удаление dev-зависимостей (экономия места)..."
+npm prune --omit=dev
+
+echo "[6/6] Создание директории для логов и перезапуск PM2..."
 mkdir -p "${LOG_DIR}"
 
-echo "[6/6] Перезапуск PM2..."
 if pm2 list | grep -q "${APP_NAME}"; then
   pm2 reload "${APP_NAME}" --update-env
 else
