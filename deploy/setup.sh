@@ -105,10 +105,13 @@ if ! id -u "${APP_USER}" &>/dev/null; then
 fi
 
 echo "=========================================="
-echo " Шаг 8: Создание директории приложения"
+echo " Шаг 8: Создание директорий приложения"
 echo "=========================================="
 mkdir -p "${APP_DIR}"
 chown -R ${APP_USER}:${APP_USER} "${APP_DIR}"
+
+mkdir -p /var/log/cvetomarket
+chown -R ${APP_USER}:${APP_USER} /var/log/cvetomarket
 
 echo "=========================================="
 echo " Шаг 8б: Настройка PM2 под пользователем ${APP_USER}"

@@ -33,8 +33,7 @@ npm run db:push
 echo "[5/6] Удаление dev-зависимостей (экономия места)..."
 npm prune --omit=dev
 
-echo "[6/6] Создание директории для логов и перезапуск PM2..."
-mkdir -p "${LOG_DIR}"
+echo "[6/6] Перезапуск PM2..."
 
 if pm2 list | grep -q "${APP_NAME}"; then
   pm2 reload "${APP_NAME}" --update-env
