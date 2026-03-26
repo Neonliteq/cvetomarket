@@ -36,7 +36,7 @@ npm prune --omit=dev
 echo "[6/6] Перезапуск PM2..."
 
 if pm2 list | grep -q "${APP_NAME}"; then
-  pm2 reload "${APP_NAME}" --update-env
+  pm2 reload deploy/ecosystem.config.cjs --update-env
 else
   pm2 start deploy/ecosystem.config.cjs
   pm2 save
