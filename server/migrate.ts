@@ -37,6 +37,16 @@ export async function runMigrations() {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS admin_notes text;
     `);
 
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS "session" (
+        "sid" varchar NOT NULL COLLATE "default",
+        "sess" json NOT NULL,
+        "expire" timestamp(6) NOT NULL,
+        CONSTRAINT "session_pkey" PRIMARY KEY ("sid")
+      );
+      CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");
+    `);
+
     console.log("[migrate] Schema up to date");
   } catch (err) {
     console.error("[migrate] Migration error:", err);
