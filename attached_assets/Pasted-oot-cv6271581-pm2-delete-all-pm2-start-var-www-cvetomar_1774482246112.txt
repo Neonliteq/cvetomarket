@@ -1,0 +1,27 @@
+oot@cv6271581:~# pm2 delete all
+pm2 start /var/www/cvetomarket/deploy/ecosystem.config.cjs
+pm2 save
+pm2 status
+[PM2] Applying action deleteProcessId on app [all](ids: [ 0, 1 ])
+[PM2] [cvetomarket](0) ✓
+[PM2] [cvetomarket](1) ✓
+┌────┬───────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
+│ id │ name      │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
+└────┴───────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
+[PM2][WARN] Applications cvetomarket not running, starting...
+[PM2] App [cvetomarket] launched (2 instances)
+┌────┬────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
+│ id │ name           │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
+├────┼────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤
+│ 0  │ cvetomarket    │ default     │ N/A     │ cluster │ 16595    │ 0s     │ 0    │ online    │ 0%       │ 46.2mb   │ root     │ disabled │
+│ 1  │ cvetomarket    │ default     │ N/A     │ cluster │ 16602    │ 0s     │ 0    │ online    │ 0%       │ 38.4mb   │ root     │ disabled │
+└────┴────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
+[PM2] Saving current process list...
+[PM2] Successfully saved in /root/.pm2/dump.pm2
+┌────┬────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
+│ id │ name           │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
+├────┼────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤
+│ 0  │ cvetomarket    │ default     │ N/A     │ cluster │ 16595    │ 0s     │ 0    │ online    │ 0%       │ 59.8mb   │ root     │ disabled │
+│ 1  │ cvetomarket    │ default     │ N/A     │ cluster │ 16602    │ 0s     │ 0    │ online    │ 0%       │ 60.5mb   │ root     │ disabled │
+└────┴────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
+root@cv6271581:~#

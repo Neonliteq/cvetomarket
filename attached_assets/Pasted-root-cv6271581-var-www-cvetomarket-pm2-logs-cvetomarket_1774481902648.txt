@@ -1,0 +1,108 @@
+root@cv6271581:/var/www/cvetomarket# pm2 logs cvetomarket --lines 20
+[TAILING] Tailing last 20 lines for [cvetomarket] process (change the value with --lines option)
+/var/log/cvetomarket/out-0.log last 20 lines:
+0|cvetomar | 2026-03-26 02:30:51 +03:00: 2026-03-26 02:30:55 +03:00:
+0|cvetomar | > rest-express@1.0.0 start
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |
+0|cvetomar | 2026-03-26 02:30:55 +03:00: 2026-03-26 02:37:27 +03:00:
+0|cvetomar | > rest-express@1.0.0 start
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |
+0|cvetomar | 2026-03-26 02:37:27 +03:00: 2026-03-26 02:37:31 +03:00:
+0|cvetomar | > rest-express@1.0.0 start
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |
+0|cvetomar | 2026-03-26 02:37:31 +03:00: 2026-03-26 02:37:34 +03:00:
+0|cvetomar | > rest-express@1.0.0 start
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |
+0|cvetomar | 2026-03-26 02:37:34 +03:00: 2026-03-26 02:37:38 +03:00:
+0|cvetomar | > rest-express@1.0.0 start
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |
+
+/var/log/cvetomarket/error-0.log last 20 lines:
+/var/log/cvetomarket/out-1.log last 20 lines:
+1|cvetomar | 2026-03-26 02:30:51 +03:00: 2026-03-26 02:30:54 +03:00:
+1|cvetomar | > rest-express@1.0.0 start
+1|cvetomar | > NODE_ENV=production node dist/index.cjs
+1|cvetomar |
+1|cvetomar | 2026-03-26 02:30:55 +03:00: 2026-03-26 02:37:27 +03:00:
+1|cvetomar | > rest-express@1.0.0 start
+1|cvetomar | > NODE_ENV=production node dist/index.cjs
+1|cvetomar |
+1|cvetomar | 2026-03-26 02:37:28 +03:00: 2026-03-26 02:37:31 +03:00:
+1|cvetomar | > rest-express@1.0.0 start
+1|cvetomar | > NODE_ENV=production node dist/index.cjs
+1|cvetomar |
+1|cvetomar | 2026-03-26 02:37:31 +03:00: 2026-03-26 02:37:34 +03:00:
+1|cvetomar | > rest-express@1.0.0 start
+1|cvetomar | > NODE_ENV=production node dist/index.cjs
+1|cvetomar |
+1|cvetomar | 2026-03-26 02:37:35 +03:00: 2026-03-26 02:37:38 +03:00:
+1|cvetomar | > rest-express@1.0.0 start
+1|cvetomar | > NODE_ENV=production node dist/index.cjs
+1|cvetomar |
+
+/var/log/cvetomarket/error-1.log last 20 lines:
+0|cvetomarket  | 2026-03-26 02:37:41 +03:00:
+0|cvetomarket  | > rest-express@1.0.0 start
+0|cvetomarket  | > NODE_ENV=production node dist/index.cjs
+1|cvetomarket  | 2026-03-26 02:37:41 +03:00:
+1|cvetomarket  | > rest-express@1.0.0 start
+1|cvetomarket  | > NODE_ENV=production node dist/index.cjs
+0|cvetomarket  | 2026-03-26 02:37:41 +03:00:
+0|cvetomarket  | 2026-03-26 02:37:41 +03:00:
+1|cvetomarket  | 2026-03-26 02:37:42 +03:00:
+1|cvetomarket  | 2026-03-26 02:37:42 +03:00:
+0|cvetomarket  | 2026-03-26 02:37:45 +03:00:
+0|cvetomarket  | > rest-express@1.0.0 start
+0|cvetomarket  | > NODE_ENV=production node dist/index.cjs
+1|cvetomarket  | 2026-03-26 02:37:45 +03:00:
+1|cvetomarket  | > rest-express@1.0.0 start
+1|cvetomarket  | > NODE_ENV=production node dist/index.cjs
+0|cvetomarket  | 2026-03-26 02:37:45 +03:00:
+0|cvetomarket  | 2026-03-26 02:37:45 +03:00:
+1|cvetomarket  | 2026-03-26 02:37:45 +03:00:
+1|cvetomarket  | 2026-03-26 02:37:45 +03:00:
+0|cvetomarket  | 2026-03-26 02:37:48 +03:00:
+0|cvetomarket  | > rest-express@1.0.0 start
+0|cvetomarket  | > NODE_ENV=production node dist/index.cjs
+1|cvetomarket  | 2026-03-26 02:37:48 +03:00:
+1|cvetomarket  | > rest-express@1.0.0 start
+1|cvetomarket  | > NODE_ENV=production node dist/index.cjs
+0|cvetomarket  | 2026-03-26 02:37:49 +03:00:
+0|cvetomarket  | 2026-03-26 02:37:49 +03:00:
+1|cvetomarket  | 2026-03-26 02:37:49 +03:00:
+1|cvetomarket  | 2026-03-26 02:37:49 +03:00:
+0|cvetomarket  | 2026-03-26 02:37:52 +03:00:
+0|cvetomarket  | > rest-express@1.0.0 start
+0|cvetomarket  | > NODE_ENV=production node dist/index.cjs
+1|cvetomarket  | 2026-03-26 02:37:52 +03:00:
+1|cvetomarket  | > rest-express@1.0.0 start
+1|cvetomarket  | > NODE_ENV=production node dist/index.cjs
+0|cvetomarket  | 2026-03-26 02:37:52 +03:00:
+0|cvetomarket  | 2026-03-26 02:37:52 +03:00:
+1|cvetomarket  | 2026-03-26 02:37:52 +03:00:
+1|cvetomarket  | 2026-03-26 02:37:52 +03:00:
+0|cvetomarket  | 2026-03-26 02:37:55 +03:00:
+0|cvetomarket  | > rest-express@1.0.0 start
+0|cvetomarket  | > NODE_ENV=production node dist/index.cjs
+1|cvetomarket  | 2026-03-26 02:37:55 +03:00:
+1|cvetomarket  | > rest-express@1.0.0 start
+1|cvetomarket  | > NODE_ENV=production node dist/index.cjs
+0|cvetomarket  | 2026-03-26 02:37:56 +03:00:
+0|cvetomarket  | 2026-03-26 02:37:56 +03:00:
+1|cvetomarket  | 2026-03-26 02:37:56 +03:00:
+1|cvetomarket  | 2026-03-26 02:37:56 +03:00:
+0|cvetomarket  | 2026-03-26 02:37:59 +03:00:
+0|cvetomarket  | > rest-express@1.0.0 start
+0|cvetomarket  | > NODE_ENV=production node dist/index.cjs
+1|cvetomarket  | 2026-03-26 02:37:59 +03:00:
+1|cvetomarket  | > rest-express@1.0.0 start
+1|cvetomarket  | > NODE_ENV=production node dist/index.cjs
+0|cvetomarket  | 2026-03-26 02:37:59 +03:00:
+0|cvetomarket  | 2026-03-26 02:37:59 +03:00:
+1|cvetomarket  | 2026-03-26 02:37:59 +03:00:
+1|cvetomarket  | 2026-03-26 02:37:59 +03:00:

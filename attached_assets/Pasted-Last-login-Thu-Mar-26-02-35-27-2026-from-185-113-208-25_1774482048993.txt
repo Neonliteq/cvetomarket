@@ -1,0 +1,105 @@
+Last login: Thu Mar 26 02:35:27 2026 from 185.113.208.250
+root@cv6271581:~# pm2 stop all
+pm2 delete all
+env $(cat /var/www/cvetomarket/.env | grep -v '^#' | xargs) pm2 start /var/www/cvetomarket/deploy/ecosystem.config.cjs
+pm2 save
+pm2 logs cvetomarket --lines 10
+[PM2] Applying action stopProcessId on app [all](ids: [ 0, 1 ])
+[PM2] [all](0) ✓
+[PM2] [all](1) ✓
+┌────┬────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
+│ id │ name           │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
+├────┼────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤
+│ 0  │ cvetomarket    │ default     │ N/A     │ cluster │ 0        │ 0      │ 18   │ stopped   │ 0%       │ 0b       │ root     │ disabled │
+│ 1  │ cvetomarket    │ default     │ N/A     │ cluster │ 0        │ 0      │ 18   │ stopped   │ 0%       │ 0b       │ root     │ disabled │
+└────┴────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
+[PM2] Applying action deleteProcessId on app [all](ids: [ 0, 1 ])
+[PM2] [cvetomarket](0) ✓
+[PM2] [cvetomarket](1) ✓
+┌────┬───────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
+│ id │ name      │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
+└────┴───────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
+[PM2][WARN] Applications cvetomarket not running, starting...
+[PM2] App [cvetomarket] launched (2 instances)
+┌────┬────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
+│ id │ name           │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
+├────┼────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤
+│ 0  │ cvetomarket    │ default     │ N/A     │ cluster │ 16108    │ 0s     │ 0    │ online    │ 0%       │ 46.6mb   │ root     │ disabled │
+│ 1  │ cvetomarket    │ default     │ N/A     │ cluster │ 16115    │ 0s     │ 0    │ online    │ 0%       │ 38.4mb   │ root     │ disabled │
+└────┴────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
+[PM2] Saving current process list...
+[PM2] Successfully saved in /root/.pm2/dump.pm2
+[TAILING] Tailing last 10 lines for [cvetomarket] process (change the value with --lines option)
+/var/log/cvetomarket/error-0.log last 10 lines:
+/var/log/cvetomarket/error-1.log last 10 lines:
+/var/log/cvetomarket/out-1.log last 10 lines:
+1|cvetomar | > NODE_ENV=production node dist/index.cjs
+1|cvetomar |
+1|cvetomar | 2026-03-26 02:37:56 +03:00: 2026-03-26 02:37:59 +03:00:
+1|cvetomar | > rest-express@1.0.0 start
+1|cvetomar | > NODE_ENV=production node dist/index.cjs
+1|cvetomar |
+1|cvetomar | 2026-03-26 02:37:59 +03:00: 2026-03-26 02:40:13 +03:00:
+1|cvetomar | > rest-express@1.0.0 start
+1|cvetomar | > NODE_ENV=production node dist/index.cjs
+1|cvetomar |
+
+/var/log/cvetomarket/out-0.log last 10 lines:
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |
+0|cvetomar | 2026-03-26 02:37:56 +03:00: 2026-03-26 02:37:59 +03:00:
+0|cvetomar | > rest-express@1.0.0 start
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |
+0|cvetomar | 2026-03-26 02:37:59 +03:00: 2026-03-26 02:40:13 +03:00:
+0|cvetomar | > rest-express@1.0.0 start
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |
+
+0|cvetomarket  | 2026-03-26 02:40:13 +03:00:
+0|cvetomarket  | 2026-03-26 02:40:13 +03:00:
+0|cvetomarket  | 2026-03-26 02:40:16 +03:00:
+0|cvetomarket  | > rest-express@1.0.0 start
+0|cvetomarket  | > NODE_ENV=production node dist/index.cjs
+0|cvetomarket  | 2026-03-26 02:40:17 +03:00:
+0|cvetomarket  | 2026-03-26 02:40:17 +03:00:
+0|cvetomarket  | 2026-03-26 02:40:20 +03:00:
+0|cvetomarket  | > rest-express@1.0.0 start
+0|cvetomarket  | > NODE_ENV=production node dist/index.cjs
+0|cvetomarket  | 2026-03-26 02:40:20 +03:00:
+0|cvetomarket  | 2026-03-26 02:40:20 +03:00:
+0|cvetomarket  | 2026-03-26 02:40:23 +03:00:
+0|cvetomarket  | > rest-express@1.0.0 start
+0|cvetomarket  | > NODE_ENV=production node dist/index.cjs
+0|cvetomarket  | 2026-03-26 02:40:24 +03:00:
+0|cvetomarket  | 2026-03-26 02:40:24 +03:00:
+0|cvetomarket  | 2026-03-26 02:40:27 +03:00:
+0|cvetomarket  | > rest-express@1.0.0 start
+0|cvetomarket  | > NODE_ENV=production node dist/index.cjs
+0|cvetomarket  | 2026-03-26 02:40:27 +03:00:
+0|cvetomarket  | 2026-03-26 02:40:27 +03:00:
+0|cvetomarket  | 2026-03-26 02:40:30 +03:00:
+0|cvetomarket  | > rest-express@1.0.0 start
+0|cvetomarket  | > NODE_ENV=production node dist/index.cjs
+0|cvetomarket  | 2026-03-26 02:40:31 +03:00:
+0|cvetomarket  | 2026-03-26 02:40:31 +03:00:
+0|cvetomarket  | 2026-03-26 02:40:34 +03:00:
+0|cvetomarket  | > rest-express@1.0.0 start
+0|cvetomarket  | > NODE_ENV=production node dist/index.cjs
+0|cvetomarket  | 2026-03-26 02:40:34 +03:00:
+0|cvetomarket  | 2026-03-26 02:40:34 +03:00:
+0|cvetomarket  | 2026-03-26 02:40:37 +03:00:
+0|cvetomarket  | > rest-express@1.0.0 start
+0|cvetomarket  | > NODE_ENV=production node dist/index.cjs
+0|cvetomarket  | 2026-03-26 02:40:38 +03:00:
+0|cvetomarket  | 2026-03-26 02:40:38 +03:00:
+0|cvetomarket  | 2026-03-26 02:40:41 +03:00:
+0|cvetomarket  | > rest-express@1.0.0 start
+0|cvetomarket  | > NODE_ENV=production node dist/index.cjs
+0|cvetomarket  | 2026-03-26 02:40:41 +03:00:
+0|cvetomarket  | 2026-03-26 02:40:41 +03:00:
+0|cvetomarket  | 2026-03-26 02:40:44 +03:00:
+0|cvetomarket  | > rest-express@1.0.0 start
+0|cvetomarket  | > NODE_ENV=production node dist/index.cjs
+0|cvetomarket  | 2026-03-26 02:40:45 +03:00:
+0|cvetomarket  | 2026-03-26 02:40:45 +03:00:
