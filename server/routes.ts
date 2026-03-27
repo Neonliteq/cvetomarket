@@ -13,7 +13,7 @@ import { objectStorageClient, ObjectStorageService } from "./replit_integrations
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { sendTelegramMessage, generateLinkToken, consumeLinkToken, getBotUsername, ORDER_STATUS_MESSAGES, registerWebhook } from "./telegram";
 import { sendPasswordResetEmail } from "./resend";
-import { buildPaymentUrl, verifyResultSignature, isRobokassaConfigured } from "./robokassa";
+import { buildPaymentUrl, verifyHandlerSignature, isUnitpayConfigured } from "./unitpay";
 
 function toSafeUser(user: Record<string, unknown>) {
   const { password: _pw, adminNotes: _notes, ...safe } = user;
@@ -662,8 +662,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.json({ order });
       }
 
-      // Card payment — generate ROBOKASSA URL
-      if (!isRobokassaConfigured()) {
+      // Card payment — generate UNITPAY URL
+      if (!isUnitpayConfigured()) {
         await storage.updatePaymentStatus(order.id, "paid");
         await notifyShopNewOrder(shopId, Number(totalAmount));
         return res.json({ order });
@@ -672,9 +672,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const buyer = userId ? await storage.getUser(userId) : null;
       const paymentEmail = buyer?.email || guestEmail || undefined;
       const paymentUrl = buildPaymentUrl({
-        outSum: finalAmount,
-        invId: order.orderNumber,
-        description: `Заказ #${order.orderNumber} — ЦветоМаркет`,
+        account: order.orderNumber,
+        sum: finalAmount,
+        desc: `Заказ #${order.orderNumber} — ЦветоМаркет`,
         email: paymentEmail,
       });
       res.json({ order, paymentUrl });
@@ -683,43 +683,50 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  // ROBOKASSA ResultURL — called by ROBOKASSA server after payment
-  app.post("/api/payment/robokassa/result", async (req, res) => {
+  // UNITPAY Handler URL — called by Unitpay server for check and pay events
+  app.get("/api/payment/unitpay/handler", async (req, res) => {
     try {
-      const { OutSum, InvId, SignatureValue } = req.body;
-      if (!OutSum || !InvId || !SignatureValue) {
-        return res.status(400).send("bad request");
+      const method = req.query.method as string;
+      const params = req.query.params as Record<string, string> | undefined;
+
+      if (!method || !params) {
+        return res.json({ error: { message: "Неверный запрос" } });
       }
-      if (!verifyResultSignature({ OutSum, InvId, SignatureValue })) {
-        console.error("[robokassa/result] invalid signature for InvId", InvId);
-        return res.status(400).send("bad sign");
+
+      const { account, sum, currency, desc, signature } = params;
+
+      if (!account || !sum || !currency || !desc) {
+        return res.json({ error: { message: "Отсутствуют обязательные параметры" } });
       }
-      const order = await storage.getOrderByNumber(Number(InvId));
+
+      if (!verifyHandlerSignature(method, params)) {
+        console.error("[unitpay/handler] invalid signature for account", account);
+        return res.json({ error: { message: "Неверная подпись" } });
+      }
+
+      const order = await storage.getOrderByNumber(Number(account));
       if (!order) {
-        console.error("[robokassa/result] order not found for InvId", InvId);
-        return res.status(404).send("order not found");
+        console.error("[unitpay/handler] order not found for account", account);
+        return res.json({ error: { message: "Заказ не найден" } });
       }
-      if (order.paymentStatus !== "paid") {
-        await storage.updatePaymentStatus(order.id, "paid", `robokassa:${InvId}`);
-        await notifyShopNewOrder(order.shopId, Number(order.totalAmount));
+
+      if (method === "check") {
+        return res.json({ result: { message: "Запрос успешно обработан" } });
       }
-      res.send(`OK${InvId}`);
+
+      if (method === "pay") {
+        if (order.paymentStatus !== "paid") {
+          await storage.updatePaymentStatus(order.id, "paid", `unitpay:${account}`);
+          await notifyShopNewOrder(order.shopId, Number(order.totalAmount));
+        }
+        return res.json({ result: { message: "Платёж успешно обработан" } });
+      }
+
+      return res.json({ error: { message: `Неизвестный метод: ${method}` } });
     } catch (e: any) {
-      console.error("[robokassa/result] error:", e.message);
-      res.status(500).send("error");
+      console.error("[unitpay/handler] error:", e.message);
+      return res.json({ error: { message: "Внутренняя ошибка сервера" } });
     }
-  });
-
-  // ROBOKASSA SuccessURL — browser redirect after successful payment
-  app.get("/api/payment/robokassa/success", (req, res) => {
-    const invId = req.query.InvId || "";
-    res.redirect(`/account?payment=success&inv=${invId}`);
-  });
-
-  // ROBOKASSA FailURL — browser redirect after failed payment
-  app.get("/api/payment/robokassa/fail", (req, res) => {
-    const invId = req.query.InvId || "";
-    res.redirect(`/account?payment=failed&inv=${invId}`);
   });
 
   app.patch("/api/orders/:id/status", requireRole("shop", "admin"), async (req, res) => {
