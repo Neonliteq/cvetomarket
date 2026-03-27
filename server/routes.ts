@@ -693,22 +693,35 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.json({ error: { message: "Неверный запрос: отсутствует method" } });
       }
 
-      // Support both formats:
-      // 1. Nested: params[account]=1 → req.query.params = { account: "1" }
-      // 2. Flat: account=1 → req.query.account = "1"
+      // Support three formats Unitpay may use:
+      // 1. Nested object (qs extended): params[account]=1 → req.query.params = { account: "1" }
+      // 2. Literal bracket keys (simple parser): req.query["params[account]"] = "1"
+      // 3. Flat keys: req.query.account = "1"
       const nested = req.query.params;
-      const params: Record<string, string> =
-        nested && typeof nested === "object" && !Array.isArray(nested)
-          ? (nested as Record<string, string>)
-          : {
-              account: req.query.account as string,
-              sum: req.query.sum as string,
-              currency: req.query.currency as string,
-              desc: req.query.desc as string,
-              signature: req.query.signature as string,
-              orderSum: req.query.orderSum as string,
-              paymentType: req.query.paymentType as string,
-            };
+      let params: Record<string, string>;
+      if (nested && typeof nested === "object" && !Array.isArray(nested)) {
+        params = nested as Record<string, string>;
+      } else if (req.query["params[account]"]) {
+        params = {
+          account: req.query["params[account]"] as string,
+          sum: req.query["params[sum]"] as string,
+          currency: req.query["params[currency]"] as string,
+          desc: req.query["params[desc]"] as string,
+          signature: req.query["params[signature]"] as string,
+          orderSum: req.query["params[orderSum]"] as string,
+          paymentType: req.query["params[paymentType]"] as string,
+        };
+      } else {
+        params = {
+          account: req.query.account as string,
+          sum: req.query.sum as string,
+          currency: req.query.currency as string,
+          desc: req.query.desc as string,
+          signature: req.query.signature as string,
+          orderSum: req.query.orderSum as string,
+          paymentType: req.query.paymentType as string,
+        };
+      }
 
       const { account, sum, currency, desc } = params;
 

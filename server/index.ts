@@ -7,6 +7,7 @@ import { runMigrations } from "./migrate";
 import { registerWebhook } from "./telegram";
 
 const app = express();
+app.set("query parser", "extended");
 const httpServer = createServer(app);
 
 declare module "http" {
