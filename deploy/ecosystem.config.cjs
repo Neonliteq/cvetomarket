@@ -24,7 +24,7 @@ module.exports = {
       args: 'start',
       cwd: '/var/www/cvetomarket',
 
-      instances: 2,
+      instances: 1,
       exec_mode: 'cluster',
 
       watch: false,
