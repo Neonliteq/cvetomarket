@@ -126,10 +126,10 @@ export default function Cart() {
               <Button
                 className="w-full gap-2"
                 size="lg"
-                onClick={() => user ? navigate("/checkout") : navigate("/auth")}
+                onClick={() => navigate("/checkout")}
                 data-testid="button-checkout"
               >
-                {user ? "Оформить заказ" : "Войти для заказа"}
+                Оформить заказ
                 <ArrowRight className="w-4 h-4" />
               </Button>
               <Link href="/catalog">
