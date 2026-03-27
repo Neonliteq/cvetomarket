@@ -54,7 +54,7 @@ export function verifyHandlerSignature(
   if (!signature) return false;
 
   const expected = sha256(
-    `${method}{up}${account}{up}${currency}{up}${desc}{up}${sum}{up}${secretKey}`
+    `${account}{up}${currency}{up}${desc}{up}${sum}{up}${secretKey}`
   );
   return signature === expected;
 }
