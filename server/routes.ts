@@ -687,15 +687,33 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.get("/api/payment/unitpay/handler", async (req, res) => {
     try {
       const method = req.query.method as string;
-      const params = req.query.params as Record<string, string> | undefined;
+      console.log("[unitpay/handler] raw query:", JSON.stringify(req.query));
 
-      if (!method || !params) {
-        return res.json({ error: { message: "Неверный запрос" } });
+      if (!method) {
+        return res.json({ error: { message: "Неверный запрос: отсутствует method" } });
       }
 
-      const { account, sum, currency, desc, signature } = params;
+      // Support both formats:
+      // 1. Nested: params[account]=1 → req.query.params = { account: "1" }
+      // 2. Flat: account=1 → req.query.account = "1"
+      const nested = req.query.params;
+      const params: Record<string, string> =
+        nested && typeof nested === "object" && !Array.isArray(nested)
+          ? (nested as Record<string, string>)
+          : {
+              account: req.query.account as string,
+              sum: req.query.sum as string,
+              currency: req.query.currency as string,
+              desc: req.query.desc as string,
+              signature: req.query.signature as string,
+              orderSum: req.query.orderSum as string,
+              paymentType: req.query.paymentType as string,
+            };
+
+      const { account, sum, currency, desc } = params;
 
       if (!account || !sum || !currency || !desc) {
+        console.error("[unitpay/handler] missing params:", { account, sum, currency, desc });
         return res.json({ error: { message: "Отсутствуют обязательные параметры" } });
       }
 
