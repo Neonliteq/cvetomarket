@@ -1,0 +1,71 @@
+root@cv6271581:/var/www/cvetomarket# pm2 logs cvetomarket --lines 30 --nostream
+[TAILING] Tailing last 30 lines for [cvetomarket] process (change the value with --lines option)
+/var/log/cvetomarket/error-0.log last 30 lines:
+/var/log/cvetomarket/out-0.log last 30 lines:
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |
+0|cvetomar | 2026-03-27 20:34:33 +03:00: 2026-03-27 20:34:36 +03:00:
+0|cvetomar | > rest-express@1.0.0 start
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |
+0|cvetomar | 2026-03-27 20:34:36 +03:00: 2026-03-27 20:34:39 +03:00:
+0|cvetomar | > rest-express@1.0.0 start
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |
+0|cvetomar | 2026-03-27 20:34:40 +03:00: 2026-03-27 20:34:43 +03:00:
+0|cvetomar | > rest-express@1.0.0 start
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |
+0|cvetomar | 2026-03-27 20:34:43 +03:00: 2026-03-27 20:34:47 +03:00:
+0|cvetomar | > rest-express@1.0.0 start
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |
+0|cvetomar | 2026-03-27 20:34:47 +03:00: 2026-03-27 20:34:50 +03:00:
+0|cvetomar | > rest-express@1.0.0 start
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |
+0|cvetomar | 2026-03-27 20:34:51 +03:00: 2026-03-27 20:44:32 +03:00:
+0|cvetomar | > rest-express@1.0.0 start
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |
+0|cvetomar | 2026-03-27 20:48:38 +03:00:
+0|cvetomar | > rest-express@1.0.0 start
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |
+
+/var/log/cvetomarket/error-1.log last 30 lines:
+/var/log/cvetomarket/out-1.log last 30 lines:
+1|cvetomar | > NODE_ENV=production node dist/index.cjs
+1|cvetomar |
+1|cvetomar | 2026-03-27 20:44:58 +03:00: 2026-03-27 20:45:01 +03:00:
+1|cvetomar | > rest-express@1.0.0 start
+1|cvetomar | > NODE_ENV=production node dist/index.cjs
+1|cvetomar |
+1|cvetomar | 2026-03-27 20:45:01 +03:00: 2026-03-27 20:45:05 +03:00:
+1|cvetomar | > rest-express@1.0.0 start
+1|cvetomar | > NODE_ENV=production node dist/index.cjs
+1|cvetomar |
+1|cvetomar | 2026-03-27 20:45:05 +03:00: 2026-03-27 20:48:38 +03:00:
+1|cvetomar | > rest-express@1.0.0 start
+1|cvetomar | > NODE_ENV=production node dist/index.cjs
+1|cvetomar |
+1|cvetomar | 2026-03-27 20:48:38 +03:00: 2026-03-27 20:48:41 +03:00:
+1|cvetomar | > rest-express@1.0.0 start
+1|cvetomar | > NODE_ENV=production node dist/index.cjs
+1|cvetomar |
+1|cvetomar | 2026-03-27 20:48:41 +03:00: 2026-03-27 20:48:45 +03:00:
+1|cvetomar | > rest-express@1.0.0 start
+1|cvetomar | > NODE_ENV=production node dist/index.cjs
+1|cvetomar |
+1|cvetomar | 2026-03-27 20:48:45 +03:00: 2026-03-27 20:48:48 +03:00:
+1|cvetomar | > rest-express@1.0.0 start
+1|cvetomar | > NODE_ENV=production node dist/index.cjs
+1|cvetomar |
+1|cvetomar | 2026-03-27 20:48:49 +03:00: 2026-03-27 20:48:52 +03:00:
+1|cvetomar | > rest-express@1.0.0 start
+1|cvetomar | > NODE_ENV=production node dist/index.cjs
+1|cvetomar |
+
+root@cv6271581:/var/www/cvetomarket# tail -20 /var/log/nginx/access.log | grep -i unitpay
+tail -20 /var/log/nginx/access.log | grep "payment"
+root@cv6271581:/var/www/cvetomarket#
