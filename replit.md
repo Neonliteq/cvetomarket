@@ -16,6 +16,7 @@ A full-featured flower marketplace (маркетплейс цветочных м
 
 ## Key Features
 - Multi-role authentication (email/password with bcrypt, express-session)
+- Guest checkout: purchase without registration (buyerId nullable; guestEmail field for Robokassa)
 - Product catalog with filters (price, category, availability, type including add-ons)
 - Shopping cart with shop constraint (one shop per cart)
 - Per-shop delivery pricing (shops set their own delivery cost; displayed in cart, checkout, shop detail page)

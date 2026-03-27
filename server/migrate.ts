@@ -38,6 +38,11 @@ export async function runMigrations() {
     `);
 
     await client.query(`
+      ALTER TABLE orders ALTER COLUMN buyer_id DROP NOT NULL;
+      ALTER TABLE orders ADD COLUMN IF NOT EXISTS guest_email text;
+    `);
+
+    await client.query(`
       CREATE TABLE IF NOT EXISTS "session" (
         "sid" varchar NOT NULL COLLATE "default",
         "sess" json NOT NULL,

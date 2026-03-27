@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { CheckCircle2, MapPin, Gift } from "lucide-react";
+import { CheckCircle2, MapPin, Gift, UserCircle } from "lucide-react";
 import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,6 +26,7 @@ const checkoutSchema = z.object({
   deliveryTime: z.string().min(1, "Выберите время доставки"),
   recipientName: z.string().min(2, "Введите имя получателя"),
   recipientPhone: z.string().min(7, "Введите телефон получателя"),
+  guestEmail: z.string().email("Введите корректный email").optional().or(z.literal("")),
   comment: z.string().optional(),
   paymentMethod: z.enum(["card", "cash"]),
 });
@@ -126,6 +127,7 @@ export default function Checkout() {
       deliveryTime: "",
       recipientName: user?.name || "",
       recipientPhone: user?.phone || "",
+      guestEmail: "",
       comment: "",
       paymentMethod: "card",
     },
@@ -138,8 +140,9 @@ export default function Checkout() {
 
   const mutation = useMutation({
     mutationFn: async (data: z.infer<typeof checkoutSchema>) => {
+      const { guestEmail, ...rest } = data;
       return await apiRequest("POST", "/api/orders", {
-        ...data,
+        ...rest,
         shopId,
         items: items.map((i) => ({
           productId: i.product.id,
@@ -150,7 +153,8 @@ export default function Checkout() {
         })),
         totalAmount: total + DELIVERY,
         deliveryCost: DELIVERY,
-        bonusUsed: bonusToUse,
+        bonusUsed: user ? bonusToUse : 0,
+        guestEmail: !user ? (guestEmail || null) : null,
         deliveryLat: deliveryCoords?.lat ?? null,
         deliveryLng: deliveryCoords?.lng ?? null,
       });
@@ -179,10 +183,6 @@ export default function Checkout() {
   });
 
   if (isLoading) return null;
-  if (!user) {
-    navigate("/auth");
-    return null;
-  }
 
   if (items.length === 0 && !success) {
     navigate("/cart");
@@ -197,10 +197,16 @@ export default function Checkout() {
         </div>
         <h2 className="text-2xl font-bold">Заказ оформлен!</h2>
         <p className="text-muted-foreground text-sm">
-          Ваш заказ принят и передан в магазин. Следите за статусом в личном кабинете.
+          {user
+            ? "Ваш заказ принят и передан в магазин. Следите за статусом в личном кабинете."
+            : `Ваш заказ принят и передан в магазин. Номер заказа: #${orderId?.slice(0, 8)}. Зарегистрируйтесь, чтобы отслеживать заказы онлайн.`}
         </p>
         <div className="flex flex-col gap-2">
-          <Button onClick={() => navigate("/account")} data-testid="button-my-orders">Мои заказы</Button>
+          {user ? (
+            <Button onClick={() => navigate("/account")} data-testid="button-my-orders">Мои заказы</Button>
+          ) : (
+            <Button onClick={() => navigate("/auth")} data-testid="button-register-after-order">Зарегистрироваться</Button>
+          )}
           <Button variant="outline" onClick={() => navigate("/catalog")}>Продолжить покупки</Button>
         </div>
       </div>
@@ -216,6 +222,24 @@ export default function Checkout() {
         <div className="lg:col-span-2">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              {!user && (
+                <Card className="border-primary/30 bg-primary/5">
+                  <CardContent className="pt-5 pb-4">
+                    <div className="flex items-start gap-3">
+                      <UserCircle className="w-5 h-5 text-primary mt-0.5 shrink-0" />
+                      <div className="text-sm">
+                        <p className="font-medium">Оформление без регистрации</p>
+                        <p className="text-muted-foreground text-xs mt-0.5">
+                          Вы можете сделать заказ как гость.{" "}
+                          <a href="/auth" className="text-primary underline underline-offset-2">Войдите или зарегистрируйтесь</a>,
+                          чтобы отслеживать заказы и получать бонусы.
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               <Card>
                 <CardContent className="pt-5 space-y-4">
                   <h3 className="font-semibold">Получатель</h3>
@@ -233,6 +257,16 @@ export default function Checkout() {
                       <FormMessage />
                     </FormItem>
                   )} />
+                  {!user && (
+                    <FormField control={form.control} name="guestEmail" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email <span className="text-muted-foreground font-normal">(необязательно)</span></FormLabel>
+                        <FormControl><Input {...field} type="email" placeholder="ivan@example.com" data-testid="input-guest-email" /></FormControl>
+                        <p className="text-xs text-muted-foreground">Для получения квитанции об оплате</p>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  )}
                 </CardContent>
               </Card>
 

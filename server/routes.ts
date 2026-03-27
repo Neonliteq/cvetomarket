@@ -593,10 +593,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   }
 
-  app.post("/api/orders", requireAuth, async (req, res) => {
+  app.post("/api/orders", async (req, res) => {
     try {
-      const userId = (req.session as any).userId;
-      const { items, shopId, totalAmount, deliveryCost, deliveryLat, deliveryLng, bonusUsed: rawBonusUsed, ...orderData } = req.body;
+      const userId = (req.session as any).userId || null;
+      const { items, shopId, totalAmount, deliveryCost, deliveryLat, deliveryLng, bonusUsed: rawBonusUsed, guestEmail, ...orderData } = req.body;
 
       const shop = await storage.getShop(shopId);
       if (!shop) return res.status(404).json({ error: "Магазин не найден" });
@@ -614,7 +614,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
 
       let bonusUsed = 0;
-      if (rawBonusUsed && Number(rawBonusUsed) > 0) {
+      if (userId && rawBonusUsed && Number(rawBonusUsed) > 0) {
         const balance = await storage.getBonusBalance(userId);
         bonusUsed = Math.min(Number(rawBonusUsed), balance, Math.floor(totalAmount));
       }
@@ -635,6 +635,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         ...orderData,
         shopId,
         buyerId: userId,
+        guestEmail: userId ? null : (guestEmail || null),
         totalAmount: finalAmount.toString(),
         deliveryCost: deliveryCost.toString(),
         platformCommission: commission.toString(),
@@ -642,7 +643,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         paymentStatus,
       });
 
-      if (bonusUsed > 0) {
+      if (bonusUsed > 0 && userId) {
         await storage.addBonusTransaction(userId, -bonusUsed, "order_spend", `Списание за заказ #${order.id.slice(0, 8)}`);
       }
       if (items?.length) {
@@ -663,18 +664,18 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       // Card payment — generate ROBOKASSA URL
       if (!isRobokassaConfigured()) {
-        // Fallback: treat as paid immediately if ROBOKASSA is not configured
         await storage.updatePaymentStatus(order.id, "paid");
         await notifyShopNewOrder(shopId, Number(totalAmount));
         return res.json({ order });
       }
 
-      const buyer = await storage.getUser(userId);
+      const buyer = userId ? await storage.getUser(userId) : null;
+      const paymentEmail = buyer?.email || guestEmail || undefined;
       const paymentUrl = buildPaymentUrl({
         outSum: finalAmount,
         invId: order.orderNumber,
         description: `Заказ #${order.orderNumber} — ЦветоМаркет`,
-        email: buyer?.email,
+        email: paymentEmail,
       });
       res.json({ order, paymentUrl });
     } catch (e: any) {

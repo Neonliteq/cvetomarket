@@ -92,7 +92,8 @@ export const products = pgTable("products", {
 export const orders = pgTable("orders", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   orderNumber: serial("order_number"),
-  buyerId: varchar("buyer_id").notNull().references(() => users.id),
+  buyerId: varchar("buyer_id").references(() => users.id),
+  guestEmail: text("guest_email"),
   shopId: varchar("shop_id").notNull().references(() => shops.id),
   status: text("status").notNull().default("new"),
   deliveryAddress: text("delivery_address").notNull(),
