@@ -1,0 +1,129 @@
+root@cv6271581:/var/www/cvetomarket# curl -v "https://cveto.market/api/payment/unitpay/handler?method=check&params%5Baccount%5D=1&params%5Bsum%5D=100.00&params%5Bcurrency%5D=RUB&params%5Bdesc%5D=test&params%5Bsignature%5D=test"
+*   Trying 194.67.122.119:443...
+* Connected to cveto.market (194.67.122.119) port 443 (#0)
+* ALPN, offering h2
+* ALPN, offering http/1.1
+*  CAfile: /etc/ssl/certs/ca-certificates.crt
+*  CApath: /etc/ssl/certs
+* TLSv1.0 (OUT), TLS header, Certificate Status (22):
+* TLSv1.3 (OUT), TLS handshake, Client hello (1):
+* TLSv1.2 (IN), TLS header, Certificate Status (22):
+* TLSv1.3 (IN), TLS handshake, Server hello (2):
+* TLSv1.2 (IN), TLS header, Finished (20):
+* TLSv1.2 (IN), TLS header, Supplemental data (23):
+* TLSv1.3 (IN), TLS handshake, Encrypted Extensions (8):
+* TLSv1.2 (IN), TLS header, Supplemental data (23):
+* TLSv1.3 (IN), TLS handshake, Certificate (11):
+* TLSv1.2 (IN), TLS header, Supplemental data (23):
+* TLSv1.3 (IN), TLS handshake, CERT verify (15):
+* TLSv1.2 (IN), TLS header, Supplemental data (23):
+* TLSv1.3 (IN), TLS handshake, Finished (20):
+* TLSv1.2 (OUT), TLS header, Finished (20):
+* TLSv1.3 (OUT), TLS change cipher, Change cipher spec (1):
+* TLSv1.2 (OUT), TLS header, Supplemental data (23):
+* TLSv1.3 (OUT), TLS handshake, Finished (20):
+* SSL connection using TLSv1.3 / TLS_AES_256_GCM_SHA384
+* ALPN, server accepted to use http/1.1
+* Server certificate:
+*  subject: CN=cveto.market
+*  start date: Mar 25 22:52:55 2026 GMT
+*  expire date: Jun 23 22:52:54 2026 GMT
+*  subjectAltName: host "cveto.market" matched cert's "cveto.market"
+*  issuer: C=US; O=Let's Encrypt; CN=R13
+*  SSL certificate verify ok.
+* TLSv1.2 (OUT), TLS header, Supplemental data (23):
+> GET /api/payment/unitpay/handler?method=check&params%5Baccount%5D=1&params%5Bsum%5D=100.00&params%5Bcurrency%5D=RUB&params%5Bdesc%5D=test&params%5Bsignature%5D=test HTTP/1.1
+> Host: cveto.market
+> User-Agent: curl/7.81.0
+> Accept: */*
+>
+* TLSv1.2 (IN), TLS header, Supplemental data (23):
+* TLSv1.3 (IN), TLS handshake, Newsession Ticket (4):
+* TLSv1.2 (IN), TLS header, Supplemental data (23):
+* TLSv1.3 (IN), TLS handshake, Newsession Ticket (4):
+* old SSL session ID is stale, removing
+* TLSv1.2 (IN), TLS header, Supplemental data (23):
+* Mark bundle as not supporting multiuse
+< HTTP/1.1 200 OK
+< Server: nginx/1.18.0 (Ubuntu)
+< Date: Fri, 27 Mar 2026 17:23:28 GMT
+< Content-Type: application/json; charset=utf-8
+< Content-Length: 53
+< Connection: keep-alive
+< X-Powered-By: Express
+< ETag: W/"35-Y55gX8LvgaKC0dKEn4fmSzItQyo"
+< X-Frame-Options: SAMEORIGIN
+< X-Content-Type-Options: nosniff
+< Referrer-Policy: strict-origin-when-cross-origin
+< X-XSS-Protection: 1; mode=block
+<
+* Connection #0 to host cveto.market left intact
+{"error":{"message":"Неверный запрос"pm2 logs cvetomarket --lines 30 --nostream logs cvetomarket --lines 30 --nostream
+[TAILING] Tailing last 30 lines for [cvetomarket] process (change the value with --lines option)
+/var/log/cvetomarket/error-1.log last 30 lines:
+/var/log/cvetomarket/out-1.log last 30 lines:
+1|cvetomar | > NODE_ENV=production node dist/index.cjs
+1|cvetomar |
+1|cvetomar |
+1|cvetomar | > rest-express@1.0.0 start
+1|cvetomar | > NODE_ENV=production node dist/index.cjs
+1|cvetomar |
+1|cvetomar |
+1|cvetomar | > rest-express@1.0.0 start
+1|cvetomar | > NODE_ENV=production node dist/index.cjs
+1|cvetomar |
+1|cvetomar |
+1|cvetomar | > rest-express@1.0.0 start
+1|cvetomar | > NODE_ENV=production node dist/index.cjs
+1|cvetomar |
+1|cvetomar |
+1|cvetomar | > rest-express@1.0.0 start
+1|cvetomar | > NODE_ENV=production node dist/index.cjs
+1|cvetomar |
+1|cvetomar |
+1|cvetomar | > rest-express@1.0.0 start
+1|cvetomar | > NODE_ENV=production node dist/index.cjs
+1|cvetomar |
+1|cvetomar |
+1|cvetomar | > rest-express@1.0.0 start
+1|cvetomar | > NODE_ENV=production node dist/index.cjs
+1|cvetomar |
+1|cvetomar | 2026-03-27 20:15:27 +03:00:
+1|cvetomar | > rest-express@1.0.0 start
+1|cvetomar | > NODE_ENV=production node dist/index.cjs
+1|cvetomar |
+
+/var/log/cvetomarket/error-0.log last 30 lines:
+/var/log/cvetomarket/out-0.log last 30 lines:
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |
+0|cvetomar | 2026-03-27 20:15:35 +03:00: 2026-03-27 20:15:38 +03:00:
+0|cvetomar | > rest-express@1.0.0 start
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |
+0|cvetomar | 2026-03-27 20:15:38 +03:00: 2026-03-27 20:15:41 +03:00:
+0|cvetomar | > rest-express@1.0.0 start
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |
+0|cvetomar | 2026-03-27 20:15:42 +03:00: 2026-03-27 20:15:45 +03:00:
+0|cvetomar | > rest-express@1.0.0 start
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |
+0|cvetomar | 2026-03-27 20:15:45 +03:00: 2026-03-27 20:15:49 +03:00:
+0|cvetomar | > rest-express@1.0.0 start
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |
+0|cvetomar | 2026-03-27 20:15:49 +03:00: 2026-03-27 20:15:52 +03:00:
+0|cvetomar | > rest-express@1.0.0 start
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |
+0|cvetomar | 2026-03-27 20:15:52 +03:00: 2026-03-27 20:15:56 +03:00:
+0|cvetomar | > rest-express@1.0.0 start
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |
+0|cvetomar | 2026-03-27 20:15:56 +03:00: 2026-03-27 20:15:59 +03:00:
+0|cvetomar | > rest-express@1.0.0 start
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |
+
+root@cv6271581:/var/www/cvetomarket#
