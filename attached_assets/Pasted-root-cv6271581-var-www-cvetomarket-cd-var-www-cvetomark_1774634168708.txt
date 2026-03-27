@@ -1,0 +1,76 @@
+root@cv6271581:/var/www/cvetomarket# cd /var/www/cvetomarket && git pull && npm ci && npm run build && npm prune --omit=dev && pm2 delete all && pm2 start deploy/ecosystem.config.cjs && pm2 save && pm2 status
+Already up to date.
+npm warn deprecated node-domexception@1.0.0: Use your platform's native DOMException instead
+
+added 741 packages, and audited 742 packages in 9s
+
+109 packages are looking for funding
+  run `npm fund` for details
+
+12 vulnerabilities (6 low, 2 moderate, 4 high)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+
+> rest-express@1.0.0 build
+> tsx script/build.ts
+
+building client...
+vite v7.3.0 building client environment for production...
+transforming (5) ../node_modules/wouter/esm/index.js
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+✓ 2609 modules transformed.
+../dist/public/index.html                   2.11 kB │ gzip:   0.81 kB
+../dist/public/assets/index-DKl-htDv.css   89.13 kB │ gzip:  14.46 kB
+../dist/public/assets/index-B4Cqjv0e.js   883.05 kB │ gzip: 247.52 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 6.86s
+building server...
+
+  dist/index.cjs  1.3mb ⚠️
+
+⚡ Done in 198ms
+
+up to date, audited 644 packages in 2s
+
+94 packages are looking for funding
+  run `npm fund` for details
+
+11 vulnerabilities (6 low, 2 moderate, 3 high)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+[PM2] Applying action deleteProcessId on app [all](ids: [ 0 ])
+[PM2] [cvetomarket](0) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+[PM2][WARN] Applications cvetomarket not running, starting...
+[PM2] App [cvetomarket] launched (1 instances)
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ cvetomarket        │ cluster  │ 0    │ online    │ 0%       │ 38.4mb   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+[PM2] Saving current process list...
+[PM2] Successfully saved in /root/.pm2/dump.pm2
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ cvetomarket        │ cluster  │ 0    │ online    │ 0%       │ 59.9mb   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+root@cv6271581:/var/www/cvetomarket#
