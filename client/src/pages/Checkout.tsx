@@ -369,7 +369,7 @@ export default function Checkout() {
                       <FormMessage />
                     </FormItem>
                   )} />
-                  <p className="text-xs text-muted-foreground">Оплата через защищённый платёжный сервис ROBOKASSA.</p>
+                  <p className="text-xs text-muted-foreground">Оплата через защищённый платёжный сервис Unitpay.</p>
                 </CardContent>
               </Card>
 
