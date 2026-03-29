@@ -85,7 +85,7 @@ type Analytics = {
   approvedShops: number;
   pendingShops: number;
   totalProducts: number;
-  avgOrderValue: number;
+  avgOrderValue: number | null;
 };
 
 type PayoutRow = {
@@ -1500,7 +1500,7 @@ export default function Admin() {
                 <Card>
                   <CardContent className="p-4">
                     <p className="text-xs text-muted-foreground mb-1">Средний чек</p>
-                    <p className="text-xl font-bold">{analytics.avgOrderValue.toLocaleString("ru-RU")} ₽</p>
+                    <p className="text-xl font-bold">{(analytics.avgOrderValue ?? 0).toLocaleString("ru-RU")} ₽</p>
                   </CardContent>
                 </Card>
                 <Card>

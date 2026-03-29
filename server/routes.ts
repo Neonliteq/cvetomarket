@@ -1223,7 +1223,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const shopOwnerCount = allUsers.filter((u) => u.role === "shop").length;
     const blockedCount = allUsers.filter((u) => u.isBlocked).length;
 
-    const avgOrderValue = allOrders.length > 0 ? totalRevenue / allOrders.filter((o) => o.status !== "cancelled").length : 0;
+    const nonCancelledOrders = allOrders.filter((o) => o.status !== "cancelled").length;
+    const avgOrderValue = nonCancelledOrders > 0 ? totalRevenue / nonCancelledOrders : 0;
 
     res.json({
       totalRevenue,
