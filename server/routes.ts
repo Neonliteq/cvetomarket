@@ -737,7 +737,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       cancelled: "Ваш заказ отменён",
     };
     const label = STATUS_LABELS[req.body.status];
-    if (label && order) {
+    if (label && order && order.buyerId) {
       const shopForNotif = await storage.getShop(order.shopId);
       await storage.createNotification({
         userId: order.buyerId,
@@ -759,7 +759,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
     }
     // Accrue bonuses on delivery (idempotent — check existing transactions)
-    if (req.body.status === "delivered" && order) {
+    if (req.body.status === "delivered" && order && order.buyerId) {
       try {
         const existingTxns = await storage.getBonusTransactions(order.buyerId);
         const buyerOrders = await storage.getOrdersByBuyer(order.buyerId);
@@ -794,7 +794,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
     }
     // Notify buyer about photo pending approval
-    if (req.body.status === "assembling" && req.body.assemblyPhotoUrl && order) {
+    if (req.body.status === "assembling" && req.body.assemblyPhotoUrl && order && order.buyerId) {
       await storage.createNotification({
         userId: order.buyerId,
         type: "photo_pending",
