@@ -13,7 +13,7 @@ import { objectStorageClient, ObjectStorageService } from "./replit_integrations
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { sendTelegramMessage, generateLinkToken, consumeLinkToken, getBotUsername, ORDER_STATUS_MESSAGES, registerWebhook } from "./telegram";
 import { sendPasswordResetEmail } from "./resend";
-import { buildPaymentUrl, verifyHandlerSignature, isUnitpayConfigured } from "./unitpay";
+import { buildPaymentUrl, verifyResultSignature, isRobokassaConfigured } from "./robokassa";
 
 function toSafeUser(user: Record<string, unknown>) {
   const { password: _pw, adminNotes: _notes, ...safe } = user;
@@ -662,8 +662,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.json({ order });
       }
 
-      // Card payment — generate UNITPAY URL
-      if (!isUnitpayConfigured()) {
+      // Card payment — generate Robokassa URL
+      if (!isRobokassaConfigured()) {
         await storage.updatePaymentStatus(order.id, "paid");
         await notifyShopNewOrder(shopId, Number(totalAmount));
         return res.json({ order });
@@ -683,80 +683,37 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  // UNITPAY Handler URL — called by Unitpay server for check and pay events
-  app.get("/api/payment/unitpay/handler", async (req, res) => {
+  // Robokassa Result URL — called by Robokassa server after successful payment
+  app.post("/api/payment/robokassa/result", async (req, res) => {
     try {
-      const method = req.query.method as string;
-      console.log("[unitpay/handler] raw query:", JSON.stringify(req.query));
+      const { OutSum, InvId, SignatureValue } = req.body;
+      console.log("[robokassa/result] body:", JSON.stringify(req.body));
 
-      if (!method) {
-        return res.json({ error: { message: "Неверный запрос: отсутствует method" } });
+      if (!OutSum || !InvId || !SignatureValue) {
+        console.error("[robokassa/result] missing params");
+        return res.status(400).send("error: missing params");
       }
 
-      // Support three formats Unitpay may use:
-      // 1. Nested object (qs extended): params[account]=1 → req.query.params = { account: "1" }
-      // 2. Literal bracket keys (simple parser): req.query["params[account]"] = "1"
-      // 3. Flat keys: req.query.account = "1"
-      const nested = req.query.params;
-      let params: Record<string, string>;
-      if (nested && typeof nested === "object" && !Array.isArray(nested)) {
-        params = nested as Record<string, string>;
-      } else if (req.query["params[account]"]) {
-        params = {
-          account: req.query["params[account]"] as string,
-          sum: req.query["params[sum]"] as string,
-          currency: req.query["params[currency]"] as string,
-          desc: req.query["params[desc]"] as string,
-          signature: req.query["params[signature]"] as string,
-          orderSum: req.query["params[orderSum]"] as string,
-          paymentType: req.query["params[paymentType]"] as string,
-        };
-      } else {
-        params = {
-          account: req.query.account as string,
-          sum: req.query.sum as string,
-          currency: req.query.currency as string,
-          desc: req.query.desc as string,
-          signature: req.query.signature as string,
-          orderSum: req.query.orderSum as string,
-          paymentType: req.query.paymentType as string,
-        };
+      if (!verifyResultSignature(OutSum, InvId, SignatureValue)) {
+        console.error("[robokassa/result] invalid signature for InvId", InvId);
+        return res.status(400).send("error: invalid signature");
       }
 
-      const { account, sum, currency, desc } = params;
-
-      if (!account || !sum || !currency || !desc) {
-        console.error("[unitpay/handler] missing params:", { account, sum, currency, desc });
-        return res.json({ error: { message: "Отсутствуют обязательные параметры" } });
-      }
-
-      if (!verifyHandlerSignature(method, params)) {
-        console.error("[unitpay/handler] invalid signature for account", account);
-        return res.json({ error: { message: "Неверная подпись" } });
-      }
-
-      const order = await storage.getOrderByNumber(Number(account));
+      const order = await storage.getOrderByNumber(Number(InvId));
       if (!order) {
-        console.error("[unitpay/handler] order not found for account", account);
-        return res.json({ error: { message: "Заказ не найден" } });
+        console.error("[robokassa/result] order not found for InvId", InvId);
+        return res.status(400).send("error: order not found");
       }
 
-      if (method === "check") {
-        return res.json({ result: { message: "Запрос успешно обработан" } });
+      if (order.paymentStatus !== "paid") {
+        await storage.updatePaymentStatus(order.id, "paid", `robokassa:${InvId}`);
+        await notifyShopNewOrder(order.shopId, Number(order.totalAmount));
       }
 
-      if (method === "pay") {
-        if (order.paymentStatus !== "paid") {
-          await storage.updatePaymentStatus(order.id, "paid", `unitpay:${account}`);
-          await notifyShopNewOrder(order.shopId, Number(order.totalAmount));
-        }
-        return res.json({ result: { message: "Платёж успешно обработан" } });
-      }
-
-      return res.json({ error: { message: `Неизвестный метод: ${method}` } });
+      return res.send(`OK${InvId}`);
     } catch (e: any) {
-      console.error("[unitpay/handler] error:", e.message);
-      return res.json({ error: { message: "Внутренняя ошибка сервера" } });
+      console.error("[robokassa/result] error:", e.message);
+      return res.status(500).send("error: internal");
     }
   });
 
