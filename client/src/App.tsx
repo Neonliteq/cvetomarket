@@ -27,6 +27,8 @@ import DeliveryAndPayment from "@/pages/DeliveryAndPayment";
 import TermsOfUse from "@/pages/TermsOfUse";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import LegalInfo from "@/pages/LegalInfo";
+import PaymentSuccess from "@/pages/PaymentSuccess";
+import PaymentFail from "@/pages/PaymentFail";
 import NotFound from "@/pages/not-found";
 
 function AddonModalMount() {
@@ -56,6 +58,8 @@ function Router() {
           <Route path="/terms-of-use" component={TermsOfUse} />
           <Route path="/privacy-policy" component={PrivacyPolicy} />
           <Route path="/legal-info" component={LegalInfo} />
+          <Route path="/payment/success" component={PaymentSuccess} />
+          <Route path="/payment/fail" component={PaymentFail} />
           <Route component={NotFound} />
         </Switch>
       </main>
