@@ -7,6 +7,7 @@ import { AuthProvider } from "@/lib/auth";
 import { CartProvider, useCart } from "@/lib/cart";
 import { CityProvider } from "@/lib/cityContext";
 import { AddonSuggestionDialog } from "@/components/AddonSuggestionDialog";
+import { CookieConsent } from "@/components/CookieConsent";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { FloatingCart } from "@/components/FloatingCart";
@@ -74,6 +75,7 @@ function App() {
               <Toaster />
               <Router />
               <AddonModalMount />
+              <CookieConsent />
             </TooltipProvider>
           </CartProvider>
         </CityProvider>
