@@ -94,13 +94,15 @@ export function Header() {
 
   const markReadMutation = useMutation({
     mutationFn: () => apiRequest("POST", "/api/notifications/read"),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["/api/notifications"] }),
   });
 
   const handleNotifOpen = (open: boolean) => {
     setNotifOpen(open);
     if (open && (notifData?.notifications?.length ?? 0) > 0) {
       markReadMutation.mutate();
+    }
+    if (!open) {
+      qc.invalidateQueries({ queryKey: ["/api/notifications"] });
     }
   };
 
