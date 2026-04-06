@@ -24,10 +24,10 @@ export function CookieConsent() {
     <div className="fixed bottom-0 left-0 right-0 z-50 p-4 md:p-5">
       <div className="max-w-4xl mx-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 md:p-5">
         <div className="flex items-start gap-3 flex-1 min-w-0">
-          <Cookie className="h-5 w-5 text-pink-500 shrink-0 mt-0.5" />
+          <Cookie className="h-5 w-5 text-primary shrink-0 mt-0.5" />
           <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
             Мы используем файлы cookie и обрабатываем персональные данные для улучшения работы сайта. Продолжая использование сайта, вы соглашаетесь с нашей{" "}
-            <Link href="/privacy-policy" className="text-pink-600 hover:underline font-medium">
+            <Link href="/privacy-policy" className="text-primary hover:underline font-medium">
               политикой конфиденциальности
             </Link>
             .
@@ -36,7 +36,7 @@ export function CookieConsent() {
         <Button
           onClick={accept}
           size="sm"
-          className="shrink-0 bg-pink-600 hover:bg-pink-700 text-white w-full sm:w-auto"
+          className="shrink-0 w-full sm:w-auto"
           data-testid="button-cookie-accept"
         >
           Принять

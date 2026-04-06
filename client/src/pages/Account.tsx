@@ -149,7 +149,7 @@ function BuyerStats({ orders }: { orders: OrderWithItems[] }) {
     { label: "Потрачено", value: `${totalSpent.toLocaleString("ru-RU")} ₽`, icon: TrendingUp, color: "text-amber-600" },
     { label: "Средний чек", value: avgCheck > 0 ? `${Math.round(avgCheck).toLocaleString("ru-RU")} ₽` : "—", icon: TrendingUp, color: "text-orange-600" },
     { label: "Любимый магазин", value: favoriteShop, icon: Store, color: "text-violet-600", truncate: true },
-    { label: "Любимый товар", value: favoriteProduct, icon: Flower2, color: "text-pink-600", truncate: true },
+    { label: "Любимый товар", value: favoriteProduct, icon: Flower2, color: "text-primary", truncate: true },
   ];
 
   return (
