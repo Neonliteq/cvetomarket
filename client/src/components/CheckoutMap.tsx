@@ -74,6 +74,7 @@ export function CheckoutMap({ shopId, onAddressSelect, initialAddress }: Checkou
           map.geoObjects.add(polygon);
         });
 
+        let centeredByZone = false;
         if (zones.length > 0) {
           const allCoords = zones.flatMap((z) => z.coordinates);
           if (allCoords.length > 0) {
@@ -82,10 +83,33 @@ export function CheckoutMap({ shopId, onAddressSelect, initialAddress }: Checkou
             const cLat = (Math.min(...lats) + Math.max(...lats)) / 2;
             const cLng = (Math.min(...lngs) + Math.max(...lngs)) / 2;
             map.setCenter([cLat, cLng], 11);
+            centeredByZone = true;
           }
         }
+
+        if (!centeredByZone && !initialAddress && navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            ({ coords }) => {
+              if (ymapInstance.current) {
+                ymapInstance.current.setCenter([coords.latitude, coords.longitude], 12);
+              }
+            },
+            () => {}
+          );
+        }
       })
-      .catch(() => {});
+      .catch(() => {
+        if (!initialAddress && navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            ({ coords }) => {
+              if (ymapInstance.current) {
+                ymapInstance.current.setCenter([coords.latitude, coords.longitude], 12);
+              }
+            },
+            () => {}
+          );
+        }
+      });
 
     map.events.add("click", (e: any) => {
       const coords = e.get("coords");

@@ -60,6 +60,15 @@ export function ShopLocationMap({ latitude, longitude, onLocationSelect }: ShopL
 
     if (hasCoords) {
       placeMarker(Number(latitude), Number(longitude));
+    } else if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        ({ coords }) => {
+          if (ymapInstance.current) {
+            ymapInstance.current.setCenter([coords.latitude, coords.longitude], 13);
+          }
+        },
+        () => {}
+      );
     }
 
     map.events.add("click", (e: any) => {

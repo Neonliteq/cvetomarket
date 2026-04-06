@@ -43,6 +43,17 @@ export function ShopsMap({ shops }: ShopsMapProps) {
     ymapInstance.current = map;
     setMapReady(true);
 
+    if (shopsWithCoords.length <= 1 && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        ({ coords }) => {
+          if (ymapInstance.current) {
+            ymapInstance.current.setCenter([coords.latitude, coords.longitude], shopsWithCoords.length === 1 ? 13 : 12);
+          }
+        },
+        () => {}
+      );
+    }
+
     shopsWithCoords.forEach((shop) => {
       const lat = Number(shop.latitude);
       const lng = Number(shop.longitude);
