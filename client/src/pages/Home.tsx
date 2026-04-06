@@ -1,5 +1,5 @@
 import { useState } from "react";
-import heroBg from "@assets/IMG_2431_1775485385560.JPG";
+import heroBg from "@assets/hero_bg_generated.png";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, Truck, Shield, Clock, Star, Cake, Heart, Flower2, Gem, Leaf, Building2, Search, type LucideIcon } from "lucide-react";
@@ -54,7 +54,7 @@ export default function Home() {
         >
           <div
             className="absolute inset-0"
-            style={{ backgroundImage: `url(${heroBg})`, backgroundSize: "auto 130%", backgroundPosition: "right center", backgroundRepeat: "no-repeat", opacity: 0.35 }}
+            style={{ backgroundImage: `url(${heroBg})`, backgroundSize: "cover", backgroundPosition: "right center", backgroundRepeat: "no-repeat", opacity: 0.65 }}
           />
           <div className="absolute inset-0" style={{ background: "linear-gradient(to right, hsl(var(--background)) 30%, transparent)" }} />
 
