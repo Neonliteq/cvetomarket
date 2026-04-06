@@ -61,8 +61,8 @@ export default function Home() {
             <div className="max-w-xl space-y-6">
               <Badge className="w-fit">Доставка от 60 минут</Badge>
               <h1 className="text-4xl md:text-5xl font-bold leading-tight">
-                Свежие букеты<br />
-                <span className="text-primary">прямо к вашей двери</span>
+                Свежие цветы для важного<br />
+                <span className="text-primary">события и без повода</span>
               </h1>
               <p className="text-lg text-muted-foreground">
                 {shops && shops.length > 0
