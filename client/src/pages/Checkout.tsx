@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { CheckCircle2, MapPin, Gift, UserCircle } from "lucide-react";
+import { CheckCircle2, MapPin, Gift, UserCircle, Tag, X } from "lucide-react";
 import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -53,6 +53,10 @@ export default function Checkout() {
   const [addressChecked, setAddressChecked] = useState(false);
   const [deliveryCoords, setDeliveryCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [bonusToUse, setBonusToUse] = useState(0);
+  const [promoInput, setPromoInput] = useState("");
+  const [promoApplied, setPromoApplied] = useState<{ code: string; discount: number; discountType: string; discountValue: number; description: string | null } | null>(null);
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [promoLoading, setPromoLoading] = useState(false);
   const shopHasZones = !!(shop as any)?.deliveryZones?.length;
   const DELIVERY = deliveryCost !== null ? deliveryCost : defaultDelivery;
 
@@ -67,7 +71,26 @@ export default function Checkout() {
     if (bonusToUse > maxBonus) setBonusToUse(maxBonus);
   }, [maxBonus, bonusToUse]);
 
-  const finalTotal = total + DELIVERY - bonusToUse;
+  const promoDiscount = promoApplied?.discount || 0;
+  const finalTotal = Math.max(0, total + DELIVERY - bonusToUse - promoDiscount);
+
+  const applyPromo = async () => {
+    if (!promoInput.trim()) return;
+    setPromoLoading(true);
+    setPromoError(null);
+    try {
+      const res = await fetch("/api/promo/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ code: promoInput.trim().toUpperCase(), orderAmount: total + DELIVERY }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setPromoError(data.error || "Ошибка"); setPromoApplied(null); }
+      else { setPromoApplied(data); setPromoError(null); }
+    } catch { setPromoError("Не удалось проверить промокод"); }
+    finally { setPromoLoading(false); }
+  };
 
   const fetchDeliveryCost = useCallback(async (lat: number, lng: number) => {
     if (!shopId) return;
@@ -154,6 +177,7 @@ export default function Checkout() {
         totalAmount: total + DELIVERY,
         deliveryCost: DELIVERY,
         bonusUsed: user ? bonusToUse : 0,
+        promoCode: promoApplied?.code || null,
         guestEmail: !user ? (guestEmail || null) : null,
         deliveryLat: deliveryCoords?.lat ?? null,
         deliveryLng: deliveryCoords?.lng ?? null,
@@ -451,6 +475,47 @@ export default function Checkout() {
                   </div>
                 </>
               )}
+              <Separator />
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm">
+                  <Tag className="w-4 h-4 text-primary" />
+                  <span className="font-medium">Промокод</span>
+                </div>
+                {promoApplied ? (
+                  <div className="flex items-center justify-between rounded-md bg-primary/10 border border-primary/30 px-3 py-2">
+                    <div>
+                      <span className="text-sm font-semibold text-primary">{promoApplied.code}</span>
+                      <span className="text-xs text-muted-foreground ml-2">
+                        -{promoApplied.discountType === "percent" ? `${promoApplied.discountValue}%` : `${promoApplied.discountValue.toLocaleString("ru-RU")} ₽`}
+                      </span>
+                    </div>
+                    <button onClick={() => { setPromoApplied(null); setPromoInput(""); }} className="text-muted-foreground hover:text-foreground" data-testid="button-remove-promo">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <Input
+                      value={promoInput}
+                      onChange={(e) => { setPromoInput(e.target.value.toUpperCase()); setPromoError(null); }}
+                      onKeyDown={(e) => e.key === "Enter" && applyPromo()}
+                      placeholder="ПРОМОКОД"
+                      className="h-8 text-sm uppercase"
+                      data-testid="input-promo-code"
+                    />
+                    <Button type="button" variant="outline" size="sm" className="h-8 text-xs shrink-0" onClick={applyPromo} disabled={promoLoading || !promoInput.trim()} data-testid="button-apply-promo">
+                      {promoLoading ? "..." : "Применить"}
+                    </Button>
+                  </div>
+                )}
+                {promoError && <p className="text-xs text-destructive">{promoError}</p>}
+                {promoApplied && (
+                  <div className="flex justify-between text-sm text-green-600 dark:text-green-400">
+                    <span>Скидка промокодом</span>
+                    <span>-{promoDiscount.toLocaleString("ru-RU")} ₽</span>
+                  </div>
+                )}
+              </div>
               <Separator />
               <div className="flex justify-between font-bold">
                 <span>Итого</span>

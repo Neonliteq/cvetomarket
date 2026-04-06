@@ -109,6 +109,8 @@ export const orders = pgTable("orders", {
   deliveryCost: decimal("delivery_cost", { precision: 10, scale: 2 }).default("300"),
   platformCommission: decimal("platform_commission", { precision: 10, scale: 2 }).default("0"),
   bonusUsed: integer("bonus_used").default(0),
+  promoCode: text("promo_code"),
+  promoDiscount: decimal("promo_discount", { precision: 10, scale: 2 }).default("0"),
   assemblyPhotoUrl: text("assembly_photo_url"),
   buyerPhotoApproval: text("buyer_photo_approval"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -184,6 +186,20 @@ export const notifications = pgTable("notifications", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const promoCodes = pgTable("promo_codes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  code: text("code").notNull().unique(),
+  discountType: text("discount_type").notNull().default("percent"),
+  discountValue: decimal("discount_value", { precision: 10, scale: 2 }).notNull(),
+  minOrderAmount: decimal("min_order_amount", { precision: 10, scale: 2 }),
+  maxUses: integer("max_uses"),
+  usedCount: integer("used_count").default(0),
+  isActive: boolean("is_active").default(true),
+  expiresAt: timestamp("expires_at"),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const orderSupplements = pgTable("order_supplements", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   supplementNumber: serial("supplement_number"),
@@ -238,3 +254,7 @@ export type InsertBonusTransaction = z.infer<typeof insertBonusTransactionSchema
 export type OrderSupplement = typeof orderSupplements.$inferSelect;
 export const insertOrderSupplementSchema = createInsertSchema(orderSupplements).omit({ id: true, supplementNumber: true, createdAt: true });
 export type InsertOrderSupplement = z.infer<typeof insertOrderSupplementSchema>;
+
+export type PromoCode = typeof promoCodes.$inferSelect;
+export const insertPromoCodeSchema = createInsertSchema(promoCodes).omit({ id: true, usedCount: true, createdAt: true });
+export type InsertPromoCode = z.infer<typeof insertPromoCodeSchema>;

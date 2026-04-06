@@ -596,7 +596,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/orders", async (req, res) => {
     try {
       const userId = (req.session as any).userId || null;
-      const { items, shopId, totalAmount, deliveryCost, deliveryLat, deliveryLng, bonusUsed: rawBonusUsed, guestEmail, ...orderData } = req.body;
+      const { items, shopId, totalAmount, deliveryCost, deliveryLat, deliveryLng, bonusUsed: rawBonusUsed, promoCode: rawPromoCode, guestEmail, ...orderData } = req.body;
 
       const shop = await storage.getShop(shopId);
       if (!shop) return res.status(404).json({ error: "Магазин не найден" });
@@ -619,7 +619,30 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         bonusUsed = Math.min(Number(rawBonusUsed), balance, Math.floor(totalAmount));
       }
 
-      const finalAmount = totalAmount - bonusUsed;
+      let promoDiscount = 0;
+      let appliedPromoCode: string | null = null;
+      let promoCodeId: string | null = null;
+      if (rawPromoCode) {
+        const promo = await storage.getPromoCodeByCode(rawPromoCode);
+        const orderBase = Number(totalAmount);
+        if (
+          promo &&
+          promo.isActive &&
+          (!promo.expiresAt || new Date(promo.expiresAt) > new Date()) &&
+          (!promo.maxUses || (promo.usedCount ?? 0) < promo.maxUses) &&
+          (!promo.minOrderAmount || orderBase >= Number(promo.minOrderAmount))
+        ) {
+          if (promo.discountType === "percent") {
+            promoDiscount = Math.round((orderBase * Number(promo.discountValue)) / 100);
+          } else {
+            promoDiscount = Math.min(Number(promo.discountValue), orderBase);
+          }
+          appliedPromoCode = promo.code;
+          promoCodeId = promo.id;
+        }
+      }
+
+      const finalAmount = Math.max(0, totalAmount - bonusUsed - promoDiscount);
       const settings = await storage.getSettings();
       const shopForCommission = await storage.getShop(shopId);
       const effectiveRate = shopForCommission?.commissionRate != null
@@ -640,11 +663,16 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         deliveryCost: deliveryCost.toString(),
         platformCommission: commission.toString(),
         bonusUsed,
+        promoCode: appliedPromoCode,
+        promoDiscount: promoDiscount.toString(),
         paymentStatus,
       });
 
       if (bonusUsed > 0 && userId) {
         await storage.addBonusTransaction(userId, -bonusUsed, "order_spend", `Списание за заказ #${order.id.slice(0, 8)}`);
+      }
+      if (promoCodeId) {
+        await storage.incrementPromoCodeUsage(promoCodeId);
       }
       if (items?.length) {
         await storage.createOrderItems(items.map((item: any) => ({
@@ -1512,6 +1540,65 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const balance = await storage.getBonusBalance(userId);
     const transactions = await storage.getBonusTransactions(userId);
     res.json({ balance, transactions });
+  });
+
+  // ---- PROMO CODES ----
+  app.post("/api/promo/validate", async (req, res) => {
+    const { code, orderAmount } = req.body;
+    if (!code) return res.status(400).json({ error: "Укажите промокод" });
+    const promo = await storage.getPromoCodeByCode(code);
+    if (!promo || !promo.isActive) return res.status(404).json({ error: "Промокод не найден или неактивен" });
+    if (promo.expiresAt && new Date(promo.expiresAt) <= new Date()) return res.status(400).json({ error: "Промокод истёк" });
+    if (promo.maxUses && (promo.usedCount ?? 0) >= promo.maxUses) return res.status(400).json({ error: "Промокод исчерпан" });
+    if (promo.minOrderAmount && Number(orderAmount) < Number(promo.minOrderAmount)) {
+      return res.status(400).json({ error: `Минимальная сумма заказа для промокода — ${Number(promo.minOrderAmount).toLocaleString("ru-RU")} ₽` });
+    }
+    let discount = 0;
+    if (promo.discountType === "percent") {
+      discount = Math.round((Number(orderAmount) * Number(promo.discountValue)) / 100);
+    } else {
+      discount = Math.min(Number(promo.discountValue), Number(orderAmount));
+    }
+    res.json({ ok: true, code: promo.code, discountType: promo.discountType, discountValue: Number(promo.discountValue), discount, description: promo.description });
+  });
+
+  app.get("/api/admin/promo-codes", requireRole("admin"), async (_req, res) => {
+    const codes = await storage.getAllPromoCodes();
+    res.json(codes);
+  });
+
+  app.post("/api/admin/promo-codes", requireRole("admin"), async (req, res) => {
+    const { code, discountType, discountValue, minOrderAmount, maxUses, isActive, expiresAt, description } = req.body;
+    if (!code || !discountType || !discountValue) return res.status(400).json({ error: "Заполните обязательные поля" });
+    try {
+      const promo = await storage.createPromoCode({
+        code, discountType, discountValue: discountValue.toString(),
+        minOrderAmount: minOrderAmount ? minOrderAmount.toString() : null,
+        maxUses: maxUses || null, isActive: isActive !== false,
+        expiresAt: expiresAt ? new Date(expiresAt) : null, description: description || null,
+      });
+      res.json(promo);
+    } catch (e: any) {
+      if (e.code === "23505") return res.status(409).json({ error: "Такой промокод уже существует" });
+      throw e;
+    }
+  });
+
+  app.patch("/api/admin/promo-codes/:id", requireRole("admin"), async (req, res) => {
+    const { isActive, expiresAt, maxUses, description } = req.body;
+    const update: any = {};
+    if (isActive !== undefined) update.isActive = isActive;
+    if (expiresAt !== undefined) update.expiresAt = expiresAt ? new Date(expiresAt) : null;
+    if (maxUses !== undefined) update.maxUses = maxUses || null;
+    if (description !== undefined) update.description = description;
+    const promo = await storage.updatePromoCode(req.params.id, update);
+    if (!promo) return res.status(404).json({ error: "Не найден" });
+    res.json(promo);
+  });
+
+  app.delete("/api/admin/promo-codes/:id", requireRole("admin"), async (req, res) => {
+    await storage.deletePromoCode(req.params.id);
+    res.json({ ok: true });
   });
 
   // ---- ADMIN CRM ----

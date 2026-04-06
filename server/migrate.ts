@@ -53,6 +53,27 @@ export async function runMigrations() {
     `);
 
     await client.query(`
+      ALTER TABLE orders ADD COLUMN IF NOT EXISTS promo_code text;
+      ALTER TABLE orders ADD COLUMN IF NOT EXISTS promo_discount numeric(10,2) DEFAULT 0;
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS promo_codes (
+        id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+        code text NOT NULL UNIQUE,
+        discount_type text NOT NULL DEFAULT 'percent',
+        discount_value numeric(10,2) NOT NULL,
+        min_order_amount numeric(10,2),
+        max_uses integer,
+        used_count integer DEFAULT 0,
+        is_active boolean DEFAULT true,
+        expires_at timestamp,
+        description text,
+        created_at timestamp DEFAULT now()
+      );
+    `);
+
+    await client.query(`
       CREATE TABLE IF NOT EXISTS order_supplements (
         id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
         supplement_number serial UNIQUE,

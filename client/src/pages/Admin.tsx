@@ -217,6 +217,9 @@ export default function Admin() {
   const [crmGrantDesc, setCrmGrantDesc] = useState("");
   const [crmGrantOpen, setCrmGrantOpen] = useState(false);
 
+  const [promoForm, setPromoForm] = useState({ code: "", discountType: "percent", discountValue: "", minOrderAmount: "", maxUses: "", expiresAt: "", description: "" });
+  const [promoFormOpen, setPromoFormOpen] = useState(false);
+
   const isAdmin = !!user && user.role === "admin";
 
   const { data: shops, isLoading: loadingShops } = useQuery<ShopWithMeta[]>({
@@ -506,6 +509,32 @@ export default function Admin() {
     },
   });
 
+  const { data: promoCodes } = useQuery<any[]>({
+    queryKey: ["/api/admin/promo-codes"],
+    enabled: isAdmin,
+  });
+
+  const createPromoMutation = useMutation({
+    mutationFn: (data: any) => apiRequest("POST", "/api/admin/promo-codes", data),
+    onSuccess: () => {
+      toast({ title: "Промокод создан" });
+      setPromoForm({ code: "", discountType: "percent", discountValue: "", minOrderAmount: "", maxUses: "", expiresAt: "", description: "" });
+      setPromoFormOpen(false);
+      qc.invalidateQueries({ queryKey: ["/api/admin/promo-codes"] });
+    },
+    onError: (e: any) => toast({ title: "Ошибка", description: e.message, variant: "destructive" }),
+  });
+
+  const deletePromoMutation = useMutation({
+    mutationFn: (id: number) => apiRequest("DELETE", `/api/admin/promo-codes/${id}`),
+    onSuccess: () => { toast({ title: "Промокод удалён" }); qc.invalidateQueries({ queryKey: ["/api/admin/promo-codes"] }); },
+  });
+
+  const togglePromoMutation = useMutation({
+    mutationFn: ({ id, isActive }: { id: number; isActive: boolean }) => apiRequest("PATCH", `/api/admin/promo-codes/${id}`, { isActive }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["/api/admin/promo-codes"] }),
+  });
+
   if (authLoading) return null;
   if (!user || user.role !== "admin") {
     navigate("/");
@@ -606,6 +635,10 @@ export default function Admin() {
           <TabsTrigger value="settings" className="gap-1 text-xs sm:text-sm" data-testid="tab-settings">
             <Settings className="w-4 h-4 shrink-0" />
             <span>Настройки</span>
+          </TabsTrigger>
+          <TabsTrigger value="promo" className="gap-1 text-xs sm:text-sm" data-testid="tab-promo">
+            <Tag className="w-4 h-4 shrink-0" />
+            <span>Промокоды</span>
           </TabsTrigger>
         </TabsList>
         </div>
@@ -2165,6 +2198,124 @@ export default function Admin() {
               </Button>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* ==================== PROMO CODES ==================== */}
+        <TabsContent value="promo">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Промокоды</h2>
+              <Button size="sm" className="gap-1" onClick={() => setPromoFormOpen(!promoFormOpen)} data-testid="button-create-promo">
+                <Plus className="w-4 h-4" /> Создать промокод
+              </Button>
+            </div>
+            {promoFormOpen && (
+              <Card>
+                <CardContent className="p-4 space-y-3">
+                  <h3 className="font-medium text-sm">Новый промокод</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label>Код</Label>
+                      <Input value={promoForm.code} onChange={(e) => setPromoForm(f => ({ ...f, code: e.target.value.toUpperCase() }))} placeholder="SUMMER20" data-testid="input-promo-code-field" />
+                    </div>
+                    <div>
+                      <Label>Тип скидки</Label>
+                      <Select value={promoForm.discountType} onValueChange={(v) => setPromoForm(f => ({ ...f, discountType: v }))}>
+                        <SelectTrigger data-testid="select-promo-discount-type"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="percent">Процент (%)</SelectItem>
+                          <SelectItem value="fixed">Фиксированная (₽)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Размер скидки</Label>
+                      <Input type="number" value={promoForm.discountValue} onChange={(e) => setPromoForm(f => ({ ...f, discountValue: e.target.value }))} placeholder={promoForm.discountType === "percent" ? "20" : "500"} data-testid="input-promo-discount-value" />
+                    </div>
+                    <div>
+                      <Label>Мин. сумма заказа (₽)</Label>
+                      <Input type="number" value={promoForm.minOrderAmount} onChange={(e) => setPromoForm(f => ({ ...f, minOrderAmount: e.target.value }))} placeholder="1000" data-testid="input-promo-min-order" />
+                    </div>
+                    <div>
+                      <Label>Макс. использований</Label>
+                      <Input type="number" value={promoForm.maxUses} onChange={(e) => setPromoForm(f => ({ ...f, maxUses: e.target.value }))} placeholder="(без ограничений)" data-testid="input-promo-max-uses" />
+                    </div>
+                    <div>
+                      <Label>Дата окончания</Label>
+                      <Input type="date" value={promoForm.expiresAt} onChange={(e) => setPromoForm(f => ({ ...f, expiresAt: e.target.value }))} data-testid="input-promo-expires" />
+                    </div>
+                  </div>
+                  <div>
+                    <Label>Описание</Label>
+                    <Input value={promoForm.description} onChange={(e) => setPromoForm(f => ({ ...f, description: e.target.value }))} placeholder="Промокод на летнюю распродажу" data-testid="input-promo-description" />
+                  </div>
+                  <Button
+                    size="sm"
+                    disabled={!promoForm.code || !promoForm.discountValue || createPromoMutation.isPending}
+                    onClick={() => createPromoMutation.mutate({
+                      code: promoForm.code.trim().toUpperCase(),
+                      discountType: promoForm.discountType,
+                      discountValue: Number(promoForm.discountValue),
+                      minOrderAmount: promoForm.minOrderAmount ? Number(promoForm.minOrderAmount) : null,
+                      maxUses: promoForm.maxUses ? Number(promoForm.maxUses) : null,
+                      expiresAt: promoForm.expiresAt ? promoForm.expiresAt : null,
+                      description: promoForm.description || null,
+                    })}
+                    data-testid="button-save-promo"
+                  >
+                    {createPromoMutation.isPending ? "Создаём..." : "Создать"}
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+            <div className="space-y-2">
+              {!promoCodes ? (
+                <Skeleton className="h-20 w-full" />
+              ) : promoCodes.length === 0 ? (
+                <p className="text-muted-foreground text-sm text-center py-8">Промокодов ещё нет</p>
+              ) : promoCodes.map((pc: any) => (
+                <Card key={pc.id} className={pc.isActive ? "" : "opacity-60"}>
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-mono font-bold text-primary text-sm">{pc.code}</span>
+                          <Badge variant={pc.isActive ? "default" : "secondary"} className="text-xs">{pc.isActive ? "Активен" : "Отключён"}</Badge>
+                          <Badge variant="outline" className="text-xs">
+                            {pc.discountType === "percent" ? `${pc.discountValue}%` : `${Number(pc.discountValue).toLocaleString("ru-RU")} ₽`}
+                          </Badge>
+                        </div>
+                        <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
+                          {pc.minOrderAmount && <span>Мин. заказ: {Number(pc.minOrderAmount).toLocaleString("ru-RU")} ₽</span>}
+                          <span>Использований: {pc.usageCount || 0}{pc.maxUses ? ` / ${pc.maxUses}` : ""}</span>
+                          {pc.expiresAt && <span>До: {new Date(pc.expiresAt).toLocaleDateString("ru-RU")}</span>}
+                          {pc.description && <span className="italic">{pc.description}</span>}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Button
+                          size="sm" variant="outline" className="h-7 text-xs"
+                          onClick={() => togglePromoMutation.mutate({ id: pc.id, isActive: !pc.isActive })}
+                          disabled={togglePromoMutation.isPending}
+                          data-testid={`button-toggle-promo-${pc.id}`}
+                        >
+                          {pc.isActive ? "Отключить" : "Включить"}
+                        </Button>
+                        <Button
+                          size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                          onClick={() => deletePromoMutation.mutate(pc.id)}
+                          disabled={deletePromoMutation.isPending}
+                          data-testid={`button-delete-promo-${pc.id}`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
 
