@@ -53,8 +53,8 @@ export default function Home() {
           }}
         >
           <div
-            className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: `url(${heroBg})`, opacity: 0.35 }}
+            className="absolute inset-0"
+            style={{ backgroundImage: `url(${heroBg})`, backgroundSize: "auto 100%", backgroundPosition: "right center", backgroundRepeat: "no-repeat", opacity: 0.35 }}
           />
           <div className="absolute inset-0" style={{ background: "linear-gradient(to right, hsl(var(--background)) 30%, transparent)" }} />
 
