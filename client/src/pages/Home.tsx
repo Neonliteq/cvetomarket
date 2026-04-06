@@ -233,9 +233,11 @@ export default function Home() {
           <p className="text-muted-foreground max-w-md mx-auto">
             Продавайте букеты тысячам покупателей. Простое управление, удобные инструменты.
           </p>
-          <Link href="/auth?role=shop">
-            <Button size="lg">Начать продавать</Button>
-          </Link>
+          <div className="pt-2">
+            <Link href="/auth?role=shop">
+              <Button size="lg">Начать продавать</Button>
+            </Link>
+          </div>
         </section>
       </div>
     </div>
