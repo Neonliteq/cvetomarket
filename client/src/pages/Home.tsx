@@ -69,9 +69,6 @@ export default function Home() {
                 Стойкие сорта и бережная сборка — чтобы букет радовал долго
               </p>
               <p className="text-lg text-muted-foreground">
-                {shops && shops.length > 0
-                  ? `${shops.length} ${shops.length === 1 ? "цветочный магазин" : shops.length < 5 ? "цветочных магазина" : "цветочных магазинов"}.`
-                  : "Цветочные магазины."}{" "}
                 Выберите идеальный букет и оформите доставку за несколько минут.
               </p>
               <form onSubmit={handleSearch} className="flex gap-2 max-w-md">
