@@ -1,7 +1,7 @@
 import { useState, useEffect, type ComponentType } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Package, MessageCircle, User, LogOut, Star, CheckCircle, Upload, Camera, X, MapPin, ShoppingBag, TrendingUp, Store, Flower2, Activity, Send, ExternalLink, Volume2, VolumeX, Gift, Copy, Link2, Lock, Eye, EyeOff } from "lucide-react";
+import { Package, MessageCircle, User, LogOut, Star, CheckCircle, Upload, Camera, X, MapPin, ShoppingBag, TrendingUp, Store, Flower2, Activity, Send, ExternalLink, Volume2, VolumeX, Gift, Copy, Link2, Lock, Eye, EyeOff, CreditCard, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isSoundEnabled, setSoundEnabled } from "@/lib/sounds";
 import { Switch } from "@/components/ui/switch";
-import type { Order, OrderItem, Review } from "@shared/schema";
+import type { Order, OrderItem, Review, OrderSupplement } from "@shared/schema";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 
@@ -47,6 +47,77 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 type StatItem = { label: string; value: string; icon: ComponentType<{ className?: string }>; color: string; truncate?: boolean };
+
+function SupplementsBuyerSection({ orderId }: { orderId: string }) {
+  const { toast } = useToast();
+  const { data } = useQuery<{ supplements: OrderSupplement[] }>({
+    queryKey: ["/api/orders", orderId, "supplements"],
+    queryFn: () => fetch(`/api/orders/${orderId}/supplements`, { credentials: "include" }).then(r => r.json()),
+  });
+  const supplements = data?.supplements ?? [];
+  const pending = supplements.filter(s => s.status === "pending");
+  if (supplements.length === 0) return null;
+
+  return (
+    <div className="mt-3 border-t border-border pt-3">
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5 mb-2">
+        <FileText className="w-3.5 h-3.5" />
+        Доплаты от магазина
+        {pending.length > 0 && (
+          <span className="ml-1 bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 rounded-full px-1.5 py-0.5 text-xs">{pending.length}</span>
+        )}
+      </p>
+      <div className="space-y-2">
+        {supplements.map(s => (
+          <SupplementPayRow key={s.id} supplement={s} orderId={orderId} onToast={toast} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SupplementPayRow({ supplement: s, orderId, onToast }: { supplement: OrderSupplement; orderId: string; onToast: ReturnType<typeof useToast>["toast"] }) {
+  const qc = useQueryClient();
+  const [loading, setLoading] = useState(false);
+
+  const handlePay = async () => {
+    setLoading(true);
+    try {
+      const data = await apiRequest("POST", `/api/supplements/${s.id}/pay`, {});
+      if (data.paymentUrl) {
+        window.location.href = data.paymentUrl;
+      } else {
+        onToast({ title: "Ошибка", description: "Не удалось создать платёж", variant: "destructive" });
+      }
+    } catch (e: any) {
+      onToast({ title: "Ошибка", description: e.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+      qc.invalidateQueries({ queryKey: ["/api/orders", orderId, "supplements"] });
+    }
+  };
+
+  return (
+    <div className="flex items-start justify-between gap-2 p-2.5 rounded-md border border-border bg-muted/30" data-testid={`supplement-buyer-row-${s.id}`}>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-medium">{s.reason}</p>
+        {s.description && <p className="text-xs text-muted-foreground truncate">{s.description}</p>}
+        <p className="text-sm font-bold mt-0.5">{Number(s.amount).toLocaleString("ru-RU")} ₽</p>
+      </div>
+      <div className="flex flex-col items-end gap-1.5 shrink-0">
+        <Badge variant={s.status === "paid" ? "default" : s.status === "cancelled" ? "destructive" : "secondary"} className="text-xs">
+          {s.status === "paid" ? "Оплачено" : s.status === "cancelled" ? "Отменено" : "Ожидает оплаты"}
+        </Badge>
+        {s.status === "pending" && (
+          <Button size="sm" className="gap-1.5 h-7 text-xs bg-amber-600 hover:bg-amber-700 text-white" onClick={handlePay} disabled={loading} data-testid={`button-pay-supplement-${s.id}`}>
+            <CreditCard className="w-3 h-3" />
+            {loading ? "…" : "Оплатить"}
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function BuyerStats({ orders }: { orders: OrderWithItems[] }) {
   const totalOrders = orders.length;
@@ -734,7 +805,8 @@ export default function Account() {
                         </div>
                       ) : null;
                     })()}
-                    <div className="flex gap-2 flex-wrap">
+                    <SupplementsBuyerSection orderId={order.id} />
+                    <div className="flex gap-2 flex-wrap mt-3">
                       {order.status === "delivered" && !shopReviewedShopIds.has(order.shopId) && (
                         <ReviewDialog order={order} />
                       )}

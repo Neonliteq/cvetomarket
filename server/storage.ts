@@ -12,7 +12,8 @@ import {
   type ShopWorker,
   type Notification, type InsertNotification,
   type BonusTransaction, type InsertBonusTransaction,
-  users, shops, products, orders, orderItems, reviews, messages, categories, cities, platformSettings, shopWorkers, notifications, bonusTransactions,
+  type OrderSupplement, type InsertOrderSupplement,
+  users, shops, products, orders, orderItems, reviews, messages, categories, cities, platformSettings, shopWorkers, notifications, bonusTransactions, orderSupplements,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, inArray, sql } from "drizzle-orm";
@@ -141,6 +142,14 @@ export interface IStorage {
   // CRM
   getCRMCustomers(): Promise<CRMCustomer[]>;
   updateUserAdminNotes(userId: string, notes: string): Promise<void>;
+
+  // Order Supplements
+  createOrderSupplement(data: InsertOrderSupplement): Promise<OrderSupplement>;
+  getOrderSupplements(orderId: string): Promise<OrderSupplement[]>;
+  getSupplementById(id: string): Promise<OrderSupplement | undefined>;
+  getSupplementByNumber(supplementNumber: number): Promise<OrderSupplement | undefined>;
+  updateSupplementStatus(id: string, status: string, paymentId?: string): Promise<OrderSupplement | undefined>;
+  cancelSupplement(id: string): Promise<void>;
 }
 
 export class DbStorage implements IStorage {
@@ -569,6 +578,39 @@ export class DbStorage implements IStorage {
 
   async updateUserAdminNotes(userId: string, notes: string): Promise<void> {
     await db.update(users).set({ adminNotes: notes }).where(eq(users.id, userId));
+  }
+
+  async createOrderSupplement(data: InsertOrderSupplement): Promise<OrderSupplement> {
+    const [s] = await db.insert(orderSupplements).values(data).returning();
+    return s;
+  }
+
+  async getSupplementById(id: string): Promise<OrderSupplement | undefined> {
+    const [s] = await db.select().from(orderSupplements).where(eq(orderSupplements.id, id));
+    return s;
+  }
+
+  async getOrderSupplements(orderId: string): Promise<OrderSupplement[]> {
+    return db.select().from(orderSupplements)
+      .where(eq(orderSupplements.orderId, orderId))
+      .orderBy(desc(orderSupplements.createdAt));
+  }
+
+  async getSupplementByNumber(supplementNumber: number): Promise<OrderSupplement | undefined> {
+    const [s] = await db.select().from(orderSupplements)
+      .where(eq(orderSupplements.supplementNumber, supplementNumber));
+    return s;
+  }
+
+  async updateSupplementStatus(id: string, status: string, paymentId?: string): Promise<OrderSupplement | undefined> {
+    const update: any = { status };
+    if (paymentId) update.paymentId = paymentId;
+    const [s] = await db.update(orderSupplements).set(update).where(eq(orderSupplements.id, id)).returning();
+    return s;
+  }
+
+  async cancelSupplement(id: string): Promise<void> {
+    await db.update(orderSupplements).set({ status: "cancelled" }).where(eq(orderSupplements.id, id));
   }
 }
 

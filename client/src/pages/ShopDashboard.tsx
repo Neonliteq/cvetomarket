@@ -26,7 +26,7 @@ import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation, useSearch } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
-import type { Product, Order, Shop, Category, Review } from "@shared/schema";
+import type { Product, Order, Shop, Category, Review, OrderSupplement } from "@shared/schema";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { DeliveryZonesMap, type DeliveryZone } from "@/components/DeliveryZonesMap";
@@ -36,6 +36,122 @@ const STATUS_LABELS: Record<string, string> = {
   new: "Новый", confirmed: "Подтверждён", assembling: "Сборка",
   delivering: "Доставка", delivered: "Доставлен", cancelled: "Отменён",
 };
+
+function SupplementsSection({ orderId }: { orderId: string }) {
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const [formOpen, setFormOpen] = useState(false);
+  const [amount, setAmount] = useState("");
+  const [reason, setReason] = useState("");
+  const [description, setDescription] = useState("");
+
+  const { data, isLoading } = useQuery<{ supplements: OrderSupplement[] }>({
+    queryKey: ["/api/orders", orderId, "supplements"],
+    queryFn: () => fetch(`/api/orders/${orderId}/supplements`, { credentials: "include" }).then(r => r.json()),
+  });
+  const supplements = data?.supplements ?? [];
+
+  const createMutation = useMutation({
+    mutationFn: () => apiRequest("POST", `/api/orders/${orderId}/supplements`, { amount: Number(amount), reason, description }),
+    onSuccess: () => {
+      toast({ title: "Счёт на доплату выставлен" });
+      qc.invalidateQueries({ queryKey: ["/api/orders", orderId, "supplements"] });
+      setFormOpen(false); setAmount(""); setReason(""); setDescription("");
+    },
+    onError: (e: any) => toast({ title: "Ошибка", description: e.message, variant: "destructive" }),
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: (id: string) => apiRequest("PATCH", `/api/supplements/${id}/cancel`, {}),
+    onSuccess: () => {
+      toast({ title: "Доплата отменена" });
+      qc.invalidateQueries({ queryKey: ["/api/orders", orderId, "supplements"] });
+    },
+    onError: (e: any) => toast({ title: "Ошибка", description: e.message, variant: "destructive" }),
+  });
+
+  const pendingCount = supplements.filter(s => s.status === "pending").length;
+
+  return (
+    <div className="mt-3 border-t border-border pt-3">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+          <FileText className="w-3.5 h-3.5" />
+          Доплаты
+          {pendingCount > 0 && (
+            <span className="ml-1 bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 rounded-full px-1.5 py-0.5 text-xs">{pendingCount}</span>
+          )}
+        </span>
+        {!formOpen && (
+          <Button size="sm" variant="outline" className="gap-1 h-7 text-xs" onClick={() => setFormOpen(true)} data-testid={`button-add-supplement-${orderId}`}>
+            <Plus className="w-3 h-3" /> Выставить счёт
+          </Button>
+        )}
+      </div>
+
+      {isLoading && <p className="text-xs text-muted-foreground">Загрузка…</p>}
+
+      {supplements.length > 0 && (
+        <div className="space-y-2 mb-2">
+          {supplements.map(s => (
+            <div key={s.id} className="flex items-start justify-between gap-2 p-2 rounded-md bg-muted/50 text-sm" data-testid={`supplement-row-${s.id}`}>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-xs">{s.reason}</p>
+                {s.description && <p className="text-xs text-muted-foreground truncate">{s.description}</p>}
+                <p className="font-bold text-xs mt-0.5">{Number(s.amount).toLocaleString("ru-RU")} ₽</p>
+              </div>
+              <div className="flex flex-col items-end gap-1 shrink-0">
+                <Badge variant={s.status === "paid" ? "default" : s.status === "cancelled" ? "destructive" : "secondary"} className="text-xs">
+                  {s.status === "paid" ? "Оплачено" : s.status === "cancelled" ? "Отменено" : "Ожидает"}
+                </Badge>
+                {s.status === "pending" && (
+                  <Button size="sm" variant="ghost" className="h-6 text-xs text-destructive hover:text-destructive px-2" onClick={() => cancelMutation.mutate(s.id)} disabled={cancelMutation.isPending} data-testid={`button-cancel-supplement-${s.id}`}>
+                    <X className="w-3 h-3 mr-0.5" /> Отменить
+                  </Button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {formOpen && (
+        <div className="space-y-2 p-3 bg-muted/40 rounded-md border border-border">
+          <Input
+            placeholder="Причина доплаты (обязательно)"
+            value={reason}
+            onChange={e => setReason(e.target.value)}
+            className="h-8 text-sm"
+            data-testid={`input-supplement-reason-${orderId}`}
+          />
+          <Input
+            type="number"
+            placeholder="Сумма, ₽"
+            value={amount}
+            onChange={e => setAmount(e.target.value)}
+            className="h-8 text-sm"
+            data-testid={`input-supplement-amount-${orderId}`}
+          />
+          <Textarea
+            placeholder="Комментарий (необязательно)"
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            className="text-sm min-h-[56px]"
+            data-testid={`input-supplement-description-${orderId}`}
+          />
+          <div className="flex gap-2">
+            <Button size="sm" className="flex-1" onClick={() => createMutation.mutate()} disabled={createMutation.isPending || !reason.trim() || !amount} data-testid={`button-submit-supplement-${orderId}`}>
+              Выставить счёт
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => { setFormOpen(false); setAmount(""); setReason(""); setDescription(""); }}>
+              Отмена
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const STATUS_COLORS: Record<string, string> = {
   new: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
@@ -1007,6 +1123,9 @@ export default function ShopDashboard() {
                         Написать заказчику
                       </Button>
                     </div>
+                    {!["cancelled", "delivered"].includes(order.status) && (
+                      <SupplementsSection orderId={order.id} />
+                    )}
                   </CardContent>
                 </Card>
                 ));

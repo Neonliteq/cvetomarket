@@ -699,7 +699,26 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(400).send("error: invalid signature");
       }
 
-      const order = await storage.getOrderByNumber(Number(InvId));
+      const SUPPLEMENT_OFFSET = 100000;
+      const invIdNum = Number(InvId);
+
+      // Supplement payment (InvId >= SUPPLEMENT_OFFSET + 1)
+      if (invIdNum > SUPPLEMENT_OFFSET) {
+        const supplementNumber = invIdNum - SUPPLEMENT_OFFSET;
+        const supplement = await storage.getSupplementByNumber(supplementNumber);
+        if (!supplement) {
+          console.error("[robokassa/result] supplement not found for InvId", InvId);
+          return res.status(400).send("error: supplement not found");
+        }
+        if (supplement.status !== "paid") {
+          await storage.updateSupplementStatus(supplement.id, "paid", `robokassa:${InvId}`);
+          console.log("[robokassa/result] supplement paid:", supplement.id);
+        }
+        return res.send(`OK${InvId}`);
+      }
+
+      // Regular order payment
+      const order = await storage.getOrderByNumber(invIdNum);
       if (!order) {
         console.error("[robokassa/result] order not found for InvId", InvId);
         return res.status(400).send("error: order not found");
@@ -1529,6 +1548,105 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const { notes } = req.body;
       await storage.updateUserAdminNotes(req.params.id, notes ?? "");
+      res.json({ ok: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // ── Order Supplements ────────────────────────────────────────────────────
+
+  // Create a supplement invoice (shop/worker/admin)
+  app.post("/api/orders/:id/supplements", requireRole("shop", "admin"), async (req, res) => {
+    try {
+      const orderId = req.params.id;
+      const order = await storage.getOrder(orderId);
+      if (!order) return res.status(404).json({ error: "Заказ не найден" });
+
+      const { amount, reason, description } = req.body;
+      if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
+        return res.status(400).json({ error: "Укажите корректную сумму доплаты" });
+      }
+      if (!reason?.trim()) {
+        return res.status(400).json({ error: "Укажите причину доплаты" });
+      }
+
+      const supplement = await storage.createOrderSupplement({
+        orderId,
+        shopId: order.shopId,
+        amount: String(Number(amount).toFixed(2)),
+        reason: reason.trim(),
+        description: description?.trim() || null,
+        status: "pending",
+        paymentId: null,
+      });
+
+      // Notify buyer if registered
+      if (order.buyerId) {
+        await storage.createNotification({
+          userId: order.buyerId,
+          type: "order_status",
+          title: "Магазин выставил счёт на доплату",
+          text: `${reason.trim()} — ${Number(amount).toLocaleString("ru-RU")} ₽`,
+          link: "/account",
+          isRead: false,
+        });
+        const buyer = await storage.getUser(order.buyerId);
+        if (buyer?.telegramChatId) {
+          await sendTelegramMessage(
+            buyer.telegramChatId,
+            `💳 <b>Магазин выставил счёт на доплату</b>\n\n<b>${reason.trim()}</b>\nСумма: <b>${Number(amount).toLocaleString("ru-RU")} ₽</b>\n\nОткройте раздел «Мои заказы» для оплаты.`
+          );
+        }
+      }
+
+      res.json({ supplement });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Get supplements for an order
+  app.get("/api/orders/:id/supplements", requireAuth, async (req, res) => {
+    try {
+      const supplements = await storage.getOrderSupplements(req.params.id);
+      res.json({ supplements });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Generate Robokassa payment URL for supplement (buyer)
+  app.post("/api/supplements/:id/pay", requireAuth, async (req, res) => {
+    try {
+      const supplement = await storage.getSupplementById(req.params.id);
+      if (!supplement) return res.status(404).json({ error: "Доплата не найдена" });
+      if (supplement.status !== "pending") return res.status(400).json({ error: "Доплата уже оплачена или отменена" });
+
+      if (!isRobokassaConfigured()) {
+        return res.status(400).json({ error: "Платёжная система не настроена" });
+      }
+
+      const SUPPLEMENT_OFFSET = 100000;
+      const paymentUrl = buildPaymentUrl({
+        account: supplement.supplementNumber + SUPPLEMENT_OFFSET,
+        sum: Number(supplement.amount),
+        desc: `Доплата: ${supplement.reason}`,
+      });
+
+      res.json({ paymentUrl });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Cancel a supplement (shop/admin)
+  app.patch("/api/supplements/:id/cancel", requireRole("shop", "admin"), async (req, res) => {
+    try {
+      const supplement = await storage.getSupplementById(req.params.id);
+      if (!supplement) return res.status(404).json({ error: "Доплата не найдена" });
+      if (supplement.status !== "pending") return res.status(400).json({ error: "Можно отменить только ожидающую доплату" });
+      await storage.cancelSupplement(req.params.id);
       res.json({ ok: true });
     } catch (e: any) {
       res.status(500).json({ error: e.message });

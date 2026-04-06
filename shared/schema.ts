@@ -184,6 +184,19 @@ export const notifications = pgTable("notifications", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const orderSupplements = pgTable("order_supplements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  supplementNumber: serial("supplement_number"),
+  orderId: varchar("order_id").notNull().references(() => orders.id),
+  shopId: varchar("shop_id").notNull().references(() => shops.id),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  reason: varchar("reason", { length: 255 }).notNull(),
+  description: text("description"),
+  status: varchar("status", { length: 20 }).notNull().default("pending"),
+  paymentId: text("payment_id"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
 export const insertShopSchema = createInsertSchema(shops).omit({ id: true, createdAt: true, rating: true, reviewCount: true });
 export const insertProductSchema = createInsertSchema(products).omit({ id: true, createdAt: true, rating: true, reviewCount: true });
@@ -222,3 +235,6 @@ export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type BonusTransaction = typeof bonusTransactions.$inferSelect;
 export const insertBonusTransactionSchema = createInsertSchema(bonusTransactions).omit({ id: true, createdAt: true });
 export type InsertBonusTransaction = z.infer<typeof insertBonusTransactionSchema>;
+export type OrderSupplement = typeof orderSupplements.$inferSelect;
+export const insertOrderSupplementSchema = createInsertSchema(orderSupplements).omit({ id: true, supplementNumber: true, createdAt: true });
+export type InsertOrderSupplement = z.infer<typeof insertOrderSupplementSchema>;

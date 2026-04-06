@@ -52,6 +52,21 @@ export async function runMigrations() {
       CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");
     `);
 
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS order_supplements (
+        id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+        supplement_number serial UNIQUE,
+        order_id varchar NOT NULL REFERENCES orders(id),
+        shop_id varchar NOT NULL REFERENCES shops(id),
+        amount numeric(10,2) NOT NULL,
+        reason varchar(255) NOT NULL,
+        description text,
+        status varchar(20) NOT NULL DEFAULT 'pending',
+        payment_id text,
+        created_at timestamp NOT NULL DEFAULT now()
+      );
+    `);
+
     console.log("[migrate] Schema up to date");
   } catch (err) {
     console.error("[migrate] Migration error:", err);
