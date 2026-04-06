@@ -49,7 +49,7 @@ export default function Home() {
         <div
           className="min-h-[500px] md:min-h-[600px] flex items-center"
           style={{
-            background: "linear-gradient(135deg, hsl(134 30% 20% / 0.12) 0%, hsl(126 29% 71% / 0.06) 50%, transparent 100%)",
+            background: "linear-gradient(135deg, hsl(142 55% 30% / 0.10) 0%, hsl(126 32% 71% / 0.06) 50%, transparent 100%)",
           }}
         >
           <div
