@@ -64,6 +64,9 @@ export default function Home() {
                 Свежие цветы для важного<br />
                 <span className="text-primary">события и без повода</span>
               </h1>
+              <p className="text-base text-muted-foreground/80 italic">
+                Стойкие сорта и бережная сборка — чтобы букет радовал долго
+              </p>
               <p className="text-lg text-muted-foreground">
                 {shops && shops.length > 0
                   ? `${shops.length} ${shops.length === 1 ? "цветочный магазин" : shops.length < 5 ? "цветочных магазина" : "цветочных магазинов"}.`
