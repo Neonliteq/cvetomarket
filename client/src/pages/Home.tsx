@@ -61,9 +61,9 @@ export default function Home() {
           <div className="relative max-w-7xl mx-auto px-4 py-16 md:py-24">
             <div className="max-w-xl space-y-6">
               <Badge className="w-fit">Доставка от 60 минут</Badge>
-              <h1 className="text-4xl md:text-5xl font-bold leading-tight">
+              <h1 className="text-4xl md:text-5xl font-bold leading-tight text-black dark:text-white">
                 Свежие цветы для важного<br />
-                <span className="text-primary">события и без повода</span>
+                события и без повода
               </h1>
               <p className="text-base text-muted-foreground/80 italic">
                 Стойкие сорта и бережная сборка — чтобы букет радовал долго
