@@ -126,16 +126,6 @@ export function ShopsMap({ shops }: ShopsMapProps) {
     };
   }, [loadYmaps]);
 
-  if (shopsWithCoords.length === 0) {
-    return (
-      <div className="text-center py-20 text-muted-foreground space-y-2">
-        <MapPin className="w-12 h-12 mx-auto opacity-20" />
-        <p className="font-medium">Нет магазинов с координатами</p>
-        <p className="text-sm">Магазины появятся на карте после указания адреса</p>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-2">
       <div
@@ -147,6 +137,12 @@ export function ShopsMap({ shops }: ShopsMapProps) {
         <div className="flex items-center justify-center py-8 text-muted-foreground text-sm">
           <MapPin className="w-4 h-4 mr-2 animate-pulse" />
           Загрузка карты...
+        </div>
+      )}
+      {mapReady && shopsWithCoords.length === 0 && (
+        <div className="text-center py-4 text-muted-foreground text-sm space-y-1">
+          <p className="font-medium">Нет магазинов с координатами</p>
+          <p>Магазины появятся на карте после указания адреса</p>
         </div>
       )}
     </div>
