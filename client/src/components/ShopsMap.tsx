@@ -30,28 +30,36 @@ export function ShopsMap({ shops }: ShopsMapProps) {
     if (!mapRef.current || ymapInstance.current) return;
     const ymaps = (window as any).ymaps;
 
-    const center = shopsWithCoords.length > 0
+    const MOSCOW: [number, number] = [55.751574, 37.573856];
+
+    const center = shopsWithCoords.length > 1
       ? [Number(shopsWithCoords[0].latitude), Number(shopsWithCoords[0].longitude)]
-      : [55.751574, 37.573856];
+      : MOSCOW;
 
     const map = new ymaps.Map(mapRef.current, {
       center,
-      zoom: shopsWithCoords.length > 1 ? 10 : 13,
+      zoom: shopsWithCoords.length > 1 ? 10 : 12,
       controls: ["zoomControl", "geolocationControl"],
     });
 
     ymapInstance.current = map;
     setMapReady(true);
 
-    if (shopsWithCoords.length <= 1 && navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        ({ coords }) => {
-          if (ymapInstance.current) {
-            ymapInstance.current.setCenter([coords.latitude, coords.longitude], shopsWithCoords.length === 1 ? 13 : 12);
+    if (shopsWithCoords.length <= 1) {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          ({ coords }) => {
+            if (ymapInstance.current) {
+              ymapInstance.current.setCenter([coords.latitude, coords.longitude], 12);
+            }
+          },
+          () => {
+            if (ymapInstance.current) {
+              ymapInstance.current.setCenter(MOSCOW, 12);
+            }
           }
-        },
-        () => {}
-      );
+        );
+      }
     }
 
     shopsWithCoords.forEach((shop) => {
