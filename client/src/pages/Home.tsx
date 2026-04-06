@@ -225,9 +225,9 @@ export default function Home() {
           )}
         </section>
 
-        <section className="rounded-lg bg-primary/5 border border-primary/10 p-8 text-center space-y-4">
-          <div className="flex justify-center mb-4">
-            <Star className="w-10 h-10 text-primary fill-primary/30" />
+        <section className="rounded-lg bg-primary/5 border border-primary/10 px-8 py-10 text-center space-y-4">
+          <div className="flex justify-center">
+            <Flower2 className="w-10 h-10 text-primary fill-primary/30" />
           </div>
           <h2 className="text-2xl font-bold">Откройте свой цветочный магазин</h2>
           <p className="text-muted-foreground max-w-md mx-auto">
