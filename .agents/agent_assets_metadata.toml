@@ -1,0 +1,8 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "NsjSO9bYJXSc0BjXpv9d1"
+uri = "file://attached_assets/footer_eucalyptus.png"
+type = "image"
+title = "footer eucalyptus background"

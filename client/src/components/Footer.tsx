@@ -1,10 +1,16 @@
 import { Link } from "wouter";
 import { Flower2 } from "lucide-react";
+import eucalyptusBg from "@assets/footer_eucalyptus.png";
 
 export function Footer() {
   return (
-    <footer className="mt-16" style={{ background: "hsl(152 28% 22%)" }}>
-      <div className="max-w-7xl mx-auto px-4 py-10 grid grid-cols-1 md:grid-cols-4 gap-8">
+    <footer className="mt-16 relative" style={{
+        backgroundImage: `url(${eucalyptusBg})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }}>
+      <div className="absolute inset-0" style={{ background: "hsl(152 40% 12% / 0.82)" }} />
+      <div className="relative z-10 max-w-7xl mx-auto px-4 py-10 grid grid-cols-1 md:grid-cols-4 gap-8">
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-md flex items-center justify-center" style={{ background: "hsl(152 35% 32%)" }}>
@@ -41,7 +47,7 @@ export function Footer() {
           </div>
         </div>
       </div>
-      <div style={{ borderTop: "1px solid hsl(152 25% 30%)" }}>
+      <div className="relative z-10" style={{ borderTop: "1px solid hsl(152 25% 30%)" }}>
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <p className="text-xs" style={{ color: "hsl(140 15% 58%)" }}>© 2026 ЦветоМаркет. Все права защищены.</p>
         </div>
