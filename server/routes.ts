@@ -162,6 +162,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         if (referrer) referredBy = referrer.id;
       }
       const user = await storage.createUser({ email, password: hash, name, phone: phone || null, role: role || "buyer", referralCode: newRefCode, referredBy } as any);
+      await storage.addBonusTransaction(user.id, 1000, "welcome", "Приветственный бонус за регистрацию");
       if (role === "shop") {
         const { inn, ogrn, legalName, legalAddress, legalType, description, cityId, address } = req.body;
         await storage.createShop({
@@ -359,6 +360,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
             referralCode: refCode,
             vkId: String(vkId),
           });
+          await storage.addBonusTransaction(user!.id, 1000, "welcome", "Приветственный бонус за регистрацию");
         }
       }
       if (user!.isBlocked) return res.redirect("/auth?error=vk_blocked");

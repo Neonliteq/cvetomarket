@@ -65,7 +65,7 @@ export default function Checkout() {
     enabled: !!user,
   });
   const bonusBalance = bonusData?.balance || 0;
-  const maxBonus = Math.min(bonusBalance, Math.floor(total + DELIVERY));
+  const maxBonus = Math.min(bonusBalance, Math.floor((total + DELIVERY) * 0.20));
 
   useEffect(() => {
     if (bonusToUse > maxBonus) setBonusToUse(maxBonus);
@@ -446,7 +446,7 @@ export default function Checkout() {
                     <div className="flex items-center gap-2 text-sm">
                       <Gift className="w-4 h-4 text-amber-600" />
                       <span className="font-medium">Списать бонусы</span>
-                      <span className="text-xs text-muted-foreground">(доступно {bonusBalance})</span>
+                      <span className="text-xs text-muted-foreground">(доступно {bonusBalance}, макс. 20% от суммы — {maxBonus})</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Input
