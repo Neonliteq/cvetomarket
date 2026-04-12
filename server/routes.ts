@@ -183,6 +183,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const { email, password } = req.body;
       const user = await storage.getUserByEmail(email);
       if (!user) return res.status(401).json({ error: "Неверный email или пароль" });
+      if (!user.password) return res.status(401).json({ error: "Этот аккаунт использует вход через ВКонтакте. Используйте кнопку «Войти через ВКонтакте»." });
       const match = await bcrypt.compare(password, user.password);
       if (!match) return res.status(401).json({ error: "Неверный email или пароль" });
       if (user.isBlocked) return res.status(403).json({ error: "Ваш аккаунт заблокирован" });
@@ -262,9 +263,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   // ---- VK OAuth ----
-  app.get("/api/auth/vk", (req, res) => {
+  app.get("/api/auth/vk", async (req, res) => {
     const appId = process.env.VK_APP_ID;
     if (!appId) return res.status(500).send("VK OAuth not configured");
+    const crypto = await import("crypto");
+    const state = crypto.randomBytes(16).toString("hex");
+    (req.session as any).vkOAuthState = state;
     const proto = (req.headers["x-forwarded-proto"] as string) || req.protocol;
     const host = (req.headers["x-forwarded-host"] as string) || (req.headers.host as string);
     const redirectUri = `${proto}://${host}/api/auth/vk/callback`;
@@ -274,14 +278,18 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       redirect_uri: redirectUri,
       scope: "email",
       response_type: "code",
+      state,
       v: "5.131",
     });
     res.redirect(`https://oauth.vk.com/authorize?${params}`);
   });
 
   app.get("/api/auth/vk/callback", async (req, res) => {
-    const { code, error } = req.query;
+    const { code, error, state } = req.query;
     if (error || !code) return res.redirect("/auth?error=vk_cancelled");
+    const expectedState = (req.session as any).vkOAuthState;
+    if (!state || !expectedState || state !== expectedState) return res.redirect("/auth?error=vk_cancelled");
+    delete (req.session as any).vkOAuthState;
     const appId = process.env.VK_APP_ID;
     const appSecret = process.env.VK_APP_SECRET;
     if (!appId || !appSecret) return res.redirect("/auth?error=vk_cancelled");
@@ -317,17 +325,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
           let refCode = "";
           for (let i = 0; i < 8; i++) refCode += chars[Math.floor(Math.random() * chars.length)];
-          const randomPass = Math.random().toString(36) + Math.random().toString(36) + Date.now();
-          const hash = await bcrypt.hash(randomPass, SALT_ROUNDS);
           user = await storage.createUser({
             email,
-            password: hash,
+            password: null,
             name,
             role: "buyer",
             avatarUrl,
             referralCode: refCode,
             vkId: String(vkId),
-          } as any);
+          });
         }
       }
       if (user!.isBlocked) return res.redirect("/auth?error=vk_blocked");

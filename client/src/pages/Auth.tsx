@@ -537,6 +537,20 @@ export default function Auth() {
                       </Button>
                     </form>
                   </Form>
+                  <div className="relative my-4">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-card px-2 text-muted-foreground">или</span>
+                    </div>
+                  </div>
+                  <a href="/api/auth/vk" className="block w-full" data-testid="button-vk-register">
+                    <Button variant="outline" className="w-full gap-2" type="button">
+                      <SiVk className="w-5 h-5 text-[#0077FF]" />
+                      Зарегистрироваться через ВКонтакте
+                    </Button>
+                  </a>
                 </TabsContent>
               </Tabs>
             )}

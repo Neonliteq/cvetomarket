@@ -90,6 +90,7 @@ export async function runMigrations() {
 
     await client.query(`
       ALTER TABLE users ADD COLUMN IF NOT EXISTS vk_id text UNIQUE;
+      ALTER TABLE users ALTER COLUMN password DROP NOT NULL;
     `);
 
     console.log("[migrate] Schema up to date");
