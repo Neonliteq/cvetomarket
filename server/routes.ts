@@ -268,17 +268,22 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     if (!appId) return res.status(500).send("VK OAuth not configured");
     const crypto = await import("crypto");
     const state = crypto.randomBytes(16).toString("hex");
+    const codeVerifier = crypto.randomBytes(32).toString("base64url");
+    const codeChallenge = crypto.createHash("sha256").update(codeVerifier).digest("base64url");
     (req.session as any).vkOAuthState = state;
+    (req.session as any).vkCodeVerifier = codeVerifier;
     const proto = (req.headers["x-forwarded-proto"] as string) || req.protocol;
     const host = (req.headers["x-forwarded-host"] as string) || (req.headers.host as string);
     const redirectUri = `${proto}://${host}/api/auth/vk/callback`;
     const params = new URLSearchParams({
+      response_type: "code",
       client_id: appId,
       redirect_uri: redirectUri,
-      response_type: "code",
       state,
+      code_challenge: codeChallenge,
+      code_challenge_method: "s256",
     });
-    res.redirect(`https://oauth.vk.com/authorize?${params}`);
+    res.redirect(`https://id.vk.com/authorize?${params}`);
   });
 
   app.get("/api/auth/vk/callback", async (req, res) => {
@@ -287,6 +292,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const expectedState = (req.session as any).vkOAuthState;
     if (!state || !expectedState || state !== expectedState) return res.redirect("/auth?error=vk_cancelled");
     delete (req.session as any).vkOAuthState;
+    const codeVerifier = (req.session as any).vkCodeVerifier as string | undefined;
+    delete (req.session as any).vkCodeVerifier;
     const appId = process.env.VK_APP_ID;
     const appSecret = process.env.VK_APP_SECRET;
     if (!appId || !appSecret) return res.redirect("/auth?error=vk_cancelled");
@@ -294,25 +301,38 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const host = (req.headers["x-forwarded-host"] as string) || (req.headers.host as string);
     const redirectUri = `${proto}://${host}/api/auth/vk/callback`;
     try {
-      const tokenResp = await fetch(
-        `https://oauth.vk.com/access_token?client_id=${appId}&client_secret=${appSecret}&redirect_uri=${encodeURIComponent(redirectUri)}&code=${code}`
-      );
+      const tokenBody = new URLSearchParams({
+        grant_type: "authorization_code",
+        client_id: appId,
+        client_secret: appSecret,
+        redirect_uri: redirectUri,
+        code: code as string,
+        ...(codeVerifier ? { code_verifier: codeVerifier } : {}),
+      });
+      const tokenResp = await fetch("https://id.vk.com/oauth2/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: tokenBody,
+      });
       const tokenData = await tokenResp.json() as any;
       if (tokenData.error) {
         console.error("VK token error:", tokenData);
         return res.redirect("/auth?error=vk_cancelled");
       }
-      const { access_token, user_id: vkIdRaw, email: vkEmail } = tokenData;
-      const vkId = String(vkIdRaw);
-      const infoResp = await fetch(
-        `https://api.vk.com/method/users.get?access_token=${access_token}&fields=photo_200&v=5.131`
-      );
+      const { access_token } = tokenData;
+      const infoResp = await fetch("https://id.vk.com/oauth2/user_info", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ client_id: appId, access_token }),
+      });
       const infoData = await infoResp.json() as any;
-      const vkUser = infoData.response?.[0];
+      const vkUser = infoData.user;
       if (!vkUser) {
-        console.error("VK users.get error:", infoData);
+        console.error("VK user_info error:", infoData);
         return res.redirect("/auth?error=vk_cancelled");
       }
+      const vkId = String(vkUser.user_id);
+      const vkEmail = vkUser.email || null;
       let user = await storage.getUserByVkId(String(vkId));
       if (!user) {
         if (vkEmail) {
