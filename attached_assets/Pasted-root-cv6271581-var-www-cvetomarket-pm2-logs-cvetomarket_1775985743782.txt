@@ -1,0 +1,54 @@
+root@cv6271581:/var/www/cvetomarket# pm2 logs cvetomarket --lines 50
+[TAILING] Tailing last 50 lines for [cvetomarket] process (change the value with --lines option)
+/var/log/cvetomarket/error-0.log last 50 lines:
+/var/log/cvetomarket/out-0.log last 50 lines:
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |
+0|cvetomar | 2026-04-01 17:57:07 +03:00:
+0|cvetomar | > rest-express@1.0.0 start
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |
+0|cvetomar | 2026-04-01 18:01:49 +03:00:
+0|cvetomar | > rest-express@1.0.0 start
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |
+0|cvetomar | 2026-04-01 18:10:59 +03:00:
+0|cvetomar | > rest-express@1.0.0 start
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |
+0|cvetomar | 2026-04-01 18:14:55 +03:00:
+0|cvetomar | > rest-express@1.0.0 start
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |
+0|cvetomar | 2026-04-01 18:30:54 +03:00:
+0|cvetomar | > rest-express@1.0.0 start
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |
+0|cvetomar | 2026-04-01 18:35:17 +03:00:
+0|cvetomar | > rest-express@1.0.0 start
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |
+0|cvetomar | 2026-04-01 18:37:36 +03:00:
+0|cvetomar | > rest-express@1.0.0 start
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |
+0|cvetomar | 2026-04-06 17:41:50 +03:00:
+0|cvetomar | > rest-express@1.0.0 start
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |
+0|cvetomar | 2026-04-06 18:12:04 +03:00:
+0|cvetomar | > rest-express@1.0.0 start
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |
+0|cvetomar | 2026-04-06 18:28:47 +03:00:
+0|cvetomar | > rest-express@1.0.0 start
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |
+0|cvetomar | 2026-04-06 18:41:41 +03:00:
+0|cvetomar | > rest-express@1.0.0 start
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |
+0|cvetomar | 2026-04-12 12:21:07 +03:00:
+0|cvetomar | > rest-express@1.0.0 start
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |

@@ -268,7 +268,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     if (!appId) return res.status(500).send("VK OAuth not configured");
     const crypto = await import("crypto");
     const state = crypto.randomBytes(16).toString("hex");
+    const codeVerifier = crypto.randomBytes(32).toString("base64url");
+    const codeChallenge = crypto.createHash("sha256").update(codeVerifier).digest("base64url");
     (req.session as any).vkOAuthState = state;
+    (req.session as any).vkCodeVerifier = codeVerifier;
     const proto = (req.headers["x-forwarded-proto"] as string) || req.protocol;
     const host = (req.headers["x-forwarded-host"] as string) || (req.headers.host as string);
     const redirectUri = `${proto}://${host}/api/auth/vk/callback`;
@@ -279,6 +282,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       scope: "email",
       response_type: "code",
       state,
+      code_challenge: codeChallenge,
+      code_challenge_method: "S256",
       v: "5.131",
     });
     res.redirect(`https://oauth.vk.com/authorize?${params}`);
@@ -290,6 +295,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const expectedState = (req.session as any).vkOAuthState;
     if (!state || !expectedState || state !== expectedState) return res.redirect("/auth?error=vk_cancelled");
     delete (req.session as any).vkOAuthState;
+    const codeVerifier = (req.session as any).vkCodeVerifier as string | undefined;
+    delete (req.session as any).vkCodeVerifier;
     const appId = process.env.VK_APP_ID;
     const appSecret = process.env.VK_APP_SECRET;
     if (!appId || !appSecret) return res.redirect("/auth?error=vk_cancelled");
@@ -297,9 +304,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const host = (req.headers["x-forwarded-host"] as string) || (req.headers.host as string);
     const redirectUri = `${proto}://${host}/api/auth/vk/callback`;
     try {
-      const tokenResp = await fetch(
-        `https://oauth.vk.com/access_token?client_id=${appId}&client_secret=${appSecret}&redirect_uri=${encodeURIComponent(redirectUri)}&code=${code}`
-      );
+      const tokenParams = new URLSearchParams({
+        client_id: appId,
+        client_secret: appSecret,
+        redirect_uri: redirectUri,
+        code: code as string,
+      });
+      if (codeVerifier) tokenParams.set("code_verifier", codeVerifier);
+      const tokenResp = await fetch(`https://oauth.vk.com/access_token?${tokenParams}`);
       const tokenData = await tokenResp.json() as any;
       if (tokenData.error) return res.redirect("/auth?error=vk_cancelled");
       const { access_token, user_id: vkId, email: vkEmail } = tokenData;
