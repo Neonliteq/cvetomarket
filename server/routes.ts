@@ -282,7 +282,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       state,
       code_challenge: codeChallenge,
       code_challenge_method: "s256",
-      scope: "email",
     });
     res.redirect(`https://id.vk.com/oauth2/authorize?${params}`);
   });
