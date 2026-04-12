@@ -39,6 +39,7 @@ export interface IStorage {
   // Users
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
+  getUserByVkId(vkId: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, data: Partial<User>): Promise<User | undefined>;
   deleteUser(id: string): Promise<void>;
@@ -168,6 +169,10 @@ export class DbStorage implements IStorage {
   }
   async getUserByEmail(email: string) {
     const [u] = await db.select().from(users).where(sql`lower(${users.email}) = ${email.toLowerCase()}`);
+    return u;
+  }
+  async getUserByVkId(vkId: string) {
+    const [u] = await db.select().from(users).where(eq(users.vkId, vkId));
     return u;
   }
   async createUser(data: InsertUser) {

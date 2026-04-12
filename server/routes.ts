@@ -261,6 +261,84 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  // ---- VK OAuth ----
+  app.get("/api/auth/vk", (req, res) => {
+    const appId = process.env.VK_APP_ID;
+    if (!appId) return res.status(500).send("VK OAuth not configured");
+    const proto = (req.headers["x-forwarded-proto"] as string) || req.protocol;
+    const host = (req.headers["x-forwarded-host"] as string) || (req.headers.host as string);
+    const redirectUri = `${proto}://${host}/api/auth/vk/callback`;
+    const params = new URLSearchParams({
+      client_id: appId,
+      display: "page",
+      redirect_uri: redirectUri,
+      scope: "email",
+      response_type: "code",
+      v: "5.131",
+    });
+    res.redirect(`https://oauth.vk.com/authorize?${params}`);
+  });
+
+  app.get("/api/auth/vk/callback", async (req, res) => {
+    const { code, error } = req.query;
+    if (error || !code) return res.redirect("/auth?error=vk_cancelled");
+    const appId = process.env.VK_APP_ID;
+    const appSecret = process.env.VK_APP_SECRET;
+    if (!appId || !appSecret) return res.redirect("/auth?error=vk_cancelled");
+    const proto = (req.headers["x-forwarded-proto"] as string) || req.protocol;
+    const host = (req.headers["x-forwarded-host"] as string) || (req.headers.host as string);
+    const redirectUri = `${proto}://${host}/api/auth/vk/callback`;
+    try {
+      const tokenResp = await fetch(
+        `https://oauth.vk.com/access_token?client_id=${appId}&client_secret=${appSecret}&redirect_uri=${encodeURIComponent(redirectUri)}&code=${code}`
+      );
+      const tokenData = await tokenResp.json() as any;
+      if (tokenData.error) return res.redirect("/auth?error=vk_cancelled");
+      const { access_token, user_id: vkId, email: vkEmail } = tokenData;
+      const infoResp = await fetch(
+        `https://api.vk.com/method/users.get?access_token=${access_token}&fields=photo_200&v=5.131`
+      );
+      const infoData = await infoResp.json() as any;
+      const vkUser = infoData.response?.[0];
+      if (!vkUser) return res.redirect("/auth?error=vk_cancelled");
+      let user = await storage.getUserByVkId(String(vkId));
+      if (!user) {
+        if (vkEmail) {
+          const existing = await storage.getUserByEmail(vkEmail);
+          if (existing) {
+            await storage.updateUser(existing.id, { vkId: String(vkId) });
+            user = await storage.getUser(existing.id);
+          }
+        }
+        if (!user) {
+          const email = vkEmail || `vk_${vkId}@vkauth.local`;
+          const name = `${vkUser.first_name || ""} ${vkUser.last_name || ""}`.trim() || "VK User";
+          const avatarUrl = vkUser.photo_200 || null;
+          const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+          let refCode = "";
+          for (let i = 0; i < 8; i++) refCode += chars[Math.floor(Math.random() * chars.length)];
+          const randomPass = Math.random().toString(36) + Math.random().toString(36) + Date.now();
+          const hash = await bcrypt.hash(randomPass, SALT_ROUNDS);
+          user = await storage.createUser({
+            email,
+            password: hash,
+            name,
+            role: "buyer",
+            avatarUrl,
+            referralCode: refCode,
+            vkId: String(vkId),
+          } as any);
+        }
+      }
+      if (user!.isBlocked) return res.redirect("/auth?error=vk_blocked");
+      (req.session as any).userId = user!.id;
+      res.redirect("/");
+    } catch (e) {
+      console.error("VK OAuth error:", e);
+      res.redirect("/auth?error=vk_cancelled");
+    }
+  });
+
   app.patch("/api/auth/profile", requireAuth, async (req, res) => {
     const userId = (req.session as any).userId;
     const { name, phone, avatarUrl, buyerCity } = req.body;

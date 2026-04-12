@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Flower2, Copy, CheckCircle2, ArrowLeft, Key } from "lucide-react";
+import { SiVk } from "react-icons/si";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -71,9 +72,19 @@ export default function Auth() {
   const [forgotResult, setForgotResult] = useState<{ hasTelegram: boolean; emailSent?: boolean; resetLink?: string } | null>(null);
   const [copied, setCopied] = useState(false);
 
+  const vkError = params.get("error");
+
   useEffect(() => {
     if (resetToken) setView("reset");
   }, [resetToken]);
+
+  useEffect(() => {
+    if (vkError === "vk_cancelled") {
+      toast({ title: "Вход через ВКонтакте отменён", variant: "destructive" });
+    } else if (vkError === "vk_blocked") {
+      toast({ title: "Ваш аккаунт заблокирован", variant: "destructive" });
+    }
+  }, [vkError]);
 
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -368,6 +379,20 @@ export default function Auth() {
                       </button>
                     </p>
                   </div>
+                  <div className="relative my-4">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-card px-2 text-muted-foreground">или</span>
+                    </div>
+                  </div>
+                  <a href="/api/auth/vk" className="block w-full" data-testid="button-vk-login">
+                    <Button variant="outline" className="w-full gap-2" type="button">
+                      <SiVk className="w-5 h-5 text-[#0077FF]" />
+                      Войти через ВКонтакте
+                    </Button>
+                  </a>
                 </TabsContent>
 
                 <TabsContent value="register">
