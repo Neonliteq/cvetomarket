@@ -119,8 +119,17 @@ export default function Auth() {
       if (user.role === "shop") navigate("/shop-dashboard");
       else if (user.role === "admin") navigate("/admin");
       else navigate("/");
-    } catch {
-      toast({ title: "Ошибка входа", description: "Неверный email или пароль", variant: "destructive" });
+    } catch (err: any) {
+      let description = "Неверный email или пароль";
+      const raw = err?.message || "";
+      const jsonStart = raw.indexOf("{");
+      if (jsonStart !== -1) {
+        try {
+          const parsed = JSON.parse(raw.slice(jsonStart));
+          if (parsed.error) description = parsed.error;
+        } catch {}
+      }
+      toast({ title: "Ошибка входа", description, variant: "destructive" });
     }
   };
 
