@@ -1,0 +1,67 @@
+root@cv6271581:/var/www/cvetomarket# pm2 logs --lines 30
+[TAILING] Tailing last 30 lines for [all] processes (change the value with --lines option)
+/root/.pm2/pm2.log last 30 lines:
+PM2        | [migrate] Schema up to date
+PM2        | 4:30:01 PM [express] serving on port 5000
+PM2        | 4:30:05 PM [express] GET /api/cities 304 in 7ms :: [{"id":"a8d71b68-3a1e-4344-80a8-9117e2bbb982","name":"Калининград и область"}]
+PM2        | 4:30:05 PM [express] GET /api/auth/me 304 in 3ms :: {"user":null}
+PM2        | 4:30:06 PM [express] GET /api/auth/vk 302 in 9ms
+PM2        | VK token error: { error: 'invalid_request', error_description: 'device_id is invalid' }
+PM2        | 4:30:10 PM [express] GET /api/auth/vk/callback 302 in 136ms
+PM2        | 4:30:10 PM [express] GET /api/cities 304 in 3ms :: [{"id":"a8d71b68-3a1e-4344-80a8-9117e2bbb982","name":"Калининград и область"}]
+PM2        | 4:30:10 PM [express] GET /api/auth/me 304 in 2ms :: {"user":null}
+PM2        | 4:30:15 PM [express] GET /api/auth/me 304 in 4ms :: {"user":null}
+PM2        | 4:30:15 PM [express] GET /api/cities 304 in 14ms :: [{"id":"a8d71b68-3a1e-4344-80a8-9117e2bbb982","name":"Калининград и область"}]
+PM2        | 4:30:16 PM [express] GET /api/auth/vk 302 in 4ms
+PM2        | VK token error: { error: 'invalid_request', error_description: 'device_id is invalid' }
+PM2        | 4:30:20 PM [express] GET /api/auth/vk/callback 302 in 72ms
+PM2        | 4:30:20 PM [express] GET /api/cities 304 in 4ms :: [{"id":"a8d71b68-3a1e-4344-80a8-9117e2bbb982","name":"Калининград и область"}]
+PM2        | 4:30:20 PM [express] GET /api/auth/me 304 in 3ms :: {"user":null}
+PM2        | 4:30:31 PM [express] GET /api/auth/me 304 in 3ms :: {"user":null}
+PM2        | 4:30:31 PM [express] GET /api/cities 304 in 13ms :: [{"id":"a8d71b68-3a1e-4344-80a8-9117e2bbb982","name":"Калининград и область"}]
+PM2        | 4:30:31 PM [express] GET /api/auth/me 304 in 3ms :: {"user":null}
+PM2        | 4:30:31 PM [express] GET /api/cities 304 in 14ms :: [{"id":"a8d71b68-3a1e-4344-80a8-9117e2bbb982","name":"Калининград и область"}]
+PM2        | 4:30:32 PM [express] GET /api/auth/vk 302 in 4ms
+PM2        | VK token error: { error: 'invalid_request', error_description: 'device_id is invalid' }
+PM2        | 4:30:49 PM [express] GET /api/auth/vk/callback 302 in 91ms
+PM2        | 4:30:49 PM [express] GET /api/auth/me 304 in 4ms :: {"user":null}
+PM2        | 4:30:49 PM [express] GET /api/cities 304 in 20ms :: [{"id":"a8d71b68-3a1e-4344-80a8-9117e2bbb982","name":"Калининград и область"}]
+PM2        | 4:31:06 PM [express] GET /api/auth/vk 302 in 11ms
+PM2        | VK token error: { error: 'invalid_request', error_description: 'device_id is invalid' }
+PM2        | 4:31:07 PM [express] GET /api/auth/vk/callback 302 in 80ms
+PM2        | 4:31:08 PM [express] GET /api/cities 304 in 14ms :: [{"id":"a8d71b68-3a1e-4344-80a8-9117e2bbb982","name":"Калининград и область"}]
+PM2        | 4:31:08 PM [express] GET /api/auth/me 304 in 3ms :: {"user":null}
+
+/var/log/cvetomarket/error-0.log last 30 lines:
+/var/log/cvetomarket/out-0.log last 30 lines:
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |
+0|cvetomar | 2026-04-12 13:08:52 +03:00:
+0|cvetomar | > rest-express@1.0.0 start
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |
+0|cvetomar | 2026-04-12 13:11:04 +03:00:
+0|cvetomar | > rest-express@1.0.0 start
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |
+0|cvetomar | 2026-04-12 14:07:32 +03:00:
+0|cvetomar | > rest-express@1.0.0 start
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |
+0|cvetomar | 2026-04-12 14:09:51 +03:00:
+0|cvetomar | > rest-express@1.0.0 start
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |
+0|cvetomar | 2026-04-12 15:06:47 +03:00:
+0|cvetomar | > rest-express@1.0.0 start
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |
+0|cvetomar | 2026-04-12 16:26:03 +03:00:
+0|cvetomar | > rest-express@1.0.0 start
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |
+0|cvetomar | 2026-04-12 16:30:00 +03:00:
+0|cvetomar | > rest-express@1.0.0 start
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |
+

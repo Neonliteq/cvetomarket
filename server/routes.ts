@@ -287,7 +287,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   app.get("/api/auth/vk/callback", async (req, res) => {
-    const { code, error, state } = req.query;
+    const { code, error, state, device_id } = req.query;
     if (error || !code) return res.redirect("/auth?error=vk_cancelled");
     const expectedState = (req.session as any).vkOAuthState;
     if (!state || !expectedState || state !== expectedState) return res.redirect("/auth?error=vk_cancelled");
@@ -308,6 +308,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         redirect_uri: redirectUri,
         code: code as string,
         ...(codeVerifier ? { code_verifier: codeVerifier } : {}),
+        ...(device_id ? { device_id: device_id as string } : {}),
       });
       const tokenResp = await fetch("https://id.vk.com/oauth2/auth", {
         method: "POST",
