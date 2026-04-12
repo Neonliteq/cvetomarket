@@ -277,16 +277,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const redirectUri = `${proto}://${host}/api/auth/vk/callback`;
     const params = new URLSearchParams({
       client_id: appId,
-      display: "page",
       redirect_uri: redirectUri,
-      scope: "email",
       response_type: "code",
       state,
       code_challenge: codeChallenge,
-      code_challenge_method: "S256",
-      v: "5.131",
+      code_challenge_method: "s256",
+      scope: "email",
     });
-    res.redirect(`https://oauth.vk.com/authorize?${params}`);
+    res.redirect(`https://id.vk.com/oauth2/authorize?${params}`);
   });
 
   app.get("/api/auth/vk/callback", async (req, res) => {
@@ -304,23 +302,37 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const host = (req.headers["x-forwarded-host"] as string) || (req.headers.host as string);
     const redirectUri = `${proto}://${host}/api/auth/vk/callback`;
     try {
-      const tokenParams = new URLSearchParams({
-        client_id: appId,
-        client_secret: appSecret,
-        redirect_uri: redirectUri,
-        code: code as string,
+      const tokenResp = await fetch("https://id.vk.com/oauth2/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          grant_type: "authorization_code",
+          client_id: appId,
+          client_secret: appSecret,
+          redirect_uri: redirectUri,
+          code: code as string,
+          ...(codeVerifier ? { code_verifier: codeVerifier } : {}),
+        }),
       });
-      if (codeVerifier) tokenParams.set("code_verifier", codeVerifier);
-      const tokenResp = await fetch(`https://oauth.vk.com/access_token?${tokenParams}`);
       const tokenData = await tokenResp.json() as any;
-      if (tokenData.error) return res.redirect("/auth?error=vk_cancelled");
-      const { access_token, user_id: vkId, email: vkEmail } = tokenData;
-      const infoResp = await fetch(
-        `https://api.vk.com/method/users.get?access_token=${access_token}&fields=photo_200&v=5.131`
-      );
+      if (tokenData.error) {
+        console.error("VK token error:", tokenData);
+        return res.redirect("/auth?error=vk_cancelled");
+      }
+      const { access_token } = tokenData;
+      const infoResp = await fetch("https://id.vk.com/oauth2/user_info", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ client_id: appId, access_token }),
+      });
       const infoData = await infoResp.json() as any;
-      const vkUser = infoData.response?.[0];
-      if (!vkUser) return res.redirect("/auth?error=vk_cancelled");
+      const vkUser = infoData.user;
+      if (!vkUser) {
+        console.error("VK user_info error:", infoData);
+        return res.redirect("/auth?error=vk_cancelled");
+      }
+      const vkId = String(vkUser.user_id);
+      const vkEmail = vkUser.email || null;
       let user = await storage.getUserByVkId(String(vkId));
       if (!user) {
         if (vkEmail) {
@@ -333,7 +345,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         if (!user) {
           const email = vkEmail || `vk_${vkId}@vkauth.local`;
           const name = `${vkUser.first_name || ""} ${vkUser.last_name || ""}`.trim() || "VK User";
-          const avatarUrl = vkUser.photo_200 || null;
+          const avatarUrl = vkUser.avatar || vkUser.photo_200 || null;
           const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
           let refCode = "";
           for (let i = 0; i < 8; i++) refCode += chars[Math.floor(Math.random() * chars.length)];
