@@ -41,7 +41,7 @@ export function Footer() {
         <div className="space-y-2">
           <p className="font-semibold text-sm text-white">Продавцам</p>
           <div className="space-y-1.5">
-            <Link href="/auth?role=shop"><p className="text-sm cursor-pointer transition-colors" style={{ color: "hsl(140 20% 72%)" }}>Открыть магазин</p></Link>
+            <Link href="/seller-auth"><p className="text-sm cursor-pointer transition-colors" style={{ color: "hsl(140 20% 72%)" }}>Открыть магазин</p></Link>
             <Link href="/shop-dashboard"><p className="text-sm cursor-pointer transition-colors" style={{ color: "hsl(140 20% 72%)" }}>Кабинет продавца</p></Link>
           </div>
         </div>

@@ -234,7 +234,7 @@ export default function Home() {
             Продавайте букеты тысячам покупателей — простое управление, удобные инструменты
           </p>
           <div className="pt-2">
-            <Link href="/auth?role=shop">
+            <Link href="/seller-auth">
               <Button size="lg">Начать продавать</Button>
             </Link>
           </div>

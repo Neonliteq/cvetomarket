@@ -19,6 +19,7 @@ import ShopDetail from "@/pages/ShopDetail";
 import Cart from "@/pages/Cart";
 import Checkout from "@/pages/Checkout";
 import Auth from "@/pages/Auth";
+import SellerAuth from "@/pages/SellerAuth";
 import Account from "@/pages/Account";
 import ShopDashboard from "@/pages/ShopDashboard";
 import Admin from "@/pages/Admin";
@@ -50,6 +51,7 @@ function Router() {
           <Route path="/cart" component={Cart} />
           <Route path="/checkout" component={Checkout} />
           <Route path="/auth" component={Auth} />
+          <Route path="/seller-auth" component={SellerAuth} />
           <Route path="/account" component={Account} />
           <Route path="/shop-dashboard" component={ShopDashboard} />
           <Route path="/admin" component={Admin} />
