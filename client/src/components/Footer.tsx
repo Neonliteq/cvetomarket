@@ -19,7 +19,7 @@ export function Footer() {
             <span className="font-bold text-lg text-white">ЦветоМаркет</span>
           </div>
           <p className="text-sm" style={{ color: "hsl(140 20% 72%)" }}>
-            Маркетплейс цветочных магазинов. Доставка букетов по всему городу.
+            Маркетплейс цветочных магазинов. Доставляем по городу и области.
           </p>
         </div>
         <div className="space-y-2">
