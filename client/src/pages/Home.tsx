@@ -69,7 +69,7 @@ export default function Home() {
                 Стойкие сорта и бережная сборка — чтобы букет радовал долго
               </p>
               <p className="text-lg text-muted-foreground">
-                Выберите идеальный букет и оформите доставку за несколько минут.
+                Выберите идеальный букет и оформите доставку за несколько минут
               </p>
               <form onSubmit={handleSearch} className="flex gap-2 max-w-md">
                 <div className="relative flex-1">
@@ -231,7 +231,7 @@ export default function Home() {
           </div>
           <h2 className="text-2xl font-bold">Откройте свой цветочный магазин</h2>
           <p className="text-muted-foreground max-w-md mx-auto">
-            Продавайте букеты тысячам покупателей. Простое управление, удобные инструменты.
+            Продавайте букеты тысячам покупателей — простое управление, удобные инструменты
           </p>
           <div className="pt-2">
             <Link href="/auth?role=shop">
