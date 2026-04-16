@@ -3,21 +3,6 @@ import { users, shops, products, categories, cities, platformSettings } from "@s
 import { eq } from "drizzle-orm";
 import bcrypt from "bcrypt";
 
-export async function ensureDefaultCategories() {
-  const defaults = [
-    { name: "ТОП", slug: "top" },
-    { name: "День рождения", slug: "birthday" },
-    { name: "Романтика", slug: "romance" },
-    { name: "8 марта", slug: "march8" },
-    { name: "Свадьба", slug: "wedding" },
-    { name: "Сочувствие", slug: "sympathy" },
-    { name: "Корпоратив", slug: "corporate" },
-  ];
-  for (const cat of defaults) {
-    await db.insert(categories).values(cat).onConflictDoNothing();
-  }
-}
-
 export async function seed() {
   try {
     const existingUsers = await db.select().from(users).limit(1);
