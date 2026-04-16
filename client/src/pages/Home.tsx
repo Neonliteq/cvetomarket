@@ -2,7 +2,7 @@ import { useState } from "react";
 import heroBg from "@assets/hero_bg_generated.png";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, Truck, Shield, Clock, Star, Cake, Heart, Flower2, Gem, Leaf, Building2, Search, type LucideIcon } from "lucide-react";
+import { ArrowRight, Truck, Shield, Clock, Star, Cake, Heart, Flower2, Gem, Leaf, Building2, Search, Trophy, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,6 +14,7 @@ import type { Product, Shop, Category } from "@shared/schema";
 type CategoryWithCount = Category & { productCount: number };
 
 const SLUG_ICONS: Record<string, LucideIcon> = {
+  top: Trophy,
   birthday: Cake,
   romance: Heart,
   march8: Flower2,
