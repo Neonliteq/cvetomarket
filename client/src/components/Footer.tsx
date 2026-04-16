@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { Flower2 } from "lucide-react";
+import { Flower2, Gift } from "lucide-react";
 import eucalyptusBg from "@assets/footer_eucalyptus.png";
 
 export function Footer() {
@@ -21,6 +21,13 @@ export function Footer() {
           <p className="text-sm" style={{ color: "hsl(140 20% 72%)" }}>
             Маркетплейс цветочных магазинов — доставляем по городу и области
           </p>
+          <div className="flex items-start gap-2 rounded-md px-3 py-2.5" style={{ background: "hsl(152 35% 20% / 0.6)", border: "1px solid hsl(152 30% 28%)" }}>
+            <Gift className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "hsl(45 90% 65%)" }} />
+            <div>
+              <p className="text-xs font-semibold" style={{ color: "hsl(45 90% 75%)" }}>Бонусная программа</p>
+              <p className="text-xs mt-0.5" style={{ color: "hsl(140 20% 65%)" }}>1000 бонусов при регистрации — до 20% скидки на заказ</p>
+            </div>
+          </div>
         </div>
         <div className="space-y-2">
           <p className="font-semibold text-sm text-white">Покупателям</p>
@@ -28,6 +35,7 @@ export function Footer() {
             <Link href="/catalog"><p className="text-sm cursor-pointer transition-colors" style={{ color: "hsl(140 20% 72%)" }}>Каталог</p></Link>
             <Link href="/shops"><p className="text-sm cursor-pointer transition-colors" style={{ color: "hsl(140 20% 72%)" }}>Магазины</p></Link>
             <Link href="/account"><p className="text-sm cursor-pointer transition-colors" style={{ color: "hsl(140 20% 72%)" }}>Мои заказы</p></Link>
+            <Link href="/account?tab=bonuses"><p className="text-sm cursor-pointer transition-colors" style={{ color: "hsl(140 20% 72%)" }}>Мои бонусы</p></Link>
           </div>
         </div>
         <div className="space-y-2">
