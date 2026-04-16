@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Flower2, Copy, CheckCircle2, ArrowLeft, Key } from "lucide-react";
+import { Flower2, Copy, CheckCircle2, ArrowLeft, Key, Store } from "lucide-react";
 import { SiVk } from "react-icons/si";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -402,6 +402,20 @@ export default function Auth() {
                       Войти через ВКонтакте
                     </Button>
                   </a>
+                  <div className="relative my-4">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-card px-2 text-muted-foreground">продавцам</span>
+                    </div>
+                  </div>
+                  <Link href="/seller-auth" className="block w-full" data-testid="button-seller-login">
+                    <Button variant="outline" className="w-full gap-2" type="button">
+                      <Store className="w-4 h-4" />
+                      Войти как продавец
+                    </Button>
+                  </Link>
                 </TabsContent>
 
                 <TabsContent value="register">
