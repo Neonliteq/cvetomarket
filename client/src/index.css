@@ -286,3 +286,17 @@
     inset: -1px;
   }
 }
+
+/* Убираем стрелки у числовых полей и полей времени */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button,
+input[type="time"]::-webkit-inner-spin-button,
+input[type="time"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"],
+input[type="time"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
