@@ -38,6 +38,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
+    if (user) {
+      const storageKey = `push_registered_endpoint_${user.id}`;
+      const endpoint = localStorage.getItem(storageKey);
+      if (endpoint) {
+        try {
+          const res = await fetch("/api/push/unsubscribe", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ endpoint }),
+            credentials: "include",
+          });
+          if (res.ok) {
+            localStorage.removeItem(storageKey);
+          }
+        } catch {
+        }
+      }
+    }
     await apiRequest("POST", "/api/auth/logout", {});
     setUser(null);
   };
