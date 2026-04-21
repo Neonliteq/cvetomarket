@@ -18,6 +18,7 @@ import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import { playMessageSound, playOrderSound } from "@/lib/sounds";
+import { InstallPWA } from "@/components/InstallPWA";
 
 interface Notification {
   id: string;
@@ -220,6 +221,7 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-2">
+          <InstallPWA />
           {user && (
             <Popover open={notifOpen} onOpenChange={handleNotifOpen}>
               <PopoverTrigger asChild>
