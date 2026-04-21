@@ -54,8 +54,22 @@ export function PushNotificationPrompt() {
     if (!("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) return;
     if (Notification.permission === "granted" || Notification.permission === "denied") return;
     if (sessionStorage.getItem(DISMISSED_KEY)) return;
-    const timer = setTimeout(() => setShow(true), 3000);
-    return () => clearTimeout(timer);
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    (async () => {
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        const existing = await reg.pushManager.getSubscription();
+        if (existing) return;
+      } catch {
+      }
+      if (cancelled) return;
+      timer = setTimeout(() => setShow(true), 3000);
+    })();
+    return () => {
+      cancelled = true;
+      if (timer !== undefined) clearTimeout(timer);
+    };
   }, [user]);
 
   useEffect(() => {
