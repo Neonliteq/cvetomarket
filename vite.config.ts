@@ -25,6 +25,16 @@ export default defineConfig({
             },
           },
           {
+            urlPattern: ({ url }: { url: URL }) =>
+              /\.(png|jpg|jpeg|svg|ico|woff2?|ttf|eot)$/.test(url.pathname),
+            handler: "CacheFirst",
+            options: {
+              cacheName: "static-assets",
+              expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\//,
             handler: "StaleWhileRevalidate",
             options: { cacheName: "google-fonts-stylesheets" },
