@@ -1,7 +1,7 @@
 import { useState, useEffect, type ComponentType } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Package, MessageCircle, User, LogOut, Star, CheckCircle, Upload, Camera, X, MapPin, ShoppingBag, TrendingUp, Store, Flower2, Activity, Send, ExternalLink, Volume2, VolumeX, Gift, Copy, Link2, Lock, Eye, EyeOff, CreditCard, FileText } from "lucide-react";
+import { Package, MessageCircle, User, LogOut, Star, CheckCircle, Upload, Camera, X, MapPin, ShoppingBag, TrendingUp, Store, Flower2, Activity, Send, ExternalLink, Volume2, VolumeX, Gift, Copy, Link2, Lock, Eye, EyeOff, CreditCard, FileText, Bell, BellOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -443,6 +443,140 @@ function SoundSection() {
         />
         <span className="text-sm text-muted-foreground">{enabled ? "Включены" : "Выключены"}</span>
       </div>
+    </div>
+  );
+}
+
+async function getVapidPublicKey(): Promise<string | null> {
+  try {
+    const res = await fetch("/api/push/vapid-public-key");
+    const data = await res.json();
+    return data.key || null;
+  } catch {
+    return null;
+  }
+}
+
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = atob(base64);
+  return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)));
+}
+
+function PushNotificationsSection() {
+  const { toast } = useToast();
+  const [permission, setPermission] = useState<NotificationPermission | null>(null);
+  const [subscription, setSubscription] = useState<PushSubscription | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [supported, setSupported] = useState(true);
+
+  useEffect(() => {
+    if (!("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) {
+      setSupported(false);
+      return;
+    }
+    setPermission(Notification.permission);
+    navigator.serviceWorker.ready.then((reg) => {
+      reg.pushManager.getSubscription().then(setSubscription);
+    });
+  }, []);
+
+  const isSubscribed = permission === "granted" && !!subscription;
+
+  const handleEnable = async () => {
+    setLoading(true);
+    try {
+      const perm = await Notification.requestPermission();
+      setPermission(perm);
+      if (perm !== "granted") {
+        toast({ title: "Уведомления заблокированы", description: "Разрешите уведомления в настройках браузера", variant: "destructive" });
+        return;
+      }
+      const vapidKey = await getVapidPublicKey();
+      if (!vapidKey) throw new Error("Не удалось получить ключ сервера");
+      const reg = await navigator.serviceWorker.ready;
+      let sub = await reg.pushManager.getSubscription();
+      if (!sub) {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(vapidKey),
+        });
+      }
+      const json = sub.toJSON();
+      const res = await fetch("/api/push/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ endpoint: json.endpoint, keys: { p256dh: json.keys?.p256dh, auth: json.keys?.auth } }),
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Не удалось сохранить подписку на сервере");
+      }
+      setSubscription(sub);
+      toast({ title: "Push-уведомления включены" });
+    } catch (e: any) {
+      toast({ title: "Ошибка", description: e.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDisable = async () => {
+    if (!subscription) return;
+    setLoading(true);
+    try {
+      const res = await fetch("/api/push/unsubscribe", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ endpoint: subscription.endpoint }),
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Не удалось отписаться на сервере");
+      }
+      await subscription.unsubscribe();
+      setSubscription(null);
+      toast({ title: "Push-уведомления отключены" });
+    } catch (e: any) {
+      toast({ title: "Ошибка", description: e.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div>
+      <p className="text-sm font-medium mb-1.5 flex items-center gap-1.5">
+        {isSubscribed
+          ? <Bell className="w-4 h-4 text-primary" />
+          : <BellOff className="w-4 h-4 text-muted-foreground" />}
+        Push-уведомления
+      </p>
+      <p className="text-xs text-muted-foreground mb-3">
+        Получайте уведомления о заказах и сообщениях даже когда приложение закрыто
+      </p>
+      {!supported ? (
+        <p className="text-xs text-muted-foreground">Ваш браузер не поддерживает push-уведомления</p>
+      ) : permission === "denied" ? (
+        <p className="text-xs text-amber-600 dark:text-amber-400">
+          Уведомления заблокированы в браузере. Разрешите их в настройках браузера и обновите страницу.
+        </p>
+      ) : (
+        <div className="flex items-center gap-3">
+          <Switch
+            checked={isSubscribed}
+            onCheckedChange={isSubscribed ? handleDisable : handleEnable}
+            disabled={loading}
+            data-testid="switch-push-notifications"
+          />
+          <span className="text-sm text-muted-foreground">
+            {loading ? "Применяется..." : isSubscribed ? "Включены" : "Выключены"}
+          </span>
+        </div>
+      )}
     </div>
   );
 }
@@ -1065,6 +1199,10 @@ export default function Account() {
               {/* Sound notifications */}
               <Separator />
               <SoundSection />
+
+              {/* Push notifications */}
+              <Separator />
+              <PushNotificationsSection />
             </CardContent>
           </Card>
         </TabsContent>
