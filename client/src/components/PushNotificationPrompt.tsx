@@ -29,20 +29,31 @@ async function subscribeToPush(vapidKey: string): Promise<PushSubscription | nul
   });
 }
 
-async function sendSubscriptionToServer(sub: PushSubscription): Promise<void> {
+const DISMISSED_KEY = "push_prompt_dismissed";
+
+function endpointKey(userId: string): string {
+  return `push_registered_endpoint_${userId}`;
+}
+
+async function sendSubscriptionToServer(sub: PushSubscription, userId: string): Promise<void> {
   const json = sub.toJSON();
-  await fetch("/api/push/subscribe", {
+  const newEndpoint = json.endpoint!;
+  const storageKey = endpointKey(userId);
+  const previousEndpoint = localStorage.getItem(storageKey) ?? undefined;
+  const res = await fetch("/api/push/subscribe", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      endpoint: json.endpoint,
+      endpoint: newEndpoint,
       keys: { p256dh: json.keys?.p256dh, auth: json.keys?.auth },
+      previousEndpoint: previousEndpoint !== newEndpoint ? previousEndpoint : undefined,
     }),
     credentials: "include",
   });
+  if (res.ok) {
+    localStorage.setItem(storageKey, newEndpoint);
+  }
 }
-
-const DISMISSED_KEY = "push_prompt_dismissed";
 
 export function PushNotificationPrompt() {
   const { user } = useAuth();
@@ -77,18 +88,19 @@ export function PushNotificationPrompt() {
     if (!("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) return;
     if (Notification.permission !== "granted") return;
     (async () => {
-      const vapidKey = await getVapidPublicKey();
-      if (!vapidKey) return;
-      const reg = await navigator.serviceWorker.ready;
-      const existing = await reg.pushManager.getSubscription();
-      if (existing) {
-        await sendSubscriptionToServer(existing);
-      } else {
-        try {
+      try {
+        const vapidKey = await getVapidPublicKey();
+        if (!vapidKey) return;
+        const reg = await navigator.serviceWorker.ready;
+        const existing = await reg.pushManager.getSubscription();
+        if (existing) {
+          await sendSubscriptionToServer(existing, user.id);
+        } else {
           const sub = await subscribeToPush(vapidKey);
-          if (sub) await sendSubscriptionToServer(sub);
-        } catch {
+          if (sub) await sendSubscriptionToServer(sub, user.id);
         }
+      } catch (e) {
+        console.error("Push re-registration error:", e);
       }
     })();
   }, [user]);
@@ -101,7 +113,7 @@ export function PushNotificationPrompt() {
         const vapidKey = await getVapidPublicKey();
         if (vapidKey) {
           const sub = await subscribeToPush(vapidKey);
-          if (sub) await sendSubscriptionToServer(sub);
+          if (sub) await sendSubscriptionToServer(sub, user.id);
         }
       }
     } catch (e) {

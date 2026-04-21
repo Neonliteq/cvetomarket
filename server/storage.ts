@@ -168,6 +168,7 @@ export interface IStorage {
   getPushSubscriptionsByUser(userId: string): Promise<PushSub[]>;
   deletePushSubscription(id: string): Promise<void>;
   deletePushSubscriptionByEndpoint(endpoint: string): Promise<void>;
+  deletePushSubscriptionByEndpointAndUser(endpoint: string, userId: string): Promise<void>;
 
   // Notification Preferences
   getNotificationPreferences(userId: string): Promise<NotificationPreferences | undefined>;
@@ -686,6 +687,12 @@ export class DbStorage implements IStorage {
 
   async deletePushSubscriptionByEndpoint(endpoint: string): Promise<void> {
     await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, endpoint));
+  }
+
+  async deletePushSubscriptionByEndpointAndUser(endpoint: string, userId: string): Promise<void> {
+    await db.delete(pushSubscriptions).where(
+      and(eq(pushSubscriptions.endpoint, endpoint), eq(pushSubscriptions.userId, userId))
+    );
   }
 
   async getNotificationPreferences(userId: string): Promise<NotificationPreferences | undefined> {

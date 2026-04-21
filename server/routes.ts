@@ -1885,9 +1885,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/push/subscribe", requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
-      const { endpoint, keys } = req.body;
+      const { endpoint, keys, previousEndpoint } = req.body;
       if (!endpoint || !keys?.p256dh || !keys?.auth) {
         return res.status(400).json({ error: "Некорректные данные подписки" });
+      }
+      if (previousEndpoint && previousEndpoint !== endpoint) {
+        await storage.deletePushSubscriptionByEndpointAndUser(previousEndpoint, userId);
       }
       const sub = await storage.upsertPushSubscription({
         userId,
