@@ -466,6 +466,7 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 
 function PushNotificationsSection() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [permission, setPermission] = useState<NotificationPermission | null>(null);
   const [subscription, setSubscription] = useState<PushSubscription | null>(null);
   const [loading, setLoading] = useState(false);
@@ -483,6 +484,22 @@ function PushNotificationsSection() {
   }, []);
 
   const isSubscribed = permission === "granted" && !!subscription;
+
+  const { data: prefs } = useQuery<{ notifyOrders: boolean; notifyMessages: boolean }>({
+    queryKey: ["/api/notification-preferences"],
+    enabled: isSubscribed,
+  });
+
+  const prefsMutation = useMutation({
+    mutationFn: (data: { notifyOrders?: boolean; notifyMessages?: boolean }) =>
+      apiRequest("PATCH", "/api/notification-preferences", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/notification-preferences"] });
+    },
+    onError: () => {
+      toast({ title: "Ошибка", description: "Не удалось сохранить настройки", variant: "destructive" });
+    },
+  });
 
   const handleEnable = async () => {
     setLoading(true);
@@ -565,16 +582,40 @@ function PushNotificationsSection() {
           Уведомления заблокированы в браузере. Разрешите их в настройках браузера и обновите страницу.
         </p>
       ) : (
-        <div className="flex items-center gap-3">
-          <Switch
-            checked={isSubscribed}
-            onCheckedChange={isSubscribed ? handleDisable : handleEnable}
-            disabled={loading}
-            data-testid="switch-push-notifications"
-          />
-          <span className="text-sm text-muted-foreground">
-            {loading ? "Применяется..." : isSubscribed ? "Включены" : "Выключены"}
-          </span>
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <Switch
+              checked={isSubscribed}
+              onCheckedChange={isSubscribed ? handleDisable : handleEnable}
+              disabled={loading}
+              data-testid="switch-push-notifications"
+            />
+            <span className="text-sm text-muted-foreground">
+              {loading ? "Применяется..." : isSubscribed ? "Включены" : "Выключены"}
+            </span>
+          </div>
+          {isSubscribed && (
+            <div className="pl-1 space-y-2 border-l-2 border-muted ml-1">
+              <div className="flex items-center gap-3 pl-3">
+                <Switch
+                  checked={prefs?.notifyOrders ?? true}
+                  onCheckedChange={(val) => prefsMutation.mutate({ notifyOrders: val })}
+                  disabled={prefsMutation.isPending}
+                  data-testid="switch-notify-orders"
+                />
+                <span className="text-sm text-muted-foreground">Заказы</span>
+              </div>
+              <div className="flex items-center gap-3 pl-3">
+                <Switch
+                  checked={prefs?.notifyMessages ?? true}
+                  onCheckedChange={(val) => prefsMutation.mutate({ notifyMessages: val })}
+                  disabled={prefsMutation.isPending}
+                  data-testid="switch-notify-messages"
+                />
+                <span className="text-sm text-muted-foreground">Сообщения</span>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

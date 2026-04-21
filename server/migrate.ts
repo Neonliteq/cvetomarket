@@ -104,6 +104,15 @@ export async function runMigrations() {
       );
     `);
 
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS notification_preferences (
+        id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id varchar NOT NULL REFERENCES users(id) UNIQUE,
+        notify_orders boolean NOT NULL DEFAULT true,
+        notify_messages boolean NOT NULL DEFAULT true
+      );
+    `);
+
     console.log("[migrate] Schema up to date");
   } catch (err) {
     console.error("[migrate] Migration error:", err);

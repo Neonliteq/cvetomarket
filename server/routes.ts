@@ -702,11 +702,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           `🛍 <b>Новый заказ в магазине «${shopData.name}»</b>\n\nСумма: <b>${totalAmount.toLocaleString("ru-RU")} ₽</b>\n\nОткройте панель управления, чтобы подтвердить заказ.`
         );
       }
-      await sendPushToUser(recipientId, {
-        title: "Новый заказ",
-        body: `Магазин «${shopData.name}» — ${notifText}`,
-        link: "/shop-dashboard",
-      });
+      const recipientPrefs = await storage.getNotificationPreferences(recipientId).catch((e) => { console.error("[prefs] Failed to load notification preferences for", recipientId, e?.message); return undefined; });
+      if (recipientPrefs === undefined || recipientPrefs.notifyOrders) {
+        await sendPushToUser(recipientId, {
+          title: "Новый заказ",
+          body: `Магазин «${shopData.name}» — ${notifText}`,
+          link: "/shop-dashboard",
+        });
+      }
     }
   }
 
@@ -925,11 +928,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           );
         }
       }
-      await sendPushToUser(order.buyerId, {
-        title: label,
-        body: shopForNotif ? `Магазин «${shopForNotif.name}»` : "Статус вашего заказа изменился",
-        link: "/account",
-      });
+      const buyerPrefs = await storage.getNotificationPreferences(order.buyerId).catch((e) => { console.error("[prefs] Failed to load notification preferences for", order.buyerId, e?.message); return undefined; });
+      if (buyerPrefs === undefined || buyerPrefs.notifyOrders) {
+        await sendPushToUser(order.buyerId, {
+          title: label,
+          body: shopForNotif ? `Магазин «${shopForNotif.name}»` : "Статус вашего заказа изменился",
+          link: "/account",
+        });
+      }
     }
     // Accrue bonuses on delivery (idempotent — check existing transactions)
     if (req.body.status === "delivered" && order && order.buyerId) {
@@ -1174,11 +1180,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         );
       }
       const pushBody = imageUrl && !content.trim() ? "📷 Фото" : (content.length > 80 ? content.slice(0, 80) + "..." : content);
-      await sendPushToUser(msg.receiverId, {
-        title: `Новое сообщение от ${sender.name}`,
-        body: pushBody,
-        link: `/chat?userId=${senderId}`,
-      });
+      const receiverPrefs = await storage.getNotificationPreferences(msg.receiverId).catch((e) => { console.error("[prefs] Failed to load notification preferences for", msg.receiverId, e?.message); return undefined; });
+      if (receiverPrefs === undefined || receiverPrefs.notifyMessages) {
+        await sendPushToUser(msg.receiverId, {
+          title: `Новое сообщение от ${sender.name}`,
+          body: pushBody,
+          link: `/chat?userId=${senderId}`,
+        });
+      }
     }
     res.json(msg);
   });
@@ -1902,6 +1911,34 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!owned) return res.status(404).json({ error: "Подписка не найдена" });
       await storage.deletePushSubscription(owned.id);
       res.json({ ok: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get("/api/notification-preferences", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const prefs = await storage.getNotificationPreferences(userId);
+      res.json(prefs ?? { userId, notifyOrders: true, notifyMessages: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.patch("/api/notification-preferences", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const schema = z.object({
+        notifyOrders: z.boolean().optional(),
+        notifyMessages: z.boolean().optional(),
+      }).refine((d) => d.notifyOrders !== undefined || d.notifyMessages !== undefined, {
+        message: "At least one preference field must be provided",
+      });
+      const parsed = schema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
+      const prefs = await storage.upsertNotificationPreferences(userId, parsed.data);
+      res.json(prefs);
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }

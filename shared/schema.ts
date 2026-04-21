@@ -214,6 +214,17 @@ export const insertPushSubscriptionSchema = createInsertSchema(pushSubscriptions
 export type PushSubscription = typeof pushSubscriptions.$inferSelect;
 export type InsertPushSubscription = z.infer<typeof insertPushSubscriptionSchema>;
 
+export const notificationPreferences = pgTable("notification_preferences", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id).unique(),
+  notifyOrders: boolean("notify_orders").notNull().default(true),
+  notifyMessages: boolean("notify_messages").notNull().default(true),
+});
+
+export const insertNotificationPreferencesSchema = createInsertSchema(notificationPreferences).omit({ id: true });
+export type NotificationPreferences = typeof notificationPreferences.$inferSelect;
+export type InsertNotificationPreferences = z.infer<typeof insertNotificationPreferencesSchema>;
+
 export const orderSupplements = pgTable("order_supplements", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   supplementNumber: serial("supplement_number"),

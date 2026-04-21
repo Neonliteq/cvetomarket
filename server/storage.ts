@@ -15,7 +15,8 @@ import {
   type OrderSupplement, type InsertOrderSupplement,
   type PromoCode, type InsertPromoCode,
   type PushSubscription as PushSub, type InsertPushSubscription,
-  users, shops, products, orders, orderItems, reviews, messages, categories, cities, platformSettings, shopWorkers, notifications, bonusTransactions, orderSupplements, promoCodes, pushSubscriptions,
+  type NotificationPreferences,
+  users, shops, products, orders, orderItems, reviews, messages, categories, cities, platformSettings, shopWorkers, notifications, bonusTransactions, orderSupplements, promoCodes, pushSubscriptions, notificationPreferences,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, inArray, sql } from "drizzle-orm";
@@ -167,6 +168,10 @@ export interface IStorage {
   getPushSubscriptionsByUser(userId: string): Promise<PushSub[]>;
   deletePushSubscription(id: string): Promise<void>;
   deletePushSubscriptionByEndpoint(endpoint: string): Promise<void>;
+
+  // Notification Preferences
+  getNotificationPreferences(userId: string): Promise<NotificationPreferences | undefined>;
+  upsertNotificationPreferences(userId: string, data: Partial<Pick<NotificationPreferences, 'notifyOrders' | 'notifyMessages'>>): Promise<NotificationPreferences>;
 }
 
 export class DbStorage implements IStorage {
@@ -681,6 +686,28 @@ export class DbStorage implements IStorage {
 
   async deletePushSubscriptionByEndpoint(endpoint: string): Promise<void> {
     await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, endpoint));
+  }
+
+  async getNotificationPreferences(userId: string): Promise<NotificationPreferences | undefined> {
+    const [row] = await db.select().from(notificationPreferences).where(eq(notificationPreferences.userId, userId));
+    return row;
+  }
+
+  async upsertNotificationPreferences(userId: string, data: Partial<Pick<NotificationPreferences, 'notifyOrders' | 'notifyMessages'>>): Promise<NotificationPreferences> {
+    const existing = await this.getNotificationPreferences(userId);
+    if (existing) {
+      const [updated] = await db
+        .update(notificationPreferences)
+        .set(data)
+        .where(eq(notificationPreferences.userId, userId))
+        .returning();
+      return updated;
+    }
+    const [inserted] = await db
+      .insert(notificationPreferences)
+      .values({ userId, notifyOrders: true, notifyMessages: true, ...data })
+      .returning();
+    return inserted;
   }
 }
 
