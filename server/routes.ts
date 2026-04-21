@@ -14,6 +14,7 @@ import { registerObjectStorageRoutes } from "./replit_integrations/object_storag
 import { sendTelegramMessage, generateLinkToken, consumeLinkToken, getBotUsername, ORDER_STATUS_MESSAGES, registerWebhook } from "./telegram";
 import { sendPasswordResetEmail } from "./resend";
 import { buildPaymentUrl, verifyResultSignature, isRobokassaConfigured } from "./robokassa";
+import { sendPushToUser, VAPID_PUBLIC_KEY } from "./webpush";
 
 function toSafeUser(user: Record<string, unknown>) {
   const { password: _pw, adminNotes: _notes, ...safe } = user;
@@ -701,6 +702,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           `🛍 <b>Новый заказ в магазине «${shopData.name}»</b>\n\nСумма: <b>${totalAmount.toLocaleString("ru-RU")} ₽</b>\n\nОткройте панель управления, чтобы подтвердить заказ.`
         );
       }
+      await sendPushToUser(recipientId, {
+        title: "Новый заказ",
+        body: `Магазин «${shopData.name}» — ${notifText}`,
+        link: "/shop-dashboard",
+      });
     }
   }
 
@@ -919,6 +925,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           );
         }
       }
+      await sendPushToUser(order.buyerId, {
+        title: label,
+        body: shopForNotif ? `Магазин «${shopForNotif.name}»` : "Статус вашего заказа изменился",
+        link: "/account",
+      });
     }
     // Accrue bonuses on delivery (idempotent — check existing transactions)
     if (req.body.status === "delivered" && order && order.buyerId) {
@@ -1162,6 +1173,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           `💬 <b>Новое сообщение от ${sender.name}</b>\n\n${tgText}`
         );
       }
+      const pushBody = imageUrl && !content.trim() ? "📷 Фото" : (content.length > 80 ? content.slice(0, 80) + "..." : content);
+      await sendPushToUser(msg.receiverId, {
+        title: `Новое сообщение от ${sender.name}`,
+        body: pushBody,
+        link: `/chat?userId=${senderId}`,
+      });
     }
     res.json(msg);
   });
@@ -1845,6 +1862,45 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!supplement) return res.status(404).json({ error: "Доплата не найдена" });
       if (supplement.status !== "pending") return res.status(400).json({ error: "Можно отменить только ожидающую доплату" });
       await storage.cancelSupplement(req.params.id);
+      res.json({ ok: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Push Notification Routes
+  app.get("/api/push/vapid-public-key", (_req, res) => {
+    res.json({ key: VAPID_PUBLIC_KEY });
+  });
+
+  app.post("/api/push/subscribe", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const { endpoint, keys } = req.body;
+      if (!endpoint || !keys?.p256dh || !keys?.auth) {
+        return res.status(400).json({ error: "Некорректные данные подписки" });
+      }
+      const sub = await storage.upsertPushSubscription({
+        userId,
+        endpoint,
+        p256dh: keys.p256dh,
+        auth: keys.auth,
+      });
+      res.json({ ok: true, id: sub.id });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.delete("/api/push/unsubscribe", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const { endpoint } = req.body;
+      if (!endpoint) return res.status(400).json({ error: "Нет endpoint" });
+      const subs = await storage.getPushSubscriptionsByUser(userId);
+      const owned = subs.find((s) => s.endpoint === endpoint);
+      if (!owned) return res.status(404).json({ error: "Подписка не найдена" });
+      await storage.deletePushSubscription(owned.id);
       res.json({ ok: true });
     } catch (e: any) {
       res.status(500).json({ error: e.message });

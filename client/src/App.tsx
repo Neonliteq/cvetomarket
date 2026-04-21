@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -11,6 +11,8 @@ import { CookieConsent } from "@/components/CookieConsent";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { FloatingCart } from "@/components/FloatingCart";
+import { PushNotificationPrompt } from "@/components/PushNotificationPrompt";
+import { useEffect } from "react";
 import Home from "@/pages/Home";
 import Catalog from "@/pages/Catalog";
 import Shops from "@/pages/Shops";
@@ -35,6 +37,21 @@ import NotFound from "@/pages/not-found";
 function AddonModalMount() {
   const { addonShopId, clearAddonSuggestion } = useCart();
   return <AddonSuggestionDialog shopId={addonShopId} onClose={clearAddonSuggestion} />;
+}
+
+function ServiceWorkerNavigator() {
+  const [, setLocation] = useLocation();
+  useEffect(() => {
+    if (!("serviceWorker" in navigator)) return;
+    const handler = (event: MessageEvent) => {
+      if (event.data?.type === "NAVIGATE" && event.data.link) {
+        setLocation(event.data.link);
+      }
+    };
+    navigator.serviceWorker.addEventListener("message", handler);
+    return () => navigator.serviceWorker.removeEventListener("message", handler);
+  }, [setLocation]);
+  return null;
 }
 
 function Router() {
@@ -82,6 +99,8 @@ function App() {
               <Router />
               <AddonModalMount />
               <CookieConsent />
+              <PushNotificationPrompt />
+              <ServiceWorkerNavigator />
             </TooltipProvider>
           </CartProvider>
         </CityProvider>

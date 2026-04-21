@@ -95,8 +95,21 @@ When a buyer adds a non-addon product to cart, `AddonSuggestionDialog` pops up s
 - Tables: bonus_transactions (userId, amount, reason, description, expiresAt); users have bonusBalance, referralCode, referredBy columns; orders have bonusUsed column
 - Frontend: Account → "Бонусы" tab (balance, referral link, history), Checkout → "Списать бонусы" block, Admin → "Бонусы" button per user
 
+## Web Push Notifications (PWA)
+- Full Web Push API (VAPID) integration for browser push notifications
+- VAPID keys stored in env vars: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`
+- Service worker (`client/src/sw.ts`) handles `push` and `notificationclick` events
+- Notifications are clickable and navigate to the relevant page via `postMessage`
+- **Buyers** receive push on order status changes (confirmed/assembling/delivering/delivered/cancelled)
+- **Sellers** receive push when a new order comes in
+- `PushNotificationPrompt` component shows a permission request 3 seconds after login
+- Push subscriptions stored in `push_subscriptions` table (endpoint, p256dh, auth per user)
+- API routes: `GET /api/push/vapid-public-key`, `POST /api/push/subscribe`, `DELETE /api/push/unsubscribe`
+- Push sending utility: `server/webpush.ts` (sendPushToUser, auto-removes expired subscriptions)
+- vite-plugin-pwa switched to `injectManifest` strategy to support custom push event handling
+
 ## Database Tables
-- users (with isBlocked, avatarUrl, bonusBalance, referralCode, referredBy fields), shops (with logoUrl, coverUrl, deliveryZones jsonb, latitude, longitude), products, orders (with bonusUsed), order_items, reviews, messages, categories, cities, platform_settings, shop_workers, bonus_transactions
+- users (with isBlocked, avatarUrl, bonusBalance, referralCode, referredBy fields), shops (with logoUrl, coverUrl, deliveryZones jsonb, latitude, longitude), products, orders (with bonusUsed), order_items, reviews, messages, categories, cities, platform_settings, shop_workers, bonus_transactions, push_subscriptions
 
 ## Important Patterns
 - Auth-protected pages must check `isLoading` before redirecting: `if (isLoading) return null; if (!user) { navigate("/auth"); return null; }`

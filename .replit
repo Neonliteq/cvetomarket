@@ -44,3 +44,9 @@ integrations = ["javascript_object_storage:2.0.0", "resend:1.0.0"]
 [postMerge]
 path = "scripts/post-merge.sh"
 timeoutMs = 20000
+
+[userenv]
+
+[userenv.shared]
+VAPID_PUBLIC_KEY = "BA0lzXEFOAqALB9LLmzn7E1ptNNDjOzb2Jz13UWaeJJ2EHmshXS0h5lp0bM7x-Ot7Xf5ZXlFKy8qZWo0BHc9PxI"
+VAPID_SUBJECT = "mailto:admin@cvetomarket.ru"

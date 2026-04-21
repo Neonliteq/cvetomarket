@@ -14,7 +14,8 @@ import {
   type BonusTransaction, type InsertBonusTransaction,
   type OrderSupplement, type InsertOrderSupplement,
   type PromoCode, type InsertPromoCode,
-  users, shops, products, orders, orderItems, reviews, messages, categories, cities, platformSettings, shopWorkers, notifications, bonusTransactions, orderSupplements, promoCodes,
+  type PushSubscription as PushSub, type InsertPushSubscription,
+  users, shops, products, orders, orderItems, reviews, messages, categories, cities, platformSettings, shopWorkers, notifications, bonusTransactions, orderSupplements, promoCodes, pushSubscriptions,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, inArray, sql } from "drizzle-orm";
@@ -160,6 +161,12 @@ export interface IStorage {
   updatePromoCode(id: string, data: Partial<PromoCode>): Promise<PromoCode | undefined>;
   deletePromoCode(id: string): Promise<void>;
   incrementPromoCodeUsage(id: string): Promise<void>;
+
+  // Push Subscriptions
+  upsertPushSubscription(data: InsertPushSubscription): Promise<PushSub>;
+  getPushSubscriptionsByUser(userId: string): Promise<PushSub[]>;
+  deletePushSubscription(id: string): Promise<void>;
+  deletePushSubscriptionByEndpoint(endpoint: string): Promise<void>;
 }
 
 export class DbStorage implements IStorage {
@@ -652,6 +659,28 @@ export class DbStorage implements IStorage {
 
   async incrementPromoCodeUsage(id: string): Promise<void> {
     await db.update(promoCodes).set({ usedCount: sql`used_count + 1` }).where(eq(promoCodes.id, id));
+  }
+
+  async upsertPushSubscription(data: InsertPushSubscription): Promise<PushSub> {
+    const [existing] = await db.select().from(pushSubscriptions).where(eq(pushSubscriptions.endpoint, data.endpoint));
+    if (existing) {
+      const [updated] = await db.update(pushSubscriptions).set({ p256dh: data.p256dh, auth: data.auth, userId: data.userId }).where(eq(pushSubscriptions.endpoint, data.endpoint)).returning();
+      return updated;
+    }
+    const [inserted] = await db.insert(pushSubscriptions).values(data).returning();
+    return inserted;
+  }
+
+  async getPushSubscriptionsByUser(userId: string): Promise<PushSub[]> {
+    return db.select().from(pushSubscriptions).where(eq(pushSubscriptions.userId, userId));
+  }
+
+  async deletePushSubscription(id: string): Promise<void> {
+    await db.delete(pushSubscriptions).where(eq(pushSubscriptions.id, id));
+  }
+
+  async deletePushSubscriptionByEndpoint(endpoint: string): Promise<void> {
+    await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, endpoint));
   }
 }
 
