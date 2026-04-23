@@ -520,6 +520,11 @@ export default function Admin() {
   });
   const pushFailures = pushFailuresData?.failures ?? [];
 
+  const { data: pushConfigData } = useQuery<{ retryAttempts: number; retryDelayMs: number }>({
+    queryKey: ["/api/admin/push-config"],
+    enabled: isAdmin,
+  });
+
   const createPromoMutation = useMutation({
     mutationFn: (data: any) => apiRequest("POST", "/api/admin/promo-codes", data),
     onSuccess: () => {
@@ -2340,6 +2345,28 @@ export default function Admin() {
                 Подписки с ошибками доставки за последние {pushFailuresData?.days ?? 30} дней (ошибки после исчерпания всех попыток повтора)
               </p>
             </div>
+            <Card data-testid="card-push-retry-config">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Settings className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Настройки повторных попыток</span>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-xs text-muted-foreground">Количество попыток</div>
+                    <div className="text-xl font-bold" data-testid="text-push-retry-attempts">
+                      {pushConfigData !== undefined ? pushConfigData.retryAttempts : "—"}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">Задержка между попытками</div>
+                    <div className="text-xl font-bold" data-testid="text-push-retry-delay">
+                      {pushConfigData !== undefined ? `${pushConfigData.retryDelayMs} мс` : "—"}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
             {loadingPushFailures ? (
               <div className="space-y-2">
                 {[1, 2, 3].map((i) => <Skeleton key={i} className="h-20 w-full" />)}

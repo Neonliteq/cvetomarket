@@ -34,6 +34,8 @@ if (process.env.PUSH_RETRY_ATTEMPTS !== undefined || process.env.PUSH_RETRY_DELA
   console.log(`[webpush] retry settings: attempts=${RETRY_ATTEMPTS}, delayMs=${RETRY_DELAY_MS}`);
 }
 
+export { RETRY_ATTEMPTS, RETRY_DELAY_MS };
+
 function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }

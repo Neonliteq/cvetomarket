@@ -14,7 +14,7 @@ import { registerObjectStorageRoutes } from "./replit_integrations/object_storag
 import { sendTelegramMessage, generateLinkToken, consumeLinkToken, getBotUsername, ORDER_STATUS_MESSAGES, registerWebhook } from "./telegram";
 import { sendPasswordResetEmail } from "./resend";
 import { buildPaymentUrl, verifyResultSignature, isRobokassaConfigured } from "./robokassa";
-import { sendPushToUser, VAPID_PUBLIC_KEY } from "./webpush";
+import { sendPushToUser, VAPID_PUBLIC_KEY, RETRY_ATTEMPTS, RETRY_DELAY_MS } from "./webpush";
 
 function toSafeUser(user: Record<string, unknown>) {
   const { password: _pw, adminNotes: _notes, ...safe } = user;
@@ -1895,6 +1895,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
+  });
+
+  // Push Config (admin)
+  app.get("/api/admin/push-config", requireRole("admin"), (_req, res) => {
+    res.json({ retryAttempts: RETRY_ATTEMPTS, retryDelayMs: RETRY_DELAY_MS });
   });
 
   // Push Notification Routes
