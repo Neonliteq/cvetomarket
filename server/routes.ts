@@ -14,7 +14,7 @@ import { registerObjectStorageRoutes } from "./replit_integrations/object_storag
 import { sendTelegramMessage, generateLinkToken, consumeLinkToken, getBotUsername, ORDER_STATUS_MESSAGES, registerWebhook } from "./telegram";
 import { sendPasswordResetEmail } from "./resend";
 import { buildPaymentUrl, verifyResultSignature, isRobokassaConfigured } from "./robokassa";
-import { sendPushToUser, VAPID_PUBLIC_KEY, RETRY_ATTEMPTS, RETRY_DELAY_MS } from "./webpush";
+import { sendPushToUser, VAPID_PUBLIC_KEY, setRetrySettings, getRetryAttempts, getRetryDelayMs } from "./webpush";
 
 function toSafeUser(user: Record<string, unknown>) {
   const { password: _pw, adminNotes: _notes, ...safe } = user;
@@ -99,6 +99,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   }));
 
   registerObjectStorageRoutes(app);
+
+  // Load push retry settings from DB and apply them at startup
+  storage.getSettings().then((s) => {
+    if (s && (s.pushRetryAttempts !== null || s.pushRetryDelayMs !== null)) {
+      setRetrySettings(s.pushRetryAttempts ?? 2, s.pushRetryDelayMs ?? 1000);
+    }
+  }).catch((err) => {
+    console.warn("[webpush] Failed to load push retry settings from DB at startup, using env/defaults:", err?.message ?? err);
+  });
 
   const objStorageService = new ObjectStorageService();
 
@@ -1899,7 +1908,24 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   // Push Config (admin)
   app.get("/api/admin/push-config", requireRole("admin"), (_req, res) => {
-    res.json({ retryAttempts: RETRY_ATTEMPTS, retryDelayMs: RETRY_DELAY_MS });
+    res.json({ retryAttempts: getRetryAttempts(), retryDelayMs: getRetryDelayMs() });
+  });
+
+  app.patch("/api/admin/push-config", requireRole("admin"), async (req, res) => {
+    try {
+      const schema = z.object({
+        retryAttempts: z.number().int().min(0).max(10),
+        retryDelayMs: z.number().int().min(0).max(30000),
+      });
+      const parsed = schema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
+      const { retryAttempts, retryDelayMs } = parsed.data;
+      await storage.updateSettings({ pushRetryAttempts: retryAttempts, pushRetryDelayMs: retryDelayMs });
+      setRetrySettings(retryAttempts, retryDelayMs);
+      res.json({ retryAttempts: getRetryAttempts(), retryDelayMs: getRetryDelayMs() });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
   });
 
   // Push Notification Routes

@@ -136,6 +136,11 @@ export async function runMigrations() {
       END$$;
     `);
 
+    await client.query(`
+      ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS push_retry_attempts integer DEFAULT 2;
+      ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS push_retry_delay_ms integer DEFAULT 1000;
+    `);
+
     console.log("[migrate] Schema up to date");
   } catch (err) {
     console.error("[migrate] Migration error:", err);

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import {
@@ -219,6 +219,8 @@ export default function Admin() {
 
   const [promoForm, setPromoForm] = useState({ code: "", discountType: "percent", discountValue: "", minOrderAmount: "", maxUses: "", expiresAt: "", description: "" });
   const [promoFormOpen, setPromoFormOpen] = useState(false);
+
+  const [pushRetryForm, setPushRetryForm] = useState({ retryAttempts: 2, retryDelayMs: 1000 });
 
   const isAdmin = !!user && user.role === "admin";
 
@@ -523,6 +525,22 @@ export default function Admin() {
   const { data: pushConfigData } = useQuery<{ retryAttempts: number; retryDelayMs: number }>({
     queryKey: ["/api/admin/push-config"],
     enabled: isAdmin,
+  });
+
+  useEffect(() => {
+    if (pushConfigData) {
+      setPushRetryForm({ retryAttempts: pushConfigData.retryAttempts, retryDelayMs: pushConfigData.retryDelayMs });
+    }
+  }, [pushConfigData]);
+
+  const updatePushConfigMutation = useMutation({
+    mutationFn: (data: { retryAttempts: number; retryDelayMs: number }) =>
+      apiRequest("PATCH", "/api/admin/push-config", data),
+    onSuccess: () => {
+      toast({ title: "Настройки сохранены" });
+      qc.invalidateQueries({ queryKey: ["/api/admin/push-config"] });
+    },
+    onError: (e: any) => toast({ title: "Ошибка", description: e.message, variant: "destructive" }),
   });
 
   const createPromoMutation = useMutation({
@@ -2351,20 +2369,48 @@ export default function Admin() {
                   <Settings className="w-4 h-4 text-muted-foreground" />
                   <span className="text-sm font-medium">Настройки повторных попыток</span>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
-                    <div className="text-xs text-muted-foreground">Количество попыток</div>
-                    <div className="text-xl font-bold" data-testid="text-push-retry-attempts">
-                      {pushConfigData !== undefined ? pushConfigData.retryAttempts : "—"}
+                    <Label htmlFor="push-retry-attempts" className="text-xs text-muted-foreground">Количество попыток (0–10)</Label>
+                    <Input
+                      id="push-retry-attempts"
+                      type="number"
+                      min={0}
+                      max={10}
+                      data-testid="input-push-retry-attempts"
+                      value={pushRetryForm.retryAttempts}
+                      onChange={(e) => setPushRetryForm((f) => ({ ...f, retryAttempts: Number(e.target.value) }))}
+                      className="mt-1"
+                    />
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Активно: <span data-testid="text-push-retry-attempts">{pushConfigData !== undefined ? pushConfigData.retryAttempts : "—"}</span>
                     </div>
                   </div>
                   <div>
-                    <div className="text-xs text-muted-foreground">Задержка между попытками</div>
-                    <div className="text-xl font-bold" data-testid="text-push-retry-delay">
-                      {pushConfigData !== undefined ? `${pushConfigData.retryDelayMs} мс` : "—"}
+                    <Label htmlFor="push-retry-delay" className="text-xs text-muted-foreground">Задержка мс (0–30000)</Label>
+                    <Input
+                      id="push-retry-delay"
+                      type="number"
+                      min={0}
+                      max={30000}
+                      data-testid="input-push-retry-delay"
+                      value={pushRetryForm.retryDelayMs}
+                      onChange={(e) => setPushRetryForm((f) => ({ ...f, retryDelayMs: Number(e.target.value) }))}
+                      className="mt-1"
+                    />
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Активно: <span data-testid="text-push-retry-delay">{pushConfigData !== undefined ? `${pushConfigData.retryDelayMs} мс` : "—"}</span>
                     </div>
                   </div>
                 </div>
+                <Button
+                  size="sm"
+                  data-testid="button-save-push-config"
+                  disabled={updatePushConfigMutation.isPending}
+                  onClick={() => updatePushConfigMutation.mutate(pushRetryForm)}
+                >
+                  {updatePushConfigMutation.isPending ? "Сохранение..." : "Сохранить"}
+                </Button>
               </CardContent>
             </Card>
             {loadingPushFailures ? (

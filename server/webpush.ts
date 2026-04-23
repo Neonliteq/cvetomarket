@@ -18,23 +18,32 @@ export interface PushPayload {
   icon?: string;
 }
 
-const RETRY_ATTEMPTS = (() => {
+const ENV_RETRY_ATTEMPTS = (() => {
   const raw = parseInt(process.env.PUSH_RETRY_ATTEMPTS ?? "", 10);
   if (isNaN(raw)) return 2;
   return Math.min(Math.max(raw, 0), 10);
 })();
 
-const RETRY_DELAY_MS = (() => {
+const ENV_RETRY_DELAY_MS = (() => {
   const raw = parseInt(process.env.PUSH_RETRY_DELAY_MS ?? "", 10);
   if (isNaN(raw)) return 1000;
   return Math.min(Math.max(raw, 0), 30000);
 })();
 
-if (process.env.PUSH_RETRY_ATTEMPTS !== undefined || process.env.PUSH_RETRY_DELAY_MS !== undefined) {
-  console.log(`[webpush] retry settings: attempts=${RETRY_ATTEMPTS}, delayMs=${RETRY_DELAY_MS}`);
+let _retryAttempts = ENV_RETRY_ATTEMPTS;
+let _retryDelayMs = ENV_RETRY_DELAY_MS;
+
+export function getRetryAttempts() { return _retryAttempts; }
+export function getRetryDelayMs() { return _retryDelayMs; }
+
+export function setRetrySettings(attempts: number, delayMs: number) {
+  _retryAttempts = Math.min(Math.max(attempts, 0), 10);
+  _retryDelayMs = Math.min(Math.max(delayMs, 0), 30000);
+  console.log(`[webpush] retry settings updated: attempts=${_retryAttempts}, delayMs=${_retryDelayMs}`);
 }
 
-export { RETRY_ATTEMPTS, RETRY_DELAY_MS };
+export const RETRY_ATTEMPTS = ENV_RETRY_ATTEMPTS;
+export const RETRY_DELAY_MS = ENV_RETRY_DELAY_MS;
 
 function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -75,7 +84,7 @@ async function sendWithRetry(
       return { status: "permanent_failure" };
     }
     if (status !== undefined && status >= 500 && status < 600 && attemptsLeft > 0) {
-      await delay(RETRY_DELAY_MS);
+      await delay(getRetryDelayMs());
       return sendWithRetry(sub, data, attemptsLeft - 1);
     }
     const errorMsg = `status=${status ?? "unknown"}, message=${getPushErrorMessage(err)}`;
@@ -96,7 +105,7 @@ export async function sendPushToUser(userId: string, payload: PushPayload) {
   const permanentlyFailed: string[] = [];
   await Promise.all(
     subscriptions.map(async (sub) => {
-      const result = await sendWithRetry(sub, data, RETRY_ATTEMPTS);
+      const result = await sendWithRetry(sub, data, getRetryAttempts());
       if (result.status === "permanent_failure") {
         permanentlyFailed.push(sub.id);
       } else if (result.status === "transient_failure") {
