@@ -62,6 +62,29 @@ export function PushNotificationPrompt() {
 
   useEffect(() => {
     if (!user) return;
+    if (!("Notification" in window)) return;
+    if (Notification.permission === "granted") return;
+    const storageKey = endpointKey(user.id);
+    const endpoint = localStorage.getItem(storageKey);
+    if (!endpoint) return;
+    (async () => {
+      try {
+        const res = await fetch("/api/push/unsubscribe", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ endpoint }),
+          credentials: "include",
+        });
+        if (res.ok || res.status === 404) {
+          localStorage.removeItem(storageKey);
+        }
+      } catch {
+      }
+    })();
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
     if (!("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) return;
     if (Notification.permission === "granted" || Notification.permission === "denied") return;
     if (sessionStorage.getItem(DISMISSED_KEY)) return;
