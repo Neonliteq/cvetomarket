@@ -113,6 +113,29 @@ export async function runMigrations() {
       );
     `);
 
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS push_delivery_failures (
+        id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id varchar NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        endpoint text NOT NULL UNIQUE,
+        failure_count integer NOT NULL DEFAULT 1,
+        last_error text,
+        last_failed_at timestamp NOT NULL DEFAULT now()
+      );
+      DO $$
+      BEGIN
+        IF EXISTS (
+          SELECT 1 FROM information_schema.table_constraints
+          WHERE constraint_name = 'push_delivery_failures_user_id_fkey'
+            AND table_name = 'push_delivery_failures'
+        ) THEN
+          ALTER TABLE push_delivery_failures DROP CONSTRAINT push_delivery_failures_user_id_fkey;
+          ALTER TABLE push_delivery_failures ADD CONSTRAINT push_delivery_failures_user_id_fkey
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+        END IF;
+      END$$;
+    `);
+
     console.log("[migrate] Schema up to date");
   } catch (err) {
     console.error("[migrate] Migration error:", err);

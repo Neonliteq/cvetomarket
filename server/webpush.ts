@@ -38,7 +38,7 @@ function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-type SendResult = "ok" | "permanent_failure";
+type SendResult = { status: "ok" } | { status: "permanent_failure" } | { status: "transient_failure"; error: string };
 
 function getPushErrorStatus(err: unknown): number | undefined {
   if (err !== null && typeof err === "object" && "statusCode" in err) {
@@ -66,20 +66,19 @@ async function sendWithRetry(
       { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
       data
     );
-    return "ok";
+    return { status: "ok" };
   } catch (err: unknown) {
     const status = getPushErrorStatus(err);
     if (status === 410 || status === 404) {
-      return "permanent_failure";
+      return { status: "permanent_failure" };
     }
     if (status !== undefined && status >= 500 && status < 600 && attemptsLeft > 0) {
       await delay(RETRY_DELAY_MS);
       return sendWithRetry(sub, data, attemptsLeft - 1);
     }
-    console.error(
-      `Push notification failed for subscription ${sub.id}: status=${status ?? "unknown"}, message=${getPushErrorMessage(err)}`
-    );
-    return "ok";
+    const errorMsg = `status=${status ?? "unknown"}, message=${getPushErrorMessage(err)}`;
+    console.error(`Push notification failed for subscription ${sub.id}: ${errorMsg}`);
+    return { status: "transient_failure", error: errorMsg };
   }
 }
 
@@ -92,16 +91,18 @@ export async function sendPushToUser(userId: string, payload: PushPayload) {
     link: payload.link || "/",
     icon: payload.icon || "/icon-192.png",
   });
-  const failed: string[] = [];
+  const permanentlyFailed: string[] = [];
   await Promise.all(
     subscriptions.map(async (sub) => {
       const result = await sendWithRetry(sub, data, RETRY_ATTEMPTS);
-      if (result === "permanent_failure") {
-        failed.push(sub.id);
+      if (result.status === "permanent_failure") {
+        permanentlyFailed.push(sub.id);
+      } else if (result.status === "transient_failure") {
+        await storage.recordPushDeliveryFailure(userId, sub.endpoint, result.error);
       }
     })
   );
-  for (const id of failed) {
+  for (const id of permanentlyFailed) {
     await storage.deletePushSubscription(id);
   }
 }

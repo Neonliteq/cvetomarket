@@ -6,7 +6,7 @@ import {
   BarChart3, MapPin, Tag, ShieldAlert, ShieldCheck, TrendingUp, DollarSign,
   Ban, UserCheck, Eye, ChevronDown, Edit, ShoppingBag, EyeOff, FileText,
   Wallet, Receipt, Percent, ArrowDownRight, Filter, ChevronsUpDown, Gift,
-  Star, Award, MessageSquare, AlertCircle, ChevronRight, Search, StickyNote
+  Star, Award, MessageSquare, AlertCircle, ChevronRight, Search, StickyNote, Bell
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -514,6 +514,12 @@ export default function Admin() {
     enabled: isAdmin,
   });
 
+  const { data: pushFailuresData, isLoading: loadingPushFailures } = useQuery<{ days: number; sinceDate: string; failures: any[] }>({
+    queryKey: ["/api/admin/push-failures"],
+    enabled: isAdmin,
+  });
+  const pushFailures = pushFailuresData?.failures ?? [];
+
   const createPromoMutation = useMutation({
     mutationFn: (data: any) => apiRequest("POST", "/api/admin/promo-codes", data),
     onSuccess: () => {
@@ -639,6 +645,13 @@ export default function Admin() {
           <TabsTrigger value="promo" className="gap-1 text-xs sm:text-sm" data-testid="tab-promo">
             <Tag className="w-4 h-4 shrink-0" />
             <span>Промокоды</span>
+          </TabsTrigger>
+          <TabsTrigger value="push-failures" className="gap-1 text-xs sm:text-sm" data-testid="tab-push-failures">
+            <Bell className="w-4 h-4 shrink-0" />
+            <span>Push-ошибки</span>
+            {pushFailures && pushFailures.length > 0 && (
+              <Badge variant="destructive" className="ml-0.5 h-4 px-1 text-[10px]">{pushFailures.length}</Badge>
+            )}
           </TabsTrigger>
         </TabsList>
         </div>
@@ -2315,6 +2328,104 @@ export default function Admin() {
                 </Card>
               ))}
             </div>
+          </div>
+        </TabsContent>
+
+        {/* ==================== PUSH FAILURES ==================== */}
+        <TabsContent value="push-failures">
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-lg font-semibold">Ошибки доставки push-уведомлений</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                Подписки с ошибками доставки за последние {pushFailuresData?.days ?? 30} дней (ошибки после исчерпания всех попыток повтора)
+              </p>
+            </div>
+            {loadingPushFailures ? (
+              <div className="space-y-2">
+                {[1, 2, 3].map((i) => <Skeleton key={i} className="h-20 w-full" />)}
+              </div>
+            ) : !pushFailures || pushFailures.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <CheckCircle className="w-10 h-10 text-green-500 mx-auto mb-3" />
+                  <p className="text-sm font-medium">Ошибок доставки нет</p>
+                  <p className="text-xs text-muted-foreground mt-1">Все push-уведомления доставляются успешно</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <Card data-testid="card-push-failures-total">
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center shrink-0">
+                        <Bell className="w-5 h-5 text-red-600 dark:text-red-400" />
+                      </div>
+                      <div>
+                        <div className="text-xs text-muted-foreground">Проблемных подписок</div>
+                        <div className="text-2xl font-bold" data-testid="text-push-failures-count">{pushFailures.length}</div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card data-testid="card-push-failures-sum">
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900 flex items-center justify-center shrink-0">
+                        <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                      </div>
+                      <div>
+                        <div className="text-xs text-muted-foreground">Всего ошибок</div>
+                        <div className="text-2xl font-bold" data-testid="text-push-failures-total">
+                          {pushFailures.reduce((sum: number, f: any) => sum + (f.failureCount ?? 0), 0)}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card data-testid="card-push-failures-users">
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center shrink-0">
+                        <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <div>
+                        <div className="text-xs text-muted-foreground">Затронутых пользователей</div>
+                        <div className="text-2xl font-bold" data-testid="text-push-failures-users">
+                          {new Set(pushFailures.map((f: any) => f.userId)).size}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+                <div className="space-y-2">
+                  {pushFailures.map((f: any) => (
+                    <Card key={f.id} data-testid={`card-push-failure-${f.id}`}>
+                      <CardContent className="p-4">
+                        <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+                          <div className="flex-1 min-w-0 space-y-1.5">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-medium text-sm" data-testid={`text-push-failure-user-${f.id}`}>{f.userName}</span>
+                              <span className="text-xs text-muted-foreground">{f.userEmail}</span>
+                              <Badge variant="destructive" className="text-xs" data-testid={`badge-push-failure-count-${f.id}`}>
+                                {f.failureCount} {f.failureCount === 1 ? "ошибка" : f.failureCount < 5 ? "ошибки" : "ошибок"}
+                              </Badge>
+                            </div>
+                            <div className="text-xs text-muted-foreground font-mono truncate" title={f.endpoint} data-testid={`text-push-failure-endpoint-${f.id}`}>
+                              {f.endpoint}
+                            </div>
+                            {f.lastError && (
+                              <div className="text-xs text-red-600 dark:text-red-400 break-all" data-testid={`text-push-failure-error-${f.id}`}>
+                                {f.lastError}
+                              </div>
+                            )}
+                            <div className="text-xs text-muted-foreground" data-testid={`text-push-failure-date-${f.id}`}>
+                              Последняя ошибка:{" "}
+                              {f.lastFailedAt ? format(new Date(f.lastFailedAt), "d MMM yyyy, HH:mm", { locale: ru }) : "—"}
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </TabsContent>
       </Tabs>

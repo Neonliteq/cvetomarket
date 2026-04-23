@@ -16,7 +16,8 @@ import {
   type PromoCode, type InsertPromoCode,
   type PushSubscription as PushSub, type InsertPushSubscription,
   type NotificationPreferences,
-  users, shops, products, orders, orderItems, reviews, messages, categories, cities, platformSettings, shopWorkers, notifications, bonusTransactions, orderSupplements, promoCodes, pushSubscriptions, notificationPreferences,
+  type PushDeliveryFailure,
+  users, shops, products, orders, orderItems, reviews, messages, categories, cities, platformSettings, shopWorkers, notifications, bonusTransactions, orderSupplements, promoCodes, pushSubscriptions, notificationPreferences, pushDeliveryFailures,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, inArray, sql } from "drizzle-orm";
@@ -173,6 +174,10 @@ export interface IStorage {
   // Notification Preferences
   getNotificationPreferences(userId: string): Promise<NotificationPreferences | undefined>;
   upsertNotificationPreferences(userId: string, data: Partial<Pick<NotificationPreferences, 'notifyOrders' | 'notifyMessages'>>): Promise<NotificationPreferences>;
+
+  // Push Delivery Failures
+  recordPushDeliveryFailure(userId: string, endpoint: string, errorMessage: string): Promise<void>;
+  getPushDeliveryFailures(sinceDate?: Date): Promise<PushDeliveryFailure[]>;
 }
 
 export class DbStorage implements IStorage {
@@ -715,6 +720,30 @@ export class DbStorage implements IStorage {
       .values({ userId, notifyOrders: true, notifyMessages: true, ...data })
       .returning();
     return inserted;
+  }
+
+  async recordPushDeliveryFailure(userId: string, endpoint: string, errorMessage: string): Promise<void> {
+    await db
+      .insert(pushDeliveryFailures)
+      .values({ userId, endpoint, failureCount: 1, lastError: errorMessage, lastFailedAt: new Date() })
+      .onConflictDoUpdate({
+        target: pushDeliveryFailures.endpoint,
+        set: {
+          userId,
+          failureCount: sql`${pushDeliveryFailures.failureCount} + 1`,
+          lastError: errorMessage,
+          lastFailedAt: new Date(),
+        },
+      });
+  }
+
+  async getPushDeliveryFailures(sinceDate?: Date): Promise<PushDeliveryFailure[]> {
+    if (sinceDate) {
+      return db.select().from(pushDeliveryFailures)
+        .where(sql`${pushDeliveryFailures.lastFailedAt} >= ${sinceDate}`)
+        .orderBy(desc(pushDeliveryFailures.failureCount));
+    }
+    return db.select().from(pushDeliveryFailures).orderBy(desc(pushDeliveryFailures.failureCount));
   }
 }
 

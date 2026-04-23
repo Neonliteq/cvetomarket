@@ -238,6 +238,17 @@ export const orderSupplements = pgTable("order_supplements", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const pushDeliveryFailures = pgTable("push_delivery_failures", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  endpoint: text("endpoint").notNull().unique(),
+  failureCount: integer("failure_count").notNull().default(1),
+  lastError: text("last_error"),
+  lastFailedAt: timestamp("last_failed_at").notNull().defaultNow(),
+});
+
+export type PushDeliveryFailure = typeof pushDeliveryFailures.$inferSelect;
+
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
 export const insertShopSchema = createInsertSchema(shops).omit({ id: true, createdAt: true, rating: true, reviewCount: true });
 export const insertProductSchema = createInsertSchema(products).omit({ id: true, createdAt: true, rating: true, reviewCount: true });

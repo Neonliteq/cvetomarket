@@ -1877,6 +1877,26 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  // Push Delivery Failures (admin)
+  app.get("/api/admin/push-failures", requireRole("admin"), async (req, res) => {
+    try {
+      const rawDays = parseInt((req.query.days as string) ?? "30", 10);
+      const days = isNaN(rawDays) ? 30 : Math.min(Math.max(rawDays, 1), 365);
+      const sinceDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+      const failures = await storage.getPushDeliveryFailures(sinceDate);
+      const allUsers = await storage.getAllUsers();
+      const userMap = Object.fromEntries(allUsers.map((u) => [u.id, { name: u.name, email: u.email }]));
+      const result = failures.map((f) => ({
+        ...f,
+        userName: userMap[f.userId]?.name ?? "Неизвестен",
+        userEmail: userMap[f.userId]?.email ?? "",
+      }));
+      res.json({ days, sinceDate, failures: result });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   // Push Notification Routes
   app.get("/api/push/vapid-public-key", (_req, res) => {
     res.json({ key: VAPID_PUBLIC_KEY });

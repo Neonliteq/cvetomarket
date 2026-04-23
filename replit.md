@@ -39,6 +39,15 @@ A full-featured flower marketplace (маркетплейс цветочных м
 7. **Финансы (Financial Analytics)** - Revenue/commission breakdown filtered by shop + time period (week/month/quarter/year/all); daily bar chart + per-shop table
 8. **Analytics Dashboard** - Revenue stats (total/monthly/weekly), commission earned, avg order value, order status breakdown, top shops by revenue, daily revenue chart, user/shop counts
 9. **Platform Settings** - Configure global commission rate (%) and delivery cost (₽)
+10. **Push-ошибки (Push Delivery Failures)** - Summary of push notification delivery failures: total count of failing subscriptions, total errors, affected users; per-subscription details (user name, endpoint, failure count, last error, last failure time)
+
+## Push Notification Delivery Tracking
+- Failed push attempts (after all retries exhausted) are stored in `push_delivery_failures` table
+- Table tracks: userId, endpoint (unique), failureCount (cumulative), lastError, lastFailedAt
+- `storage.recordPushDeliveryFailure(userId, endpoint, errorMessage)` upserts via `ON CONFLICT` on endpoint
+- Admin endpoint: `GET /api/admin/push-failures` (admin role required) returns failures with user name/email enriched
+- `server/webpush.ts` `sendWithRetry` returns `{ status: "transient_failure", error }` instead of silently logging
+- `sendPushToUser` calls `recordPushDeliveryFailure` for transient failures; still deletes subscriptions on permanent failures (410/404)
 
 ## Pages
 - `/` - Home (hero, featured products, shops)
