@@ -18,8 +18,21 @@ export interface PushPayload {
   icon?: string;
 }
 
-const RETRY_ATTEMPTS = 2;
-const RETRY_DELAY_MS = 1000;
+const RETRY_ATTEMPTS = (() => {
+  const raw = parseInt(process.env.PUSH_RETRY_ATTEMPTS ?? "", 10);
+  if (isNaN(raw)) return 2;
+  return Math.min(Math.max(raw, 0), 10);
+})();
+
+const RETRY_DELAY_MS = (() => {
+  const raw = parseInt(process.env.PUSH_RETRY_DELAY_MS ?? "", 10);
+  if (isNaN(raw)) return 1000;
+  return Math.min(Math.max(raw, 0), 30000);
+})();
+
+if (process.env.PUSH_RETRY_ATTEMPTS !== undefined || process.env.PUSH_RETRY_DELAY_MS !== undefined) {
+  console.log(`[webpush] retry settings: attempts=${RETRY_ATTEMPTS}, delayMs=${RETRY_DELAY_MS}`);
+}
 
 function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
