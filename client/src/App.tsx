@@ -13,6 +13,7 @@ import { Footer } from "@/components/Footer";
 import { FloatingCart } from "@/components/FloatingCart";
 import { PushNotificationPrompt } from "@/components/PushNotificationPrompt";
 import { useEffect } from "react";
+import { useAnalytics } from "@/lib/analytics";
 import Home from "@/pages/Home";
 import Catalog from "@/pages/Catalog";
 import Shops from "@/pages/Shops";
@@ -51,6 +52,11 @@ function ServiceWorkerNavigator() {
     navigator.serviceWorker.addEventListener("message", handler);
     return () => navigator.serviceWorker.removeEventListener("message", handler);
   }, [setLocation]);
+  return null;
+}
+
+function AnalyticsTracker() {
+  useAnalytics();
   return null;
 }
 
@@ -97,6 +103,7 @@ function App() {
             <TooltipProvider>
               <Toaster />
               <Router />
+              <AnalyticsTracker />
               <AddonModalMount />
               <CookieConsent />
               <PushNotificationPrompt />

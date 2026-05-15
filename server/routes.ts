@@ -1998,5 +1998,47 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  // Analytics — record page view (public)
+  app.post("/api/analytics/pageview", async (req, res) => {
+    try {
+      const { sessionId, page, referrer, deviceType } = req.body;
+      if (!sessionId || !page) return res.status(400).json({ error: "sessionId and page required" });
+      const userId = (req.session as any)?.userId as string | undefined;
+      await storage.recordPageView({ sessionId, userId, page, referrer, deviceType: deviceType || "desktop" });
+      res.json({ ok: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Analytics — record event (public)
+  app.post("/api/analytics/event", async (req, res) => {
+    try {
+      const { sessionId, eventName, properties, page } = req.body;
+      if (!sessionId || !eventName || !page) return res.status(400).json({ error: "sessionId, eventName and page required" });
+      const userId = (req.session as any)?.userId as string | undefined;
+      await storage.recordAnalyticsEvent({ sessionId, userId, eventName, properties, page });
+      res.json({ ok: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Analytics — admin stats
+  app.get("/api/admin/site-analytics", async (req, res) => {
+    try {
+      const user = await storage.getUser((req.session as any)?.userId);
+      if (!user || user.role !== "admin") return res.status(403).json({ error: "Forbidden" });
+      const period = (req.query.period as string) || "30d";
+      const ms: Record<string, number> = { "7d": 7, "30d": 30, "90d": 90, "1y": 365 };
+      const days = ms[period] ?? 30;
+      const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+      const data = await storage.getSiteAnalytics(since);
+      res.json(data);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   return httpServer;
 }

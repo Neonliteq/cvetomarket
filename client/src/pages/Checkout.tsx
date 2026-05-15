@@ -1,4 +1,5 @@
 import { useLocation } from "wouter";
+import { trackEvent } from "@/lib/analytics";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -184,6 +185,7 @@ export default function Checkout() {
       });
     },
     onSuccess: (data) => {
+      trackEvent("order_placed", { orderId: data.order?.id, total: total + DELIVERY });
       clearCart();
       if (data.paymentUrl) {
         window.location.href = data.paymentUrl;

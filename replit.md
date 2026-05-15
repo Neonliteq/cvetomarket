@@ -117,8 +117,17 @@ When a buyer adds a non-addon product to cart, `AddonSuggestionDialog` pops up s
 - Push sending utility: `server/webpush.ts` (sendPushToUser, auto-removes expired subscriptions)
 - vite-plugin-pwa switched to `injectManifest` strategy to support custom push event handling
 
+## Custom Site Analytics
+- Tracks all page views and user interaction events automatically
+- Session-based tracking via localStorage (30-min inactivity timeout), device type detection (mobile/desktop/tablet)
+- Tables: `page_views` (sessionId, userId, page, referrer, deviceType), `analytics_events` (sessionId, userId, eventName, properties jsonb, page)
+- Frontend hook `useAnalytics()` in `client/src/lib/analytics.ts` — auto-tracks page changes via wouter `useLocation`
+- `trackEvent(name, props?)` exported for manual event tracking (currently: add_to_cart, order_placed)
+- API: `POST /api/analytics/pageview`, `POST /api/analytics/event` (public), `GET /api/admin/site-analytics?period=7d|30d|90d|1y` (admin)
+- Admin panel → "Трафик" tab: total views, unique sessions, authorized users, daily chart, top pages, device breakdown, top events
+
 ## Database Tables
-- users (with isBlocked, avatarUrl, bonusBalance, referralCode, referredBy fields), shops (with logoUrl, coverUrl, deliveryZones jsonb, latitude, longitude), products, orders (with bonusUsed), order_items, reviews, messages, categories, cities, platform_settings, shop_workers, bonus_transactions, push_subscriptions
+- users (with isBlocked, avatarUrl, bonusBalance, referralCode, referredBy fields), shops (with logoUrl, coverUrl, deliveryZones jsonb, latitude, longitude), products, orders (with bonusUsed), order_items, reviews, messages, categories, cities, platform_settings, shop_workers, bonus_transactions, push_subscriptions, page_views, analytics_events
 
 ## Important Patterns
 - Auth-protected pages must check `isLoading` before redirecting: `if (isLoading) return null; if (!user) { navigate("/auth"); return null; }`

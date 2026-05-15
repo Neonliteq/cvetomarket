@@ -516,6 +516,25 @@ export default function Admin() {
     enabled: isAdmin,
   });
 
+  const [trafficPeriod, setTrafficPeriod] = useState<"7d" | "30d" | "90d" | "1y">("30d");
+  const { data: siteAnalytics, isLoading: loadingTraffic } = useQuery<{
+    totalViews: number;
+    uniqueSessions: number;
+    uniqueUsers: number;
+    topPages: { page: string; views: number }[];
+    deviceBreakdown: { deviceType: string; count: number }[];
+    topEvents: { eventName: string; count: number }[];
+    dailyViews: { date: string; views: number; sessions: number }[];
+  }>({
+    queryKey: ["/api/admin/site-analytics", trafficPeriod],
+    queryFn: async () => {
+      const res = await fetch(`/api/admin/site-analytics?period=${trafficPeriod}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    enabled: isAdmin,
+  });
+
   const { data: pushFailuresData, isLoading: loadingPushFailures } = useQuery<{ days: number; sinceDate: string; failures: any[] }>({
     queryKey: ["/api/admin/push-failures"],
     enabled: isAdmin,
@@ -668,6 +687,10 @@ export default function Admin() {
           <TabsTrigger value="promo" className="gap-1 text-xs sm:text-sm" data-testid="tab-promo">
             <Tag className="w-4 h-4 shrink-0" />
             <span>Промокоды</span>
+          </TabsTrigger>
+          <TabsTrigger value="traffic" className="gap-1 text-xs sm:text-sm" data-testid="tab-traffic">
+            <TrendingUp className="w-4 h-4 shrink-0" />
+            <span>Трафик</span>
           </TabsTrigger>
           <TabsTrigger value="push-failures" className="gap-1 text-xs sm:text-sm" data-testid="tab-push-failures">
             <Bell className="w-4 h-4 shrink-0" />
@@ -2351,6 +2374,212 @@ export default function Admin() {
                 </Card>
               ))}
             </div>
+          </div>
+        </TabsContent>
+
+        {/* ==================== TRAFFIC ==================== */}
+        <TabsContent value="traffic">
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold">Посещаемость сайта</h2>
+                <p className="text-sm text-muted-foreground mt-1">Просмотры страниц, сессии и события пользователей</p>
+              </div>
+              <Select value={trafficPeriod} onValueChange={(v) => setTrafficPeriod(v as any)}>
+                <SelectTrigger className="w-36" data-testid="select-traffic-period">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="7d">7 дней</SelectItem>
+                  <SelectItem value="30d">30 дней</SelectItem>
+                  <SelectItem value="90d">90 дней</SelectItem>
+                  <SelectItem value="1y">Год</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {loadingTraffic ? (
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-28 rounded-xl" />)}
+              </div>
+            ) : (
+              <>
+                {/* Summary cards */}
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                  <Card data-testid="card-traffic-views">
+                    <CardContent className="pt-5">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                          <Eye className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div>
+                          <div className="text-xs text-muted-foreground">Просмотры</div>
+                          <div className="text-2xl font-bold" data-testid="text-traffic-views">{(siteAnalytics?.totalViews ?? 0).toLocaleString()}</div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card data-testid="card-traffic-sessions">
+                    <CardContent className="pt-5">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
+                          <Users className="w-5 h-5 text-green-600 dark:text-green-400" />
+                        </div>
+                        <div>
+                          <div className="text-xs text-muted-foreground">Уникальных сессий</div>
+                          <div className="text-2xl font-bold" data-testid="text-traffic-sessions">{(siteAnalytics?.uniqueSessions ?? 0).toLocaleString()}</div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card data-testid="card-traffic-users" className="col-span-2 lg:col-span-1">
+                    <CardContent className="pt-5">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center">
+                          <UserCheck className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                        </div>
+                        <div>
+                          <div className="text-xs text-muted-foreground">Авторизованных</div>
+                          <div className="text-2xl font-bold" data-testid="text-traffic-users">{(siteAnalytics?.uniqueUsers ?? 0).toLocaleString()}</div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Daily chart */}
+                {siteAnalytics && siteAnalytics.dailyViews.length > 0 && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium">Динамика просмотров</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-1">
+                        {(() => {
+                          const maxViews = Math.max(...siteAnalytics.dailyViews.map(d => d.views), 1);
+                          return siteAnalytics.dailyViews.slice(-30).map((d) => (
+                            <div key={d.date} className="flex items-center gap-2 text-xs" data-testid={`row-daily-views-${d.date}`}>
+                              <span className="w-20 text-muted-foreground shrink-0">{format(new Date(d.date), "d MMM", { locale: ru })}</span>
+                              <div className="flex-1 bg-muted rounded-full h-4 overflow-hidden">
+                                <div
+                                  className="h-full bg-primary rounded-full transition-all"
+                                  style={{ width: `${Math.round((d.views / maxViews) * 100)}%` }}
+                                />
+                              </div>
+                              <span className="w-8 text-right font-medium shrink-0">{d.views}</span>
+                            </div>
+                          ));
+                        })()}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                  {/* Top pages */}
+                  <Card className="lg:col-span-2">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium">Топ страниц</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {(siteAnalytics?.topPages ?? []).length === 0 ? (
+                        <p className="text-sm text-muted-foreground">Нет данных</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {(siteAnalytics?.topPages ?? []).map((p, i) => {
+                            const maxViews = siteAnalytics!.topPages[0]?.views || 1;
+                            return (
+                              <div key={p.page} className="flex items-center gap-2 text-sm" data-testid={`row-top-page-${i}`}>
+                                <span className="w-4 text-muted-foreground shrink-0 font-mono text-xs">{i + 1}</span>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="truncate font-mono text-xs">{p.page}</span>
+                                    <div className="flex-1 bg-muted rounded-full h-1.5">
+                                      <div className="h-full bg-primary rounded-full" style={{ width: `${Math.round((p.views / maxViews) * 100)}%` }} />
+                                    </div>
+                                  </div>
+                                </div>
+                                <span className="text-xs font-medium shrink-0 w-8 text-right">{p.views}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Device breakdown */}
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium">Устройства</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {(siteAnalytics?.deviceBreakdown ?? []).length === 0 ? (
+                        <p className="text-sm text-muted-foreground">Нет данных</p>
+                      ) : (
+                        <div className="space-y-3">
+                          {(siteAnalytics?.deviceBreakdown ?? []).map((d) => {
+                            const total = siteAnalytics!.deviceBreakdown.reduce((s, x) => s + x.count, 0);
+                            const pct = total > 0 ? Math.round((d.count / total) * 100) : 0;
+                            const labels: Record<string, string> = { mobile: "Мобильные", desktop: "Компьютеры", tablet: "Планшеты" };
+                            const colors: Record<string, string> = { mobile: "bg-blue-500", desktop: "bg-green-500", tablet: "bg-purple-500" };
+                            return (
+                              <div key={d.deviceType} data-testid={`row-device-${d.deviceType}`}>
+                                <div className="flex justify-between text-sm mb-1">
+                                  <span>{labels[d.deviceType] || d.deviceType}</span>
+                                  <span className="font-medium">{pct}%</span>
+                                </div>
+                                <div className="bg-muted rounded-full h-2">
+                                  <div className={`h-full rounded-full ${colors[d.deviceType] || "bg-primary"}`} style={{ width: `${pct}%` }} />
+                                </div>
+                                <div className="text-xs text-muted-foreground mt-0.5">{d.count} просмотров</div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Top events */}
+                {(siteAnalytics?.topEvents ?? []).length > 0 && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium">Топ событий</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                        {(siteAnalytics?.topEvents ?? []).map((e, i) => {
+                          const EVENT_LABELS: Record<string, string> = {
+                            add_to_cart: "В корзину",
+                            checkout_start: "Оформление",
+                            order_placed: "Заказ",
+                            product_view: "Просмотр товара",
+                            register: "Регистрация",
+                            login: "Вход",
+                            search: "Поиск",
+                          };
+                          return (
+                            <div key={e.eventName} className="bg-muted/50 rounded-lg p-3 text-center" data-testid={`card-event-${i}`}>
+                              <div className="text-2xl font-bold">{e.count}</div>
+                              <div className="text-xs text-muted-foreground mt-1">{EVENT_LABELS[e.eventName] || e.eventName}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {!siteAnalytics || (siteAnalytics.totalViews === 0) ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <TrendingUp className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                    <p>Данные ещё накапливаются. Зайдите позже.</p>
+                  </div>
+                ) : null}
+              </>
+            )}
           </div>
         </TabsContent>
 

@@ -240,6 +240,29 @@ export const orderSupplements = pgTable("order_supplements", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const pageViews = pgTable("page_views", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: text("session_id").notNull(),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "set null" }),
+  page: text("page").notNull(),
+  referrer: text("referrer"),
+  deviceType: text("device_type").notNull().default("desktop"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const analyticsEvents = pgTable("analytics_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: text("session_id").notNull(),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "set null" }),
+  eventName: text("event_name").notNull(),
+  properties: jsonb("properties").default({}),
+  page: text("page").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type PageView = typeof pageViews.$inferSelect;
+export type AnalyticsEvent = typeof analyticsEvents.$inferSelect;
+
 export const pushDeliveryFailures = pgTable("push_delivery_failures", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),

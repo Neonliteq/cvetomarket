@@ -17,7 +17,8 @@ import {
   type PushSubscription as PushSub, type InsertPushSubscription,
   type NotificationPreferences,
   type PushDeliveryFailure,
-  users, shops, products, orders, orderItems, reviews, messages, categories, cities, platformSettings, shopWorkers, notifications, bonusTransactions, orderSupplements, promoCodes, pushSubscriptions, notificationPreferences, pushDeliveryFailures,
+  type PageView, type AnalyticsEvent,
+  users, shops, products, orders, orderItems, reviews, messages, categories, cities, platformSettings, shopWorkers, notifications, bonusTransactions, orderSupplements, promoCodes, pushSubscriptions, notificationPreferences, pushDeliveryFailures, pageViews, analyticsEvents,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, inArray, sql } from "drizzle-orm";
@@ -178,6 +179,19 @@ export interface IStorage {
   // Push Delivery Failures
   recordPushDeliveryFailure(userId: string, endpoint: string, errorMessage: string): Promise<void>;
   getPushDeliveryFailures(sinceDate?: Date): Promise<PushDeliveryFailure[]>;
+
+  // Analytics
+  recordPageView(data: { sessionId: string; userId?: string; page: string; referrer?: string; deviceType: string }): Promise<void>;
+  recordAnalyticsEvent(data: { sessionId: string; userId?: string; eventName: string; properties?: Record<string, unknown>; page: string }): Promise<void>;
+  getSiteAnalytics(since: Date): Promise<{
+    totalViews: number;
+    uniqueSessions: number;
+    uniqueUsers: number;
+    topPages: { page: string; views: number }[];
+    deviceBreakdown: { deviceType: string; count: number }[];
+    topEvents: { eventName: string; count: number }[];
+    dailyViews: { date: string; views: number; sessions: number }[];
+  }>;
 }
 
 export class DbStorage implements IStorage {
@@ -744,6 +758,86 @@ export class DbStorage implements IStorage {
         .orderBy(desc(pushDeliveryFailures.failureCount));
     }
     return db.select().from(pushDeliveryFailures).orderBy(desc(pushDeliveryFailures.failureCount));
+  }
+
+  async recordPageView(data: { sessionId: string; userId?: string; page: string; referrer?: string; deviceType: string }): Promise<void> {
+    await db.insert(pageViews).values({
+      sessionId: data.sessionId,
+      userId: data.userId ?? null,
+      page: data.page,
+      referrer: data.referrer ?? null,
+      deviceType: data.deviceType,
+    });
+  }
+
+  async recordAnalyticsEvent(data: { sessionId: string; userId?: string; eventName: string; properties?: Record<string, unknown>; page: string }): Promise<void> {
+    await db.insert(analyticsEvents).values({
+      sessionId: data.sessionId,
+      userId: data.userId ?? null,
+      eventName: data.eventName,
+      properties: data.properties ?? {},
+      page: data.page,
+    });
+  }
+
+  async getSiteAnalytics(since: Date) {
+    const [totalViewsRow] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(pageViews)
+      .where(sql`${pageViews.createdAt} >= ${since}`);
+
+    const [uniqueSessionsRow] = await db
+      .select({ count: sql<number>`count(distinct ${pageViews.sessionId})::int` })
+      .from(pageViews)
+      .where(sql`${pageViews.createdAt} >= ${since}`);
+
+    const [uniqueUsersRow] = await db
+      .select({ count: sql<number>`count(distinct ${pageViews.userId})::int` })
+      .from(pageViews)
+      .where(sql`${pageViews.createdAt} >= ${since} and ${pageViews.userId} is not null`);
+
+    const topPages = await db
+      .select({ page: pageViews.page, views: sql<number>`count(*)::int` })
+      .from(pageViews)
+      .where(sql`${pageViews.createdAt} >= ${since}`)
+      .groupBy(pageViews.page)
+      .orderBy(sql`count(*) desc`)
+      .limit(10);
+
+    const deviceBreakdown = await db
+      .select({ deviceType: pageViews.deviceType, count: sql<number>`count(*)::int` })
+      .from(pageViews)
+      .where(sql`${pageViews.createdAt} >= ${since}`)
+      .groupBy(pageViews.deviceType);
+
+    const topEvents = await db
+      .select({ eventName: analyticsEvents.eventName, count: sql<number>`count(*)::int` })
+      .from(analyticsEvents)
+      .where(sql`${analyticsEvents.createdAt} >= ${since}`)
+      .groupBy(analyticsEvents.eventName)
+      .orderBy(sql`count(*) desc`)
+      .limit(10);
+
+    const dailyViews = await db
+      .select({
+        date: sql<string>`date_trunc('day', ${pageViews.createdAt})::date::text`,
+        views: sql<number>`count(*)::int`,
+        sessions: sql<number>`count(distinct ${pageViews.sessionId})::int`,
+      })
+      .from(pageViews)
+      .where(sql`${pageViews.createdAt} >= ${since}`)
+      .groupBy(sql`date_trunc('day', ${pageViews.createdAt})`)
+      .orderBy(sql`date_trunc('day', ${pageViews.createdAt})`);
+
+    return {
+      totalViews: totalViewsRow?.count ?? 0,
+      uniqueSessions: uniqueSessionsRow?.count ?? 0,
+      uniqueUsers: uniqueUsersRow?.count ?? 0,
+      topPages,
+      deviceBreakdown,
+      topEvents,
+      dailyViews,
+    };
   }
 }
 

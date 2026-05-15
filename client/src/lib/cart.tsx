@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
 import type { Product, Shop } from "@shared/schema";
+import { trackEvent } from "@/lib/analytics";
 
 export interface CartItem {
   product: Product & { shopName?: string };
@@ -53,6 +54,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       if (existing) return prev.map((i) => i.product.id === product.id ? { ...i, quantity: i.quantity + 1 } : i);
       return [...prev, { product, quantity: 1 }];
     });
+    trackEvent("add_to_cart", { productId: product.id, productName: product.name, price: product.price });
     return true;
   };
 
