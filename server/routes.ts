@@ -235,10 +235,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       // Also send via Telegram if connected
       if (hasTelegram) {
-        await sendTelegramMessage(
+        const tgSent = await sendTelegramMessage(
           user.telegramChatId!,
           `🔑 <b>Сброс пароля ЦветоМаркет</b>\n\nВы запросили сброс пароля. Перейдите по ссылке (действительна 1 час):\n\n${resetLink}\n\nЕсли вы не запрашивали сброс — проигнорируйте это сообщение.`
         );
+        if (tgSent) await storage.updateTelegramLastNotifiedAt(user.id);
       }
 
       if (emailSent) {
