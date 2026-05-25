@@ -133,6 +133,7 @@ export interface IStorage {
 
   // Max
   setMaxChatId(userId: string, chatId: string | null): Promise<void>;
+  updateMaxLastNotifiedAt(userId: string): Promise<void>;
   updateSettings(data: Partial<PlatformSettings>): Promise<PlatformSettings>;
 
   // Password Reset
@@ -516,6 +517,10 @@ export class DbStorage implements IStorage {
 
   async setMaxChatId(userId: string, chatId: string | null) {
     await db.update(users).set({ maxChatId: chatId } as any).where(eq(users.id, userId));
+  }
+
+  async updateMaxLastNotifiedAt(userId: string) {
+    await db.update(users).set({ maxLastNotifiedAt: new Date() } as any).where(eq(users.id, userId));
   }
 
   async setPasswordResetToken(userId: string, token: string, expiresAt: Date) {

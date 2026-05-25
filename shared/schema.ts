@@ -20,6 +20,7 @@ export const users = pgTable("users", {
   maxChatId: text("max_chat_id"),
   maxLinkToken: text("max_link_token"),
   maxLinkTokenExpiresAt: timestamp("max_link_token_expires_at"),
+  maxLastNotifiedAt: timestamp("max_last_notified_at"),
   passwordResetToken: text("password_reset_token"),
   passwordResetTokenExpiresAt: timestamp("password_reset_token_expires_at"),
   bonusBalance: integer("bonus_balance").default(0),

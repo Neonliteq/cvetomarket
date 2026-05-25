@@ -713,10 +713,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         );
       }
       if ((recipient as any)?.maxChatId) {
-        await sendMaxMessage(
+        const maxSent = await sendMaxMessage(
           (recipient as any).maxChatId,
           `🛍 Новый заказ в магазине «${shopData.name}»\n\nСумма: ${totalAmount.toLocaleString("ru-RU")} ₽\n\nОткройте панель управления, чтобы подтвердить заказ.`
         );
+        if (maxSent) await storage.updateMaxLastNotifiedAt(recipientId);
       }
       const recipientPrefs = await storage.getNotificationPreferences(recipientId).catch((e) => { console.error("[prefs] Failed to load notification preferences for", recipientId, e?.message); return undefined; });
       if (recipientPrefs === undefined || recipientPrefs.notifyOrders) {
@@ -947,10 +948,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if ((buyer as any)?.maxChatId) {
         const maxMsg = ORDER_STATUS_MESSAGES_MAX[req.body.status];
         if (maxMsg) {
-          await sendMaxMessage(
+          const maxSent = await sendMaxMessage(
             (buyer as any).maxChatId,
             `${maxMsg}${shopForNotif ? `\n\n🏪 Магазин: ${shopForNotif.name}` : ""}`
           );
+          if (maxSent) await storage.updateMaxLastNotifiedAt(order.buyerId!);
         }
       }
       const buyerPrefs = await storage.getNotificationPreferences(order.buyerId).catch((e) => { console.error("[prefs] Failed to load notification preferences for", order.buyerId, e?.message); return undefined; });
@@ -1015,10 +1017,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         );
       }
       if ((buyerForPhoto as any)?.maxChatId) {
-        await sendMaxMessage(
+        const maxSent = await sendMaxMessage(
           (buyerForPhoto as any).maxChatId,
           `📸 Магазин загрузил фото готового букета\n\nПожалуйста, откройте раздел «Мои заказы» на сайте и одобрите или отклоните фото.`
         );
+        if (maxSent) await storage.updateMaxLastNotifiedAt(buyerForPhoto.id);
       }
     }
     res.json(order);
@@ -1059,12 +1062,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           );
         }
         if ((recipient as any)?.maxChatId) {
-          await sendMaxMessage(
+          const maxSent = await sendMaxMessage(
             (recipient as any).maxChatId,
             isApproved
               ? `✅ Покупатель одобрил фото букета\n\nЗаказ можно отправлять в доставку.`
               : `❌ Покупатель отклонил фото букета\n\nТребуется пересборка. Откройте панель управления.`
           );
+          if (maxSent) await storage.updateMaxLastNotifiedAt(recipientId);
         }
       }
     }
@@ -1220,10 +1224,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
       if ((receiver as any)?.maxChatId) {
         const maxText = imageUrl && !content.trim() ? "📷 Фото" : (content.length > 200 ? content.slice(0, 200) + "..." : content);
-        await sendMaxMessage(
+        const maxSent = await sendMaxMessage(
           (receiver as any).maxChatId,
           `💬 Новое сообщение от ${sender.name}\n\n${maxText}`
         );
+        if (maxSent) await storage.updateMaxLastNotifiedAt(msg.receiverId);
       }
       const pushBody = imageUrl && !content.trim() ? "📷 Фото" : (content.length > 80 ? content.slice(0, 80) + "..." : content);
       const receiverPrefs = await storage.getNotificationPreferences(msg.receiverId).catch((e) => { console.error("[prefs] Failed to load notification preferences for", msg.receiverId, e?.message); return undefined; });
@@ -1349,7 +1354,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
               const confirmationMessage = isSeller
                 ? "✅ Ваш аккаунт ЦветоМаркет подключён!\n\nТеперь вы будете получать уведомления прямо здесь:\n• Новый заказ в вашем магазине\n• Новое сообщение от покупателя\n\nСпасибо, что выбрали ЦветоМаркет! 🌸"
                 : "✅ Ваш аккаунт ЦветоМаркет подключён!\n\nТеперь вы будете получать уведомления прямо здесь:\n• Заказ подтверждён магазином\n• Заказ собирается\n• Заказ передан в доставку\n• Заказ доставлен\n• Заказ отменён\n\nСпасибо, что выбрали ЦветоМаркет! 🌸";
-              await sendMaxMessage(String(chatId), confirmationMessage);
+              const maxSent = await sendMaxMessage(String(chatId), confirmationMessage);
+              if (maxSent) await storage.updateMaxLastNotifiedAt(userId);
             } else {
               await sendMaxMessage(String(chatId), "⚠️ Ссылка устарела или недействительна.\n\nПожалуйста, сгенерируйте новую ссылку в настройках профиля.");
             }
@@ -1919,10 +1925,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           );
         }
         if ((buyer as any)?.maxChatId) {
-          await sendMaxMessage(
+          const maxSent = await sendMaxMessage(
             (buyer as any).maxChatId,
             `💳 Магазин выставил счёт на доплату\n\n${reason.trim()}\nСумма: ${Number(amount).toLocaleString("ru-RU")} ₽\n\nОткройте раздел «Мои заказы» для оплаты.`
           );
+          if (maxSent) await storage.updateMaxLastNotifiedAt(order.buyerId!);
         }
       }
 

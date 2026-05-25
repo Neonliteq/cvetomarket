@@ -5,16 +5,20 @@ import { eq } from "drizzle-orm";
 const BOT_TOKEN = process.env.MAX_BOT_TOKEN || "";
 const API_BASE = "https://botapi.max.ru";
 
-export async function sendMaxMessage(chatId: string, text: string): Promise<void> {
-  if (!BOT_TOKEN) return;
+/** Returns true if the message was successfully delivered, false otherwise. */
+export async function sendMaxMessage(chatId: string, text: string): Promise<boolean> {
+  if (!BOT_TOKEN) return false;
   try {
     const url = new URL(`${API_BASE}/messages/sendText`);
     url.searchParams.set("token", BOT_TOKEN);
     url.searchParams.set("chatId", chatId);
     url.searchParams.set("text", text);
-    await fetch(url.toString());
+    const res = await fetch(url.toString());
+    if (!res.ok) return false;
+    const data = await res.json() as any;
+    return data?.ok !== false;
   } catch {
-    // Silent fail — don't break main flow if Max is unavailable
+    return false;
   }
 }
 

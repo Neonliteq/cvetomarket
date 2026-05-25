@@ -416,6 +416,19 @@ function TelegramSection({ user, queryClient, toast }: { user: any; queryClient:
   );
 }
 
+function formatRelativeTime(date: Date): string {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return "только что";
+  if (diffMin < 60) return `${diffMin} мин. назад`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr} ч. назад`;
+  const diffDays = Math.floor(diffHr / 24);
+  if (diffDays < 7) return `${diffDays} дн. назад`;
+  return date.toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
+}
+
 function MaxSection({ user, queryClient, toast }: { user: any; queryClient: any; toast: any }) {
   const isConnected = !!(user as any).maxChatId;
   const [showGuide, setShowGuide] = useState(false);
@@ -454,6 +467,11 @@ function MaxSection({ user, queryClient, toast }: { user: any; queryClient: any;
             <CheckCircle className="w-4 h-4" />
             <span>Max подключён</span>
           </div>
+          <p className="text-xs text-muted-foreground" data-testid="text-max-last-notified">
+            {(user as any).maxLastNotifiedAt
+              ? `Последнее уведомление: ${formatRelativeTime(new Date((user as any).maxLastNotifiedAt))}`
+              : "Уведомлений ещё не было"}
+          </p>
           <p className="text-xs text-muted-foreground">
             Если уведомления перестали приходить, нажмите «Переподключить» — откроется бот для повторной привязки.
           </p>
