@@ -497,6 +497,23 @@ export default function ShopDashboard() {
     },
   });
 
+  const maxConnectMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("GET", "/api/max/link");
+      return res as { url: string };
+    },
+    onSuccess: ({ url }) => { window.open(url, "_blank"); },
+    onError: () => toast({ title: "Ошибка", description: "Не удалось получить ссылку", variant: "destructive" }),
+  });
+
+  const maxDisconnectMutation = useMutation({
+    mutationFn: () => apiRequest("DELETE", "/api/max/link"),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      toast({ title: "Max отключён" });
+    },
+  });
+
   const tabParam = new URLSearchParams(searchStr).get("tab");
   const validTabs = ["products", "orders", "reviews", "settings", "workers"];
   const [activeTab, setActiveTab] = useState(validTabs.includes(tabParam || "") ? tabParam! : "products");
@@ -1581,6 +1598,60 @@ export default function ShopDashboard() {
                   >
                     <ExternalLink className="w-4 h-4" />
                     {telegramConnectMutation.isPending ? "Открываем..." : "Подключить Telegram"}
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Max messenger notifications */}
+            <Card>
+              <CardContent className="p-5">
+                <div className="flex items-center gap-2 mb-1">
+                  <MessageCircle className="w-4 h-4 text-purple-500" />
+                  <h3 className="font-semibold">Max-уведомления</h3>
+                </div>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Получайте уведомления о заказах и сообщениях прямо в мессенджере <strong>Max</strong> — даже если браузер закрыт.
+                </p>
+                {!(user as any)?.maxChatId && (
+                  <ul className="mb-4 space-y-1" data-testid="shop-max-events-preview">
+                    {[
+                      "Новый заказ в вашем магазине",
+                      "Новое сообщение от покупателя",
+                    ].map((event) => (
+                      <li key={event} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <span className="w-1.5 h-1.5 rounded-full bg-purple-400 flex-shrink-0" />
+                        {event}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {(user as any)?.maxChatId ? (
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+                      <CheckCircle className="w-4 h-4" />
+                      <span>Max подключён</span>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => maxDisconnectMutation.mutate()}
+                      disabled={maxDisconnectMutation.isPending}
+                      data-testid="button-shop-max-disconnect"
+                    >
+                      Отключить
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    size="sm"
+                    className="gap-2 bg-purple-600 hover:bg-purple-700 text-white"
+                    onClick={() => maxConnectMutation.mutate()}
+                    disabled={maxConnectMutation.isPending}
+                    data-testid="button-shop-max-connect"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    {maxConnectMutation.isPending ? "Открываем бота..." : "Подключить Max"}
                   </Button>
                 )}
               </CardContent>

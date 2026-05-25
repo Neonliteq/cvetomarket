@@ -467,6 +467,23 @@ function MaxSection({ user, queryClient, toast }: { user: any; queryClient: any;
         Получайте уведомления о заказах и сообщениях прямо в мессенджере <strong>Max</strong> — даже если браузер закрыт.
       </p>
 
+      {!isConnected && (
+        <ul className="mb-3 space-y-1" data-testid="max-buyer-events-preview">
+          {[
+            "Заказ подтверждён магазином",
+            "Заказ собирается",
+            "Заказ передан в доставку",
+            "Заказ доставлен",
+            "Заказ отменён",
+          ].map((event) => (
+            <li key={event} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span className="w-1.5 h-1.5 rounded-full bg-purple-400 flex-shrink-0" />
+              {event}
+            </li>
+          ))}
+        </ul>
+      )}
+
       {isConnected ? (
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
