@@ -18,6 +18,9 @@
 10. [SSL-сертификат (HTTPS)](#9-ssl-сертификат-https)
 11. [Обновление приложения](#10-обновление-приложения)
 12. [Полезные команды](#полезные-команды)
+13. [Настройка ROBOKASSA](#настройка-robokassa)
+14. [Настройка Telegram Webhook](#настройка-telegram-webhook)
+15. [Настройка Max Bot](#настройка-max-bot-уведомления-через-max--mailru)
 
 ---
 
@@ -29,6 +32,7 @@
 - Аккаунт в [ROBOKASSA](https://robokassa.com/) (для приёма платежей)
 - Аккаунт на [Resend](https://resend.com/) (для отправки email)
 - Telegram Bot Token от [@BotFather](https://t.me/BotFather)
+- Max Bot Token от [max.ru](https://max.ru/) (для уведомлений через Max / mail.ru)
 - Ключ Яндекс Карт от [developer.tech.yandex.ru](https://developer.tech.yandex.ru/)
 
 ---
@@ -147,6 +151,10 @@ ROBOKASSA_IS_TEST=0
 
 # Resend (email)
 RESEND_API_KEY=re_XXXXXXXXXX
+
+# Max Bot (уведомления через Max / mail.ru)
+MAX_BOT_TOKEN=ТОКЕН_ВАШЕГО_MAX_БОТА
+MAX_BOT_NICK=ИМЯ_ВАШЕГО_MAX_БОТА
 ```
 
 Генерация `SESSION_SECRET`:
@@ -273,6 +281,54 @@ tail -f /var/log/nginx/access.log
 
 ```
 https://api.telegram.org/botВАШ_ТОКЕН/setWebhook?url=https://ВАШ_ДОМЕН/api/telegram/webhook
+```
+
+---
+
+## Настройка Max Bot (уведомления через Max / mail.ru)
+
+### Создание бота
+
+1. Перейдите на [max.ru](https://max.ru/) и создайте бота через раздел **Боты**
+2. Получите `MAX_BOT_TOKEN` (токен бота) и `MAX_BOT_NICK` (никнейм бота без `@`)
+3. Добавьте переменные в `/var/www/cvetomarket/.env`:
+
+```bash
+nano /var/www/cvetomarket/.env
+```
+
+```env
+MAX_BOT_TOKEN=ТОКЕН_ВАШЕГО_MAX_БОТА
+MAX_BOT_NICK=ИМЯ_ВАШЕГО_MAX_БОТА
+```
+
+### Миграция базы данных
+
+Если приложение уже было задеплоено без Max-полей, добавьте колонки вручную:
+
+```bash
+psql -h localhost -U cvetomarket -d cvetomarket -c "
+  ALTER TABLE users ADD COLUMN IF NOT EXISTS max_chat_id text;
+  ALTER TABLE users ADD COLUMN IF NOT EXISTS max_link_token text;
+  ALTER TABLE users ADD COLUMN IF NOT EXISTS max_link_token_expires_at timestamp;
+"
+```
+
+> **Примечание:** При обычном деплое (`bash deploy/deploy.sh`) миграция выполняется автоматически через `server/migrate.ts` при старте приложения.
+
+### Деплой и проверка
+
+После добавления переменных перезапустите приложение:
+
+```bash
+cd /var/www/cvetomarket && bash deploy/deploy.sh
+```
+
+Убедитесь, что webhook зарегистрировался:
+
+```bash
+pm2 logs cvetomarket | grep max
+# Ожидаемый вывод: [max] Webhook registered → https://ВАШ_ДОМЕН/api/max/webhook
 ```
 
 ---
