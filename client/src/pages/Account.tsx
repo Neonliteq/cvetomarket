@@ -384,14 +384,20 @@ function TelegramSection({ user, queryClient, toast }: { user: any; queryClient:
       </p>
 
       {isConnected ? (
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
             <CheckCircle className="w-4 h-4" />
             <span>Telegram подключён</span>
           </div>
+          <p className="text-xs text-muted-foreground" data-testid="text-telegram-last-notified">
+            {(user as any).telegramLastNotifiedAt
+              ? `Последнее уведомление: ${formatRelativeTime(new Date((user as any).telegramLastNotifiedAt))}`
+              : "Уведомлений ещё не было"}
+          </p>
           <Button
             size="sm"
             variant="outline"
+            className="self-start"
             onClick={() => disconnectMutation.mutate()}
             disabled={disconnectMutation.isPending}
             data-testid="button-telegram-disconnect"

@@ -707,10 +707,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       });
       const recipient = await storage.getUser(recipientId);
       if (recipient?.telegramChatId) {
-        await sendTelegramMessage(
+        const tgSent = await sendTelegramMessage(
           recipient.telegramChatId,
           `🛍 <b>Новый заказ в магазине «${shopData.name}»</b>\n\nСумма: <b>${totalAmount.toLocaleString("ru-RU")} ₽</b>\n\nОткройте панель управления, чтобы подтвердить заказ.`
         );
+        if (tgSent) await storage.updateTelegramLastNotifiedAt(recipientId);
       }
       if ((recipient as any)?.maxChatId) {
         const maxSent = await sendMaxMessage(
@@ -939,10 +940,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (buyer?.telegramChatId) {
         const tgMsg = ORDER_STATUS_MESSAGES[req.body.status];
         if (tgMsg) {
-          await sendTelegramMessage(
+          const tgSent = await sendTelegramMessage(
             buyer.telegramChatId,
             `${tgMsg}${shopForNotif ? `\n\n🏪 Магазин: ${shopForNotif.name}` : ""}`
           );
+          if (tgSent) await storage.updateTelegramLastNotifiedAt(order.buyerId!);
         }
       }
       if ((buyer as any)?.maxChatId) {
@@ -1011,10 +1013,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       });
       const buyerForPhoto = await storage.getUser(order.buyerId);
       if (buyerForPhoto?.telegramChatId) {
-        await sendTelegramMessage(
+        const tgSent = await sendTelegramMessage(
           buyerForPhoto.telegramChatId,
           `📸 <b>Магазин загрузил фото готового букета</b>\n\nПожалуйста, откройте раздел «Мои заказы» на сайте и одобрите или отклоните фото.`
         );
+        if (tgSent) await storage.updateTelegramLastNotifiedAt(buyerForPhoto.id);
       }
       if ((buyerForPhoto as any)?.maxChatId) {
         const maxSent = await sendMaxMessage(
@@ -1054,12 +1057,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         });
         const recipient = await storage.getUser(recipientId);
         if (recipient?.telegramChatId) {
-          await sendTelegramMessage(
+          const tgSent = await sendTelegramMessage(
             recipient.telegramChatId,
             isApproved
               ? `✅ <b>Покупатель одобрил фото букета</b>\n\nЗаказ можно отправлять в доставку.`
               : `❌ <b>Покупатель отклонил фото букета</b>\n\nТребуется пересборка. Откройте панель управления.`
           );
+          if (tgSent) await storage.updateTelegramLastNotifiedAt(recipientId);
         }
         if ((recipient as any)?.maxChatId) {
           const maxSent = await sendMaxMessage(
@@ -1217,10 +1221,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       });
       if (receiver?.telegramChatId) {
         const tgText = imageUrl && !content.trim() ? "📷 Фото" : (content.length > 200 ? content.slice(0, 200) + "..." : content);
-        await sendTelegramMessage(
+        const tgSent = await sendTelegramMessage(
           receiver.telegramChatId,
           `💬 <b>Новое сообщение от ${sender.name}</b>\n\n${tgText}`
         );
+        if (tgSent) await storage.updateTelegramLastNotifiedAt(msg.receiverId);
       }
       if ((receiver as any)?.maxChatId) {
         const maxText = imageUrl && !content.trim() ? "📷 Фото" : (content.length > 200 ? content.slice(0, 200) + "..." : content);
@@ -1298,13 +1303,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (text.startsWith("/start")) {
         const token = text.split(" ")[1]?.trim();
         if (token) {
-          const userId = consumeLinkToken(token);
+          const userId = await consumeLinkToken(token);
           if (userId) {
             await storage.setTelegramChatId(userId, chatId);
-            await sendTelegramMessage(
+            const tgSent = await sendTelegramMessage(
               chatId,
               "✅ <b>Telegram-уведомления подключены!</b>\n\nТеперь вы будете получать уведомления о заказах и сообщениях прямо здесь."
             );
+            if (tgSent) await storage.updateTelegramLastNotifiedAt(userId);
           } else {
             await sendTelegramMessage(chatId, "⚠️ Ссылка устарела или недействительна.\n\nПожалуйста, сгенерируйте новую ссылку в настройках профиля.");
           }
@@ -1919,10 +1925,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         });
         const buyer = await storage.getUser(order.buyerId);
         if (buyer?.telegramChatId) {
-          await sendTelegramMessage(
+          const tgSent = await sendTelegramMessage(
             buyer.telegramChatId,
             `💳 <b>Магазин выставил счёт на доплату</b>\n\n<b>${reason.trim()}</b>\nСумма: <b>${Number(amount).toLocaleString("ru-RU")} ₽</b>\n\nОткройте раздел «Мои заказы» для оплаты.`
           );
+          if (tgSent) await storage.updateTelegramLastNotifiedAt(order.buyerId!);
         }
         if ((buyer as any)?.maxChatId) {
           const maxSent = await sendMaxMessage(

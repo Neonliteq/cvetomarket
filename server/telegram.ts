@@ -5,16 +5,20 @@ import { eq } from "drizzle-orm";
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
 const API_BASE = `https://api.telegram.org/bot${BOT_TOKEN}`;
 
-export async function sendTelegramMessage(chatId: string, text: string): Promise<void> {
-  if (!BOT_TOKEN) return;
+/** Returns true if the message was successfully delivered, false otherwise. */
+export async function sendTelegramMessage(chatId: string, text: string): Promise<boolean> {
+  if (!BOT_TOKEN) return false;
   try {
-    await fetch(`${API_BASE}/sendMessage`, {
+    const res = await fetch(`${API_BASE}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML" }),
     });
+    if (!res.ok) return false;
+    const data = await res.json() as any;
+    return data?.ok !== false;
   } catch {
-    // Silent fail — don't break main flow if Telegram is unavailable
+    return false;
   }
 }
 

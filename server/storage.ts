@@ -130,6 +130,7 @@ export interface IStorage {
 
   // Telegram
   setTelegramChatId(userId: string, chatId: string | null): Promise<void>;
+  updateTelegramLastNotifiedAt(userId: string): Promise<void>;
 
   // Max
   setMaxChatId(userId: string, chatId: string | null): Promise<void>;
@@ -513,6 +514,10 @@ export class DbStorage implements IStorage {
 
   async setTelegramChatId(userId: string, chatId: string | null) {
     await db.update(users).set({ telegramChatId: chatId } as any).where(eq(users.id, userId));
+  }
+
+  async updateTelegramLastNotifiedAt(userId: string) {
+    await db.update(users).set({ telegramLastNotifiedAt: new Date() } as any).where(eq(users.id, userId));
   }
 
   async setMaxChatId(userId: string, chatId: string | null) {
