@@ -3,20 +3,23 @@ import { users } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
 const BOT_TOKEN = process.env.MAX_BOT_TOKEN || "";
-const API_BASE = "https://botapi.max.ru";
+const API_BASE = "https://platform-api.max.ru";
 
 /** Returns true if the message was successfully delivered, false otherwise. */
 export async function sendMaxMessage(chatId: string, text: string): Promise<boolean> {
   if (!BOT_TOKEN) return false;
   try {
-    const url = new URL(`${API_BASE}/messages/sendText`);
-    url.searchParams.set("token", BOT_TOKEN);
-    url.searchParams.set("chatId", chatId);
-    url.searchParams.set("text", text);
-    const res = await fetch(url.toString());
-    if (!res.ok) return false;
-    const data = await res.json() as any;
-    return data?.ok !== false;
+    const url = new URL(`${API_BASE}/messages`);
+    url.searchParams.set("user_id", chatId);
+    const res = await fetch(url.toString(), {
+      method: "POST",
+      headers: {
+        "Authorization": BOT_TOKEN,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ text }),
+    });
+    return res.ok;
   } catch {
     return false;
   }
@@ -78,15 +81,22 @@ export async function registerMaxWebhook(publicDomain: string): Promise<void> {
   if (!BOT_TOKEN || !publicDomain) return;
   const webhookUrl = `https://${publicDomain}/api/max/webhook`;
   try {
-    const url = new URL(`${API_BASE}/events/setWebhook`);
-    url.searchParams.set("token", BOT_TOKEN);
-    url.searchParams.set("url", webhookUrl);
-    const res = await fetch(url.toString());
+    const res = await fetch(`${API_BASE}/subscriptions`, {
+      method: "POST",
+      headers: {
+        "Authorization": BOT_TOKEN,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        url: webhookUrl,
+        update_types: ["message_created", "bot_started"],
+      }),
+    });
     const data = await res.json() as any;
-    if (data.ok) {
+    if (res.ok) {
       console.log(`[max] Webhook registered → ${webhookUrl}`);
     } else {
-      console.error("[max] Webhook registration failed:", data.description || JSON.stringify(data));
+      console.error("[max] Webhook registration failed:", JSON.stringify(data));
     }
   } catch (e) {
     console.error("[max] Webhook registration error:", e);

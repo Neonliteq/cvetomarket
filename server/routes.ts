@@ -1342,38 +1342,67 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   app.post("/api/max/webhook", async (req, res) => {
+    // Respond immediately — Max requires 200 within 30s
+    res.json({ ok: true });
     try {
-      const events: any[] = req.body?.events || [];
-      for (const event of events) {
-        if (event.type !== "newMessage") continue;
-        const chatId = event.payload?.chat?.chatId || event.payload?.from?.userId;
-        const text: string = event.payload?.text || "";
-        if (!chatId) continue;
+      const update = req.body;
+      const updateType: string = update?.update_type || "";
+
+      // bot_started fires when user follows a deep link (https://max.ru/botname?start=TOKEN)
+      if (updateType === "bot_started") {
+        const chatId = String(update.user?.user_id || update.chat_id || "");
+        const token: string = update.payload || "";
+        if (!chatId) return;
+
+        if (token) {
+          const userId = await consumeMaxLinkToken(token);
+          if (userId) {
+            await storage.setMaxChatId(userId, chatId);
+            const linkedUser = await storage.getUser(userId);
+            const isSeller = linkedUser && (linkedUser.role === "shop" || linkedUser.role === "worker");
+            const confirmationMessage = isSeller
+              ? "✅ Ваш аккаунт ЦветоМаркет подключён!\n\nТеперь вы будете получать уведомления прямо здесь:\n• Новый заказ в вашем магазине\n• Новое сообщение от покупателя\n\nСпасибо, что выбрали ЦветоМаркет! 🌸"
+              : "✅ Ваш аккаунт ЦветоМаркет подключён!\n\nТеперь вы будете получать уведомления прямо здесь:\n• Заказ подтверждён магазином\n• Заказ собирается\n• Заказ передан в доставку\n• Заказ доставлен\n• Заказ отменён\n\nСпасибо, что выбрали ЦветоМаркет! 🌸";
+            const maxSent = await sendMaxMessage(chatId, confirmationMessage);
+            if (maxSent) await storage.updateMaxLastNotifiedAt(userId);
+          } else {
+            await sendMaxMessage(chatId, "⚠️ Ссылка устарела или недействительна.\n\nПожалуйста, сгенерируйте новую ссылку в настройках профиля.");
+          }
+        } else {
+          await sendMaxMessage(chatId, "👋 Привет! Чтобы получать уведомления от ЦветоМаркет, перейдите в профиль на сайте и нажмите «Подключить Max».");
+        }
+        return;
+      }
+
+      // message_created — handle /start TEXT fallback (in case deep link sends as message)
+      if (updateType === "message_created") {
+        const chatId = String(update.message?.sender?.user_id || "");
+        const text: string = update.message?.body?.text || "";
+        if (!chatId) return;
 
         if (text.startsWith("/start")) {
           const token = text.split(" ")[1]?.trim();
           if (token) {
             const userId = await consumeMaxLinkToken(token);
             if (userId) {
-              await storage.setMaxChatId(userId, String(chatId));
+              await storage.setMaxChatId(userId, chatId);
               const linkedUser = await storage.getUser(userId);
               const isSeller = linkedUser && (linkedUser.role === "shop" || linkedUser.role === "worker");
               const confirmationMessage = isSeller
                 ? "✅ Ваш аккаунт ЦветоМаркет подключён!\n\nТеперь вы будете получать уведомления прямо здесь:\n• Новый заказ в вашем магазине\n• Новое сообщение от покупателя\n\nСпасибо, что выбрали ЦветоМаркет! 🌸"
                 : "✅ Ваш аккаунт ЦветоМаркет подключён!\n\nТеперь вы будете получать уведомления прямо здесь:\n• Заказ подтверждён магазином\n• Заказ собирается\n• Заказ передан в доставку\n• Заказ доставлен\n• Заказ отменён\n\nСпасибо, что выбрали ЦветоМаркет! 🌸";
-              const maxSent = await sendMaxMessage(String(chatId), confirmationMessage);
+              const maxSent = await sendMaxMessage(chatId, confirmationMessage);
               if (maxSent) await storage.updateMaxLastNotifiedAt(userId);
             } else {
-              await sendMaxMessage(String(chatId), "⚠️ Ссылка устарела или недействительна.\n\nПожалуйста, сгенерируйте новую ссылку в настройках профиля.");
+              await sendMaxMessage(chatId, "⚠️ Ссылка устарела или недействительна.\n\nПожалуйста, сгенерируйте новую ссылку в настройках профиля.");
             }
           } else {
-            await sendMaxMessage(String(chatId), "👋 Привет! Чтобы получать уведомления от ЦветоМаркет, перейдите в профиль на сайте и нажмите «Подключить Max».");
+            await sendMaxMessage(chatId, "👋 Привет! Чтобы получать уведомления от ЦветоМаркет, перейдите в профиль на сайте и нажмите «Подключить Max».");
           }
         }
       }
-      res.json({ ok: true });
-    } catch {
-      res.json({ ok: true });
+    } catch (e) {
+      console.error("[max] webhook error:", e);
     }
   });
 
