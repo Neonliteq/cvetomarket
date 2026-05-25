@@ -4,12 +4,8 @@ set -e
 # =============================================================================
 # ЦветоМаркет — Скрипт обновления приложения
 # =============================================================================
-# Запускайте из директории приложения /var/www/cvetomarket:
-#   sudo -u cvetomarket bash deploy/deploy.sh
-# =============================================================================
 
 APP_DIR="/var/www/cvetomarket"
-LOG_DIR="/var/log/cvetomarket"
 APP_NAME="cvetomarket"
 
 cd "${APP_DIR}"
@@ -18,31 +14,21 @@ echo "=========================================="
 echo " ЦветоМаркет — Деплой $(date +'%Y-%m-%d %H:%M:%S')"
 echo "=========================================="
 
-echo "[1/6] Получение последних изменений из Git..."
+echo "[1/4] Получение последних изменений из Git..."
 git pull origin main
 
-echo "[2/6] Установка всех зависимостей (включая dev для сборки)..."
+echo "[2/4] Установка зависимостей..."
 npm ci
 
-echo "[3/6] Сборка приложения..."
+echo "[3/4] Сборка проекта..."
 npm run build
 
-echo "[4/6] Применение миграций базы данных..."
-npm run db:push
-
-echo "[5/6] Удаление dev-зависимостей (экономия места)..."
-npm prune --omit=dev
-
-echo "[6/6] Перезапуск PM2..."
-
-if pm2 list | grep -q "${APP_NAME}"; then
-  pm2 reload deploy/ecosystem.config.cjs --update-env
-else
-  pm2 start deploy/ecosystem.config.cjs
-  pm2 save
-fi
+echo "[4/4] Перезапуск PM2..."
+pm2 delete "${APP_NAME}" 2>/dev/null || true
+set -a && source .env && set +a
+pm2 start npm --name "${APP_NAME}" -- start
+pm2 save
 
 echo ""
 echo "Деплой завершён успешно!"
-echo "Статус:"
 pm2 status "${APP_NAME}"

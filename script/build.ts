@@ -1,5 +1,5 @@
 import { build as esbuild } from "esbuild";
-import { rm, readFile } from "fs/promises";
+import { rm, readFile, unlink } from "fs/promises";
 import { execSync } from "child_process";
 
 // server deps to bundle to reduce openat(2) syscalls
@@ -36,7 +36,25 @@ async function buildAll() {
   await rm("dist", { recursive: true, force: true });
 
   console.log("building client...");
-  execSync("node_modules/.bin/vite build", { stdio: "inherit" });
+  // Pre-compile vite.config.ts → vite.config.compiled.mjs at project root
+  // so Vite loads it from outside node_modules (avoids ESM resolution bug
+  // with node_modules/.vite-temp/ in Vite 7 + "type":"module" projects).
+  const compiledConfig = "vite.config.compiled.mjs";
+  await esbuild({
+    entryPoints: ["vite.config.ts"],
+    outfile: compiledConfig,
+    format: "esm",
+    platform: "node",
+    bundle: true,
+    packages: "external",
+  });
+  try {
+    execSync(`node_modules/.bin/vite build --config ${compiledConfig}`, {
+      stdio: "inherit",
+    });
+  } finally {
+    await unlink(compiledConfig).catch(() => {});
+  }
 
   console.log("building server...");
   const pkg = JSON.parse(await readFile("package.json", "utf-8"));
