@@ -1,0 +1,73 @@
+root@cv6271581:/var/www/cvetomarket# cd /var/www/cvetomarket
+git pull origin main
+npm ci
+npm run build
+pm2 delete cvetomarket
+set -a && source .env && set +a
+pm2 start npm --name cvetomarket -- start
+pm2 save
+remote: Enumerating objects: 10, done.
+remote: Counting objects: 100% (10/10), done.
+remote: Compressing objects: 100% (3/3), done.
+remote: Total 6 (delta 2), reused 6 (delta 2), pack-reused 0 (from 0)
+Unpacking objects: 100% (6/6), 2.89 KiB | 988.00 KiB/s, done.
+From https://github.com/Neonliteq/cvetomarket
+ * branch            main       -> FETCH_HEAD
+   8ec5f0e..fac6991  main       -> origin/main
+Updating 8ec5f0e..fac6991
+Fast-forward
+ ...uilding-client-failed-to-load-config-from-var-www-cvet_1779715407882.txt | 41 +++++++++++++++++++++++
+ script/build.ts                                                             | 67 ++++++++++++++++++++++++++-----------
+ 2 files changed, 88 insertions(+), 20 deletions(-)
+ create mode 100644 attached_assets/Pasted-building-client-failed-to-load-config-from-var-www-cvet_1779715407882.txt
+npm warn deprecated sourcemap-codec@1.4.8: Please use @jridgewell/sourcemap-codec instead
+npm warn deprecated source-map@0.8.0-beta.0: The work that was done in this beta branch won't be included in future versions
+npm warn deprecated node-domexception@1.0.0: Use your platform's native DOMException instead
+npm warn deprecated glob@11.1.0: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+
+added 957 packages, and audited 958 packages in 12s
+
+182 packages are looking for funding
+  run `npm fund` for details
+
+28 vulnerabilities (1 low, 14 moderate, 13 high)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+
+> rest-express@1.0.0 build
+> tsx script/build.ts
+
+building client...
+Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@vitejs/plugin-react' imported from /var/www/cvetomarket/script/build.ts
+    at packageResolve (node:internal/modules/esm/resolve:873:9)
+    at moduleResolve (node:internal/modules/esm/resolve:946:18)
+    at defaultResolve (node:internal/modules/esm/resolve:1188:11)
+    at nextResolve (node:internal/modules/esm/hooks:864:28)
+    at resolveBase (file:///var/www/cvetomarket/node_modules/tsx/dist/esm/index.mjs?1779715570109:2:3744)
+    at resolveDirectory (file:///var/www/cvetomarket/node_modules/tsx/dist/esm/index.mjs?1779715570109:2:4243)
+    at resolveTsPaths (file:///var/www/cvetomarket/node_modules/tsx/dist/esm/index.mjs?1779715570109:2:4984)
+    at async resolve (file:///var/www/cvetomarket/node_modules/tsx/dist/esm/index.mjs?1779715570109:2:5355)
+    at async nextResolve (node:internal/modules/esm/hooks:864:22)
+    at async Hooks.resolve (node:internal/modules/esm/hooks:306:24) {
+  code: 'ERR_MODULE_NOT_FOUND'
+}
+[PM2] Applying action deleteProcessId on app [cvetomarket](ids: [ 0 ])
+[PM2] [cvetomarket](0) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+[PM2] Starting /usr/bin/npm in fork_mode (1 instance)
+[PM2] Done.
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ cvetomarket        │ fork     │ 0    │ online    │ 0%       │ 24.8mb   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+[PM2] Saving current process list...
+[PM2] Successfully saved in /root/.pm2/dump.pm2

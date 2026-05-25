@@ -17,8 +17,9 @@ echo "=========================================="
 echo "[1/4] Получение последних изменений из Git..."
 git pull origin main
 
-echo "[2/4] Установка зависимостей..."
-npm ci
+echo "[2/4] Установка зависимостей (включая devDependencies для сборки)..."
+# Unset NODE_ENV so npm ci installs devDependencies needed for build
+NODE_ENV=development npm ci
 
 echo "[3/4] Сборка проекта..."
 npm run build
