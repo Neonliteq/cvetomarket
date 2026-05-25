@@ -1,6 +1,7 @@
 import { build as esbuild } from "esbuild";
+import { build as viteBuild } from "vite";
 import { rm, readFile, unlink } from "fs/promises";
-import { execSync } from "child_process";
+import path from "path";
 
 // server deps to bundle to reduce openat(2) syscalls
 // which helps cold start times
@@ -36,28 +37,54 @@ async function buildAll() {
   await rm("dist", { recursive: true, force: true });
 
   console.log("building client...");
-  // Pre-compile vite.config.ts → vite.config.compiled.mjs at project root
-  // so Vite loads it from outside node_modules (avoids ESM resolution bug
-  // with node_modules/.vite-temp/ in Vite 7 + "type":"module" projects).
-  const compiledConfig = "vite.config.compiled.mjs";
-  await esbuild({
-    entryPoints: ["vite.config.ts"],
-    outfile: compiledConfig,
-    format: "esm",
-    platform: "node",
-    bundle: true,
-    packages: "external",
+
+  // Import plugins here (in tsx context) so Vite never needs to load a config
+  // file from disk — avoids the node_modules/.vite-temp/ ESM resolution bug
+  // that affects Vite 7 on "type":"module" projects.
+  const react = (await import("@vitejs/plugin-react")).default;
+  const { VitePWA } = await import("vite-plugin-pwa");
+
+  const root = path.resolve(import.meta.dirname, "..", "client");
+  const projectRoot = path.resolve(import.meta.dirname, "..");
+
+  await viteBuild({
+    configFile: false,
+    plugins: [
+      react(),
+      VitePWA({
+        registerType: "autoUpdate",
+        includeAssets: ["favicon.png", "icon-*.png"],
+        manifest: false,
+        strategies: "injectManifest",
+        srcDir: "src",
+        filename: "sw.ts",
+        injectManifest: {
+          globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+        },
+      }),
+    ],
+    resolve: {
+      alias: {
+        "@": path.resolve(root, "src"),
+        "@shared": path.resolve(projectRoot, "shared"),
+        "@assets": path.resolve(projectRoot, "attached_assets"),
+      },
+    },
+    root,
+    build: {
+      outDir: path.resolve(projectRoot, "dist/public"),
+      emptyOutDir: true,
+    },
+    server: {
+      fs: {
+        strict: true,
+        deny: ["**/.*"],
+      },
+    },
   });
-  try {
-    execSync(`node_modules/.bin/vite build --config ${compiledConfig}`, {
-      stdio: "inherit",
-    });
-  } finally {
-    await unlink(compiledConfig).catch(() => {});
-  }
 
   console.log("building server...");
-  const pkg = JSON.parse(await readFile("package.json", "utf-8"));
+  const pkg = JSON.parse(await readFile(path.resolve(projectRoot, "package.json"), "utf-8"));
   const allDeps = [
     ...Object.keys(pkg.dependencies || {}),
     ...Object.keys(pkg.devDependencies || {}),
