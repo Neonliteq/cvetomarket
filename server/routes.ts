@@ -1346,7 +1346,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
               await storage.setMaxChatId(userId, String(chatId));
               await sendMaxMessage(
                 String(chatId),
-                "✅ Уведомления в Max подключены!\n\nТеперь вы будете получать уведомления о заказах и сообщениях прямо здесь."
+                "✅ Ваш аккаунт ЦветоМаркет подключён!\n\nТеперь вы будете получать уведомления прямо здесь:\n• Заказ подтверждён магазином\n• Заказ собирается\n• Заказ передан в доставку\n• Заказ доставлен\n• Заказ отменён\n\nСпасибо, что выбрали ЦветоМаркет! 🌸"
               );
             } else {
               await sendMaxMessage(String(chatId), "⚠️ Ссылка устарела или недействительна.\n\nПожалуйста, сгенерируйте новую ссылку в настройках профиля.");
