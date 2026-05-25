@@ -1,7 +1,7 @@
 import { useState, useEffect, type ComponentType } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Package, MessageCircle, User, LogOut, Star, CheckCircle, Upload, Camera, X, MapPin, ShoppingBag, TrendingUp, Store, Flower2, Activity, Send, ExternalLink, Volume2, VolumeX, Gift, Copy, Link2, Lock, Eye, EyeOff, CreditCard, FileText, Bell, BellOff, Smartphone, Search, MousePointerClick, Link as LinkIcon, Info } from "lucide-react";
+import { Package, MessageCircle, User, LogOut, Star, CheckCircle, Upload, Camera, X, MapPin, ShoppingBag, TrendingUp, Store, Flower2, Activity, Send, ExternalLink, Volume2, VolumeX, Gift, Copy, Link2, Lock, Eye, EyeOff, CreditCard, FileText, Bell, BellOff, Smartphone, Search, MousePointerClick, Link as LinkIcon, Info, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -449,20 +449,36 @@ function MaxSection({ user, queryClient, toast }: { user: any; queryClient: any;
       </p>
 
       {isConnected ? (
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
             <CheckCircle className="w-4 h-4" />
             <span>Max подключён</span>
           </div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => disconnectMutation.mutate()}
-            disabled={disconnectMutation.isPending}
-            data-testid="button-max-disconnect"
-          >
-            Отключить
-          </Button>
+          <p className="text-xs text-muted-foreground">
+            Если уведомления перестали приходить, нажмите «Переподключить» — откроется бот для повторной привязки.
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5"
+              onClick={() => connectMutation.mutate()}
+              disabled={connectMutation.isPending}
+              data-testid="button-max-relink"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              {connectMutation.isPending ? "Открываем..." : "Переподключить"}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => disconnectMutation.mutate()}
+              disabled={disconnectMutation.isPending}
+              data-testid="button-max-disconnect"
+            >
+              Отключить
+            </Button>
+          </div>
         </div>
       ) : (
         <div className="space-y-3">
