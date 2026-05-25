@@ -1,7 +1,7 @@
 import { useState, useEffect, type ComponentType } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Package, MessageCircle, User, LogOut, Star, CheckCircle, Upload, Camera, X, MapPin, ShoppingBag, TrendingUp, Store, Flower2, Activity, Send, ExternalLink, Volume2, VolumeX, Gift, Copy, Link2, Lock, Eye, EyeOff, CreditCard, FileText, Bell, BellOff } from "lucide-react";
+import { Package, MessageCircle, User, LogOut, Star, CheckCircle, Upload, Camera, X, MapPin, ShoppingBag, TrendingUp, Store, Flower2, Activity, Send, ExternalLink, Volume2, VolumeX, Gift, Copy, Link2, Lock, Eye, EyeOff, CreditCard, FileText, Bell, BellOff, Smartphone, Search, MousePointerClick, Link as LinkIcon, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -418,6 +418,7 @@ function TelegramSection({ user, queryClient, toast }: { user: any; queryClient:
 
 function MaxSection({ user, queryClient, toast }: { user: any; queryClient: any; toast: any }) {
   const isConnected = !!(user as any).maxChatId;
+  const [showGuide, setShowGuide] = useState(false);
 
   const connectMutation = useMutation({
     mutationFn: async () => {
@@ -443,8 +444,8 @@ function MaxSection({ user, queryClient, toast }: { user: any; queryClient: any;
       <p className="text-sm font-medium mb-1.5 flex items-center gap-1.5">
         <MessageCircle className="w-4 h-4 text-purple-500" /> Max-уведомления
       </p>
-      <p className="text-xs text-muted-foreground mb-3">
-        Получайте уведомления о заказах и сообщениях в мессенджере Max
+      <p className="text-xs text-muted-foreground mb-2">
+        Получайте уведомления о заказах и сообщениях прямо в мессенджере <strong>Max</strong> — даже если браузер закрыт.
       </p>
 
       {isConnected ? (
@@ -464,17 +465,72 @@ function MaxSection({ user, queryClient, toast }: { user: any; queryClient: any;
           </Button>
         </div>
       ) : (
-        <Button
-          size="sm"
-          variant="outline"
-          className="gap-2"
-          onClick={() => connectMutation.mutate()}
-          disabled={connectMutation.isPending}
-          data-testid="button-max-connect"
-        >
-          <ExternalLink className="w-4 h-4" />
-          {connectMutation.isPending ? "Открываем..." : "Подключить Max"}
-        </Button>
+        <div className="space-y-3">
+          {/* Step-by-step guide */}
+          <div className="rounded-lg border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 p-3">
+            <button
+              className="w-full flex items-center justify-between text-sm font-medium text-purple-700 dark:text-purple-300"
+              onClick={() => setShowGuide(v => !v)}
+              data-testid="button-max-guide-toggle"
+            >
+              <span className="flex items-center gap-1.5">
+                <Info className="w-4 h-4" />
+                Как подключить Max?
+              </span>
+              <span className="text-xs text-purple-500">{showGuide ? "Скрыть" : "Показать"}</span>
+            </button>
+
+            {showGuide && (
+              <ol className="mt-3 space-y-2.5" data-testid="max-connection-guide">
+                <li className="flex gap-2.5 text-xs text-purple-800 dark:text-purple-200">
+                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-purple-200 dark:bg-purple-800 flex items-center justify-center font-bold text-purple-700 dark:text-purple-200">1</span>
+                  <span>
+                    <strong>Установите мессенджер Max</strong> на телефон или откройте{" "}
+                    <a
+                      href="https://max.ru"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline underline-offset-2"
+                    >
+                      max.ru
+                    </a>{" "}
+                    в браузере, если уже есть аккаунт.
+                  </span>
+                </li>
+                <li className="flex gap-2.5 text-xs text-purple-800 dark:text-purple-200">
+                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-purple-200 dark:bg-purple-800 flex items-center justify-center font-bold text-purple-700 dark:text-purple-200">2</span>
+                  <span>
+                    Нажмите кнопку <strong>«Подключить Max»</strong> ниже — откроется чат с нашим ботом.
+                  </span>
+                </li>
+                <li className="flex gap-2.5 text-xs text-purple-800 dark:text-purple-200">
+                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-purple-200 dark:bg-purple-800 flex items-center justify-center font-bold text-purple-700 dark:text-purple-200">3</span>
+                  <span>
+                    В открывшемся чате нажмите <strong>«Запустить»</strong> (или отправьте <code className="bg-purple-100 dark:bg-purple-900 px-1 rounded">/start</code>) — аккаунт привяжется автоматически.
+                  </span>
+                </li>
+                <li className="flex gap-2.5 text-xs text-purple-800 dark:text-purple-200">
+                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-purple-200 dark:bg-purple-800 flex items-center justify-center font-bold text-purple-700 dark:text-purple-200">4</span>
+                  <span>
+                    Готово! Вернитесь на эту страницу — статус обновится. Теперь вы будете получать уведомления о каждом изменении статуса заказа.
+                  </span>
+                </li>
+              </ol>
+            )}
+          </div>
+
+          {/* Connect button — prominent */}
+          <Button
+            size="sm"
+            className="gap-2 bg-purple-600 hover:bg-purple-700 text-white"
+            onClick={() => connectMutation.mutate()}
+            disabled={connectMutation.isPending}
+            data-testid="button-max-connect"
+          >
+            <ExternalLink className="w-4 h-4" />
+            {connectMutation.isPending ? "Открываем бота..." : "Подключить Max"}
+          </Button>
+        </div>
       )}
     </div>
   );
