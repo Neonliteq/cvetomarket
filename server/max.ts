@@ -3,7 +3,7 @@ import { users } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
 const BOT_TOKEN = process.env.MAX_BOT_TOKEN || "";
-const API_BASE = "https://api.icq.net/bot/v1";
+const API_BASE = "https://botapi.max.ru";
 
 export async function sendMaxMessage(chatId: string, text: string): Promise<void> {
   if (!BOT_TOKEN) return;

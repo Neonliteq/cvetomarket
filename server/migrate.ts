@@ -141,6 +141,12 @@ export async function runMigrations() {
       ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS push_retry_delay_ms integer DEFAULT 1000;
     `);
 
+    await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS max_chat_id text;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS max_link_token text;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS max_link_token_expires_at timestamp;
+    `);
+
     console.log("[migrate] Schema up to date");
   } catch (err) {
     console.error("[migrate] Migration error:", err);
