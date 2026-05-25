@@ -1344,10 +1344,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
             const userId = await consumeMaxLinkToken(token);
             if (userId) {
               await storage.setMaxChatId(userId, String(chatId));
-              await sendMaxMessage(
-                String(chatId),
-                "✅ Ваш аккаунт ЦветоМаркет подключён!\n\nТеперь вы будете получать уведомления прямо здесь:\n• Заказ подтверждён магазином\n• Заказ собирается\n• Заказ передан в доставку\n• Заказ доставлен\n• Заказ отменён\n\nСпасибо, что выбрали ЦветоМаркет! 🌸"
-              );
+              const linkedUser = await storage.getUser(userId);
+              const isSeller = linkedUser && (linkedUser.role === "shop" || linkedUser.role === "worker");
+              const confirmationMessage = isSeller
+                ? "✅ Ваш аккаунт ЦветоМаркет подключён!\n\nТеперь вы будете получать уведомления прямо здесь:\n• Новый заказ в вашем магазине\n• Новое сообщение от покупателя\n\nСпасибо, что выбрали ЦветоМаркет! 🌸"
+                : "✅ Ваш аккаунт ЦветоМаркет подключён!\n\nТеперь вы будете получать уведомления прямо здесь:\n• Заказ подтверждён магазином\n• Заказ собирается\n• Заказ передан в доставку\n• Заказ доставлен\n• Заказ отменён\n\nСпасибо, что выбрали ЦветоМаркет! 🌸";
+              await sendMaxMessage(String(chatId), confirmationMessage);
             } else {
               await sendMaxMessage(String(chatId), "⚠️ Ссылка устарела или недействительна.\n\nПожалуйста, сгенерируйте новую ссылку в настройках профиля.");
             }
