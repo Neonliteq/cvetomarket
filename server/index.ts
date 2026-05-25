@@ -5,6 +5,7 @@ import { createServer } from "http";
 import { seed } from "./seed";
 import { runMigrations } from "./migrate";
 import { registerWebhook } from "./telegram";
+import { registerMaxWebhook } from "./max";
 
 const app = express();
 app.set("query parser", "extended");
@@ -100,6 +101,7 @@ app.use((req, res, next) => {
     const domain = (process.env.REPLIT_DEV_DOMAIN || process.env.REPLIT_DOMAINS || "").split(",")[0].trim();
     if (domain) {
       registerWebhook(domain).catch(() => {});
+      registerMaxWebhook(domain).catch(() => {});
     }
   }
 

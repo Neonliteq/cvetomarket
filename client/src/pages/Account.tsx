@@ -416,6 +416,70 @@ function TelegramSection({ user, queryClient, toast }: { user: any; queryClient:
   );
 }
 
+function MaxSection({ user, queryClient, toast }: { user: any; queryClient: any; toast: any }) {
+  const isConnected = !!(user as any).maxChatId;
+
+  const connectMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("GET", "/api/max/link");
+      return res as { url: string };
+    },
+    onSuccess: ({ url }) => {
+      window.open(url, "_blank");
+    },
+    onError: (err: any) => toast({ title: "Ошибка", description: err?.message || "Не удалось получить ссылку", variant: "destructive" }),
+  });
+
+  const disconnectMutation = useMutation({
+    mutationFn: () => apiRequest("DELETE", "/api/max/link"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      toast({ title: "Max отключён" });
+    },
+  });
+
+  return (
+    <div>
+      <p className="text-sm font-medium mb-1.5 flex items-center gap-1.5">
+        <MessageCircle className="w-4 h-4 text-purple-500" /> Max-уведомления
+      </p>
+      <p className="text-xs text-muted-foreground mb-3">
+        Получайте уведомления о заказах и сообщениях в мессенджере Max
+      </p>
+
+      {isConnected ? (
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+            <CheckCircle className="w-4 h-4" />
+            <span>Max подключён</span>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => disconnectMutation.mutate()}
+            disabled={disconnectMutation.isPending}
+            data-testid="button-max-disconnect"
+          >
+            Отключить
+          </Button>
+        </div>
+      ) : (
+        <Button
+          size="sm"
+          variant="outline"
+          className="gap-2"
+          onClick={() => connectMutation.mutate()}
+          disabled={connectMutation.isPending}
+          data-testid="button-max-connect"
+        >
+          <ExternalLink className="w-4 h-4" />
+          {connectMutation.isPending ? "Открываем..." : "Подключить Max"}
+        </Button>
+      )}
+    </div>
+  );
+}
+
 function SoundSection() {
   const [enabled, setEnabled] = useState(isSoundEnabled);
 
@@ -1236,6 +1300,10 @@ export default function Account() {
               {/* Telegram notifications block — visible to all roles */}
               <Separator />
               <TelegramSection user={user} queryClient={queryClient} toast={toast} />
+
+              {/* Max messenger notifications */}
+              <Separator />
+              <MaxSection user={user} queryClient={queryClient} toast={toast} />
 
               {/* Sound notifications */}
               <Separator />

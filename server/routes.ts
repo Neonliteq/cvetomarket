@@ -12,6 +12,7 @@ import { z } from "zod";
 import { objectStorageClient, ObjectStorageService } from "./replit_integrations/object_storage";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { sendTelegramMessage, generateLinkToken, consumeLinkToken, getBotUsername, ORDER_STATUS_MESSAGES, registerWebhook } from "./telegram";
+import { sendMaxMessage, generateMaxLinkToken, consumeMaxLinkToken, getMaxBotNick, ORDER_STATUS_MESSAGES_MAX, registerMaxWebhook } from "./max";
 import { sendPasswordResetEmail } from "./resend";
 import { buildPaymentUrl, verifyResultSignature, isRobokassaConfigured } from "./robokassa";
 import { sendPushToUser, VAPID_PUBLIC_KEY, setRetrySettings, getRetryAttempts, getRetryDelayMs } from "./webpush";
@@ -711,6 +712,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           `🛍 <b>Новый заказ в магазине «${shopData.name}»</b>\n\nСумма: <b>${totalAmount.toLocaleString("ru-RU")} ₽</b>\n\nОткройте панель управления, чтобы подтвердить заказ.`
         );
       }
+      if ((recipient as any)?.maxChatId) {
+        await sendMaxMessage(
+          (recipient as any).maxChatId,
+          `🛍 Новый заказ в магазине «${shopData.name}»\n\nСумма: ${totalAmount.toLocaleString("ru-RU")} ₽\n\nОткройте панель управления, чтобы подтвердить заказ.`
+        );
+      }
       const recipientPrefs = await storage.getNotificationPreferences(recipientId).catch((e) => { console.error("[prefs] Failed to load notification preferences for", recipientId, e?.message); return undefined; });
       if (recipientPrefs === undefined || recipientPrefs.notifyOrders) {
         await sendPushToUser(recipientId, {
@@ -937,6 +944,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           );
         }
       }
+      if ((buyer as any)?.maxChatId) {
+        const maxMsg = ORDER_STATUS_MESSAGES_MAX[req.body.status];
+        if (maxMsg) {
+          await sendMaxMessage(
+            (buyer as any).maxChatId,
+            `${maxMsg}${shopForNotif ? `\n\n🏪 Магазин: ${shopForNotif.name}` : ""}`
+          );
+        }
+      }
       const buyerPrefs = await storage.getNotificationPreferences(order.buyerId).catch((e) => { console.error("[prefs] Failed to load notification preferences for", order.buyerId, e?.message); return undefined; });
       if (buyerPrefs === undefined || buyerPrefs.notifyOrders) {
         await sendPushToUser(order.buyerId, {
@@ -998,6 +1014,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           `📸 <b>Магазин загрузил фото готового букета</b>\n\nПожалуйста, откройте раздел «Мои заказы» на сайте и одобрите или отклоните фото.`
         );
       }
+      if ((buyerForPhoto as any)?.maxChatId) {
+        await sendMaxMessage(
+          (buyerForPhoto as any).maxChatId,
+          `📸 Магазин загрузил фото готового букета\n\nПожалуйста, откройте раздел «Мои заказы» на сайте и одобрите или отклоните фото.`
+        );
+      }
     }
     res.json(order);
   });
@@ -1034,6 +1056,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
             isApproved
               ? `✅ <b>Покупатель одобрил фото букета</b>\n\nЗаказ можно отправлять в доставку.`
               : `❌ <b>Покупатель отклонил фото букета</b>\n\nТребуется пересборка. Откройте панель управления.`
+          );
+        }
+        if ((recipient as any)?.maxChatId) {
+          await sendMaxMessage(
+            (recipient as any).maxChatId,
+            isApproved
+              ? `✅ Покупатель одобрил фото букета\n\nЗаказ можно отправлять в доставку.`
+              : `❌ Покупатель отклонил фото букета\n\nТребуется пересборка. Откройте панель управления.`
           );
         }
       }
@@ -1188,6 +1218,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           `💬 <b>Новое сообщение от ${sender.name}</b>\n\n${tgText}`
         );
       }
+      if ((receiver as any)?.maxChatId) {
+        const maxText = imageUrl && !content.trim() ? "📷 Фото" : (content.length > 200 ? content.slice(0, 200) + "..." : content);
+        await sendMaxMessage(
+          (receiver as any).maxChatId,
+          `💬 Новое сообщение от ${sender.name}\n\n${maxText}`
+        );
+      }
       const pushBody = imageUrl && !content.trim() ? "📷 Фото" : (content.length > 80 ? content.slice(0, 80) + "..." : content);
       const receiverPrefs = await storage.getNotificationPreferences(msg.receiverId).catch((e) => { console.error("[prefs] Failed to load notification preferences for", msg.receiverId, e?.message); return undefined; });
       if (receiverPrefs === undefined || receiverPrefs.notifyMessages) {
@@ -1271,6 +1308,54 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         }
       }
 
+      res.json({ ok: true });
+    } catch {
+      res.json({ ok: true });
+    }
+  });
+
+  // ---- MAX MESSENGER ----
+  app.get("/api/max/link", requireAuth, async (req, res) => {
+    const userId = (req.session as any).userId;
+    const token = await generateMaxLinkToken(userId);
+    const nick = getMaxBotNick();
+    if (!nick) return res.status(500).json({ error: "MAX_BOT_NICK не настроен" });
+    res.json({ url: `https://max.ru/${nick}?start=${token}` });
+  });
+
+  app.delete("/api/max/link", requireAuth, async (req, res) => {
+    const userId = (req.session as any).userId;
+    await storage.setMaxChatId(userId, null);
+    res.json({ ok: true });
+  });
+
+  app.post("/api/max/webhook", async (req, res) => {
+    try {
+      const events: any[] = req.body?.events || [];
+      for (const event of events) {
+        if (event.type !== "newMessage") continue;
+        const chatId = event.payload?.chat?.chatId || event.payload?.from?.userId;
+        const text: string = event.payload?.text || "";
+        if (!chatId) continue;
+
+        if (text.startsWith("/start")) {
+          const token = text.split(" ")[1]?.trim();
+          if (token) {
+            const userId = await consumeMaxLinkToken(token);
+            if (userId) {
+              await storage.setMaxChatId(userId, String(chatId));
+              await sendMaxMessage(
+                String(chatId),
+                "✅ Уведомления в Max подключены!\n\nТеперь вы будете получать уведомления о заказах и сообщениях прямо здесь."
+              );
+            } else {
+              await sendMaxMessage(String(chatId), "⚠️ Ссылка устарела или недействительна.\n\nПожалуйста, сгенерируйте новую ссылку в настройках профиля.");
+            }
+          } else {
+            await sendMaxMessage(String(chatId), "👋 Привет! Чтобы получать уведомления от ЦветоМаркет, перейдите в профиль на сайте и нажмите «Подключить Max».");
+          }
+        }
+      }
       res.json({ ok: true });
     } catch {
       res.json({ ok: true });
@@ -1829,6 +1914,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           await sendTelegramMessage(
             buyer.telegramChatId,
             `💳 <b>Магазин выставил счёт на доплату</b>\n\n<b>${reason.trim()}</b>\nСумма: <b>${Number(amount).toLocaleString("ru-RU")} ₽</b>\n\nОткройте раздел «Мои заказы» для оплаты.`
+          );
+        }
+        if ((buyer as any)?.maxChatId) {
+          await sendMaxMessage(
+            (buyer as any).maxChatId,
+            `💳 Магазин выставил счёт на доплату\n\n${reason.trim()}\nСумма: ${Number(amount).toLocaleString("ru-RU")} ₽\n\nОткройте раздел «Мои заказы» для оплаты.`
           );
         }
       }

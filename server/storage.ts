@@ -130,6 +130,9 @@ export interface IStorage {
 
   // Telegram
   setTelegramChatId(userId: string, chatId: string | null): Promise<void>;
+
+  // Max
+  setMaxChatId(userId: string, chatId: string | null): Promise<void>;
   updateSettings(data: Partial<PlatformSettings>): Promise<PlatformSettings>;
 
   // Password Reset
@@ -509,6 +512,10 @@ export class DbStorage implements IStorage {
 
   async setTelegramChatId(userId: string, chatId: string | null) {
     await db.update(users).set({ telegramChatId: chatId } as any).where(eq(users.id, userId));
+  }
+
+  async setMaxChatId(userId: string, chatId: string | null) {
+    await db.update(users).set({ maxChatId: chatId } as any).where(eq(users.id, userId));
   }
 
   async setPasswordResetToken(userId: string, token: string, expiresAt: Date) {
