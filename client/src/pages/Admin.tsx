@@ -199,6 +199,7 @@ export default function Admin() {
   const [shopFilter, setShopFilter] = useState("all");
   const [orderFilter, setOrderFilter] = useState("all");
   const [orderSearch, setOrderSearch] = useState("");
+  const [productShopFilter, setProductShopFilter] = useState("all");
   const [editShopId, setEditShopId] = useState<string | null>(null);
   const [editShopData, setEditShopData] = useState<Record<string, string>>({});
   const [editProductId, setEditProductId] = useState<string | null>(null);
@@ -591,6 +592,7 @@ export default function Admin() {
 
   const pendingShops = (shops || []).filter((s) => s.status === "pending");
   const filteredShops = shopFilter === "all" ? shops : shops?.filter((s) => s.status === shopFilter);
+  const filteredProducts = productShopFilter === "all" ? allProducts : allProducts?.filter((p) => p.shopId === productShopFilter);
   const filteredOrders = (orderFilter === "all" ? orders : orders?.filter((o) => o.status === orderFilter))?.filter((o) => {
     if (!orderSearch.trim()) return true;
     const q = orderSearch.trim().toLowerCase().replace("#", "");
@@ -1104,12 +1106,27 @@ export default function Admin() {
 
         {/* ==================== PRODUCTS ==================== */}
         <TabsContent value="products">
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <Select value={productShopFilter} onValueChange={setProductShopFilter}>
+              <SelectTrigger className="w-56" data-testid="select-product-shop-filter">
+                <SelectValue placeholder="Все магазины" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Все магазины</SelectItem>
+                {shops?.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <span className="text-sm text-muted-foreground">
+              Показано: {filteredProducts?.length || 0} из {allProducts?.length || 0}
+            </span>
+          </div>
           {loadingProducts ? (
             <div className="space-y-3">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-lg" />)}</div>
-          ) : allProducts?.length ? (
+          ) : filteredProducts?.length ? (
             <div className="space-y-3">
-              <p className="text-sm text-muted-foreground mb-2">Все товары на платформе: {allProducts.length}</p>
-              {allProducts.map((p) => (
+              {filteredProducts.map((p) => (
                 <Card key={p.id} className={!p.isActive ? "opacity-60" : ""} data-testid={`card-admin-product-${p.id}`}>
                   <CardContent className="p-4 flex items-center gap-3">
                     <div className="w-12 h-12 rounded-md overflow-hidden bg-muted shrink-0">
@@ -1273,7 +1290,9 @@ export default function Admin() {
               ))}
             </div>
           ) : (
-            <div className="text-center py-12 text-muted-foreground text-sm">Нет товаров</div>
+            <div className="text-center py-12 text-muted-foreground text-sm">
+              {productShopFilter !== "all" ? "В этом магазине нет товаров" : "Нет товаров"}
+            </div>
           )}
         </TabsContent>
 
