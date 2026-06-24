@@ -1776,7 +1776,11 @@ export default function Admin() {
                             </div>
                             <span className="text-sm font-semibold">{review.rating} / 5</span>
                             {review.productName ? (
-                              <Badge variant="outline" className="text-xs"><MessageSquare className="w-3 h-3 mr-1" />Товар: {review.productName}</Badge>
+                              <Link href={`/product/${review.productId}`}>
+                                <Badge variant="outline" className="text-xs cursor-pointer hover:bg-muted transition-colors" data-testid={`link-review-product-${review.productId}`}>
+                                  <MessageSquare className="w-3 h-3 mr-1" />Товар: {review.productName}
+                                </Badge>
+                              </Link>
                             ) : (
                               <Badge variant="secondary" className="text-xs"><Store className="w-3 h-3 mr-1" />Магазин</Badge>
                             )}
