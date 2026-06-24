@@ -1423,7 +1423,18 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const allShops = await storage.getShops();
     const userMap = Object.fromEntries(allUsers.map((u) => [u.id, u.name]));
     const shopMap = Object.fromEntries(allShops.map((s) => [s.id, s.name]));
-    res.json(ordersList.map((o) => ({ ...o, buyerName: userMap[o.buyerId], shopName: shopMap[o.shopId] })));
+    const allItems = await storage.getOrderItemsByOrderIds(ordersList.map((o) => o.id));
+    const itemsByOrder: Record<string, typeof allItems> = {};
+    for (const item of allItems) {
+      if (!itemsByOrder[item.orderId]) itemsByOrder[item.orderId] = [];
+      itemsByOrder[item.orderId].push(item);
+    }
+    res.json(ordersList.map((o) => ({
+      ...o,
+      buyerName: userMap[o.buyerId],
+      shopName: shopMap[o.shopId],
+      items: itemsByOrder[o.id] || [],
+    })));
   });
 
   app.patch("/api/admin/shops/:id/status", requireRole("admin"), async (req, res) => {

@@ -87,6 +87,7 @@ export interface IStorage {
 
   // Order Items
   getOrderItems(orderId: string): Promise<OrderItem[]>;
+  getOrderItemsByOrderIds(orderIds: string[]): Promise<OrderItem[]>;
   createOrderItems(items: InsertOrderItem[]): Promise<OrderItem[]>;
 
   // Reviews
@@ -377,6 +378,11 @@ export class DbStorage implements IStorage {
 
   async getOrderItems(orderId: string) {
     return db.select().from(orderItems).where(eq(orderItems.orderId, orderId));
+  }
+  async getOrderItemsByOrderIds(orderIds: string[]) {
+    if (!orderIds.length) return [];
+    const { inArray } = await import("drizzle-orm");
+    return db.select().from(orderItems).where(inArray(orderItems.orderId, orderIds));
   }
   async createOrderItems(items: InsertOrderItem[]) {
     if (!items.length) return [];

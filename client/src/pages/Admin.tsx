@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import {
   CheckCircle, XCircle, Users, Store, Package, Settings, Plus, Trash2,
   BarChart3, MapPin, Tag, ShieldAlert, ShieldCheck, TrendingUp, DollarSign,
@@ -1060,6 +1060,18 @@ export default function Admin() {
                           <span>Тел: {order.recipientPhone}</span>
                           <span>Адрес: {order.deliveryAddress}</span>
                         </div>
+                        {(order as any).items?.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mt-1.5">
+                            {(order as any).items.map((item: any) => (
+                              <Link key={item.id} href={`/product/${item.productId}`}>
+                                <span className="inline-flex items-center gap-1 text-xs bg-muted hover:bg-muted/80 text-foreground rounded px-2 py-0.5 cursor-pointer transition-colors" data-testid={`link-order-product-${item.productId}`}>
+                                  <Package className="w-3 h-3 shrink-0 text-muted-foreground" />
+                                  {item.productName}{item.quantity > 1 ? ` ×${item.quantity}` : ""}
+                                </span>
+                              </Link>
+                            ))}
+                          </div>
+                        )}
                         {Number(order.platformCommission) > 0 && (
                           <p className="text-xs text-green-600 mt-1">Комиссия: {Number(order.platformCommission).toLocaleString("ru-RU")} ₽</p>
                         )}
