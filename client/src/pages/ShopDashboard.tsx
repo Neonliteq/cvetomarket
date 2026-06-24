@@ -1091,12 +1091,6 @@ export default function ShopDashboard() {
                       )}
                       {order.status === "assembling" && (
                         <div className="flex flex-col gap-2 w-full sm:w-auto sm:flex-row sm:items-center">
-                          {order.buyerPhotoApproval === "pending" && (
-                            <span className="text-xs text-amber-600 font-medium flex items-center gap-1.5 px-1">
-                              <Clock className="w-3.5 h-3.5" />
-                              Ожидание одобрения покупателя…
-                            </span>
-                          )}
                           {order.buyerPhotoApproval === "approved" && (
                             <span className="text-xs text-green-600 font-medium flex items-center gap-1.5 px-1">
                               <Package className="w-3.5 h-3.5" />
@@ -1107,7 +1101,7 @@ export default function ShopDashboard() {
                             size="sm"
                             className="gap-1.5"
                             onClick={() => updateOrderMutation.mutate({ id: order.id, status: "delivering" })}
-                            disabled={updateOrderMutation.isPending || order.buyerPhotoApproval === "pending"}
+                            disabled={updateOrderMutation.isPending}
                             data-testid={`button-delivering-order-${order.id}`}
                           >
                             <Truck className="w-3.5 h-3.5" />

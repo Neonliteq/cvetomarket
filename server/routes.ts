@@ -914,8 +914,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       return res.status(400).json({ error: "Загрузите фото готового букета перед тем как пометить заказ собранным" });
     }
     let order = await storage.updateOrderStatus(req.params.id, req.body.status, req.body.assemblyPhotoUrl);
-    // Guest order (no buyerId) — auto-approve photo so shop can proceed without waiting
-    if (req.body.status === "assembling" && order && !order.buyerId) {
+    // Auto-approve photo for all orders — buyer confirmation is optional/informational only
+    if (req.body.status === "assembling" && order) {
       order = await storage.updateOrderPhotoApproval(order.id, "approved") ?? order;
     }
     // Notify buyer about status change
