@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { ShoppingCart, User, Flower2, Menu, X, ChevronDown, Bell, MessageCircle, Package, Star, ChevronRight, LogOut, LayoutDashboard, ShoppingBag, Shield, Clock, CheckCircle2, XCircle, Camera, ShoppingBag as OrderNewIcon, MapPin, Check } from "lucide-react";
+import { ShoppingCart, User, Flower2, Menu, X, ChevronDown, Bell, MessageCircle, Package, Star, ChevronRight, LogOut, LayoutDashboard, ShoppingBag, Shield, Clock, CheckCircle2, XCircle, Camera, ShoppingBag as OrderNewIcon, MapPin, Check, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -85,7 +85,14 @@ export function Header() {
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const qc = useQueryClient();
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await qc.invalidateQueries();
+    setTimeout(() => setRefreshing(false), 600);
+  };
 
   const { data: notifData } = useQuery<NotificationsData>({
     queryKey: ["/api/notifications"],
@@ -441,6 +448,17 @@ export function Header() {
               <Button size="sm" data-testid="button-login">Войти</Button>
             </Link>
           )}
+
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            data-testid="button-refresh"
+            title="Обновить данные"
+          >
+            <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
+          </Button>
 
           <Button
             variant="ghost"
