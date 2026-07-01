@@ -14,6 +14,7 @@ import { useCart } from "@/lib/cart";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { trackEvent } from "@/lib/analytics";
 import type { Product, Shop, Review } from "@shared/schema";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
@@ -38,6 +39,12 @@ export default function ProductDetail() {
     queryKey: [`/api/shops/${product?.shopId}`],
     enabled: !!product?.shopId,
   });
+
+  useEffect(() => {
+    if (product) {
+      trackEvent("product_view", { productId: product.id, productName: product.name, shopId: product.shopId, price: product.price });
+    }
+  }, [product?.id]);
 
   const handleAddToCart = () => {
     if (!product) return;

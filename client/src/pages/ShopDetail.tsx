@@ -10,6 +10,7 @@ import { ProductCard } from "@/components/ProductCard";
 import { StarRating } from "@/components/StarRating";
 import { useAuth } from "@/lib/auth";
 import { apiRequest } from "@/lib/queryClient";
+import { trackEvent } from "@/lib/analytics";
 import type { Shop, Product } from "@shared/schema";
 
 type ProductWithMeta = Product & { shopName?: string; categoryName?: string };
@@ -41,6 +42,12 @@ export default function ShopDetail() {
     queryKey: [`/api/shops/${id}/products`],
     enabled: !!id,
   });
+
+  useEffect(() => {
+    if (shop) {
+      trackEvent("shop_view", { shopId: shop.id, shopName: shop.name });
+    }
+  }, [shop?.id]);
 
   if (loadingShop) {
     return (

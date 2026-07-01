@@ -252,6 +252,10 @@ export const pageViews = pgTable("page_views", {
   page: text("page").notNull(),
   referrer: text("referrer"),
   deviceType: text("device_type").notNull().default("desktop"),
+  utmSource: text("utm_source"),
+  utmMedium: text("utm_medium"),
+  utmCampaign: text("utm_campaign"),
+  durationSeconds: integer("duration_seconds"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

@@ -42,6 +42,10 @@ export default function Checkout() {
   const [success, setSuccess] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
 
+  useEffect(() => {
+    trackEvent("checkout_start", { itemCount: items.length, shopId: shopId || undefined });
+  }, []);
+
   const { data: shop } = useQuery<Shop>({
     queryKey: ["/api/shops", shopId],
     enabled: !!shopId,

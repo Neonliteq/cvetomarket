@@ -187,7 +187,7 @@ export interface IStorage {
   getPushDeliveryFailures(sinceDate?: Date): Promise<PushDeliveryFailure[]>;
 
   // Analytics
-  recordPageView(data: { sessionId: string; userId?: string; page: string; referrer?: string; deviceType: string }): Promise<void>;
+  recordPageView(data: { sessionId: string; userId?: string; page: string; referrer?: string; deviceType: string; utmSource?: string | null; utmMedium?: string | null; utmCampaign?: string | null; durationSeconds?: number | null }): Promise<void>;
   recordAnalyticsEvent(data: { sessionId: string; userId?: string; eventName: string; properties?: Record<string, unknown>; page: string }): Promise<void>;
   getSiteAnalytics(since: Date): Promise<{
     totalViews: number;
@@ -197,6 +197,14 @@ export interface IStorage {
     deviceBreakdown: { deviceType: string; count: number }[];
     topEvents: { eventName: string; count: number }[];
     dailyViews: { date: string; views: number; sessions: number }[];
+    avgSessionDuration: number;
+    bounceRate: number;
+    funnelSteps: { step: string; label: string; sessions: number }[];
+    topSearchQueries: { query: string; count: number }[];
+    utmBreakdown: { utmSource: string; sessions: number; views: number }[];
+    abandonedCarts: number;
+    topProducts: { productId: string; productName: string; views: number; cartAdds: number }[];
+    topShops: { shopId: string; shopName: string; views: number }[];
   }>;
 }
 
@@ -783,13 +791,17 @@ export class DbStorage implements IStorage {
     return db.select().from(pushDeliveryFailures).orderBy(desc(pushDeliveryFailures.failureCount));
   }
 
-  async recordPageView(data: { sessionId: string; userId?: string; page: string; referrer?: string; deviceType: string }): Promise<void> {
+  async recordPageView(data: { sessionId: string; userId?: string; page: string; referrer?: string; deviceType: string; utmSource?: string | null; utmMedium?: string | null; utmCampaign?: string | null; durationSeconds?: number | null }): Promise<void> {
     await db.insert(pageViews).values({
       sessionId: data.sessionId,
       userId: data.userId ?? null,
       page: data.page,
       referrer: data.referrer ?? null,
       deviceType: data.deviceType,
+      utmSource: data.utmSource ?? null,
+      utmMedium: data.utmMedium ?? null,
+      utmCampaign: data.utmCampaign ?? null,
+      durationSeconds: data.durationSeconds ?? null,
     });
   }
 
@@ -852,6 +864,135 @@ export class DbStorage implements IStorage {
       .groupBy(sql`date_trunc('day', ${pageViews.createdAt})`)
       .orderBy(sql`date_trunc('day', ${pageViews.createdAt})`);
 
+    // --- Session duration (avg of non-null duration_seconds) ---
+    const [durationRow] = await db
+      .select({ avg: sql<number>`round(avg(${pageViews.durationSeconds}))::int` })
+      .from(pageViews)
+      .where(sql`${pageViews.createdAt} >= ${since} and ${pageViews.durationSeconds} is not null and ${pageViews.durationSeconds} > 0`);
+
+    // --- Bounce rate: sessions with only 1 page view ---
+    const [bounceRow] = await db.execute(sql`
+      SELECT
+        count(*) FILTER (WHERE cnt = 1)::int AS bounced,
+        count(*)::int AS total
+      FROM (
+        SELECT session_id, count(*) AS cnt
+        FROM page_views
+        WHERE created_at >= ${since}
+        GROUP BY session_id
+      ) s
+    `);
+    const bounced = Number((bounceRow as any)?.bounced ?? 0);
+    const totalSessions = Number((bounceRow as any)?.total ?? 1);
+    const bounceRate = totalSessions > 0 ? Math.round((bounced / totalSessions) * 100) : 0;
+
+    // --- Funnel analysis ---
+    const funnelData = await db.execute(sql`
+      SELECT
+        count(distinct CASE WHEN page = '/catalog' THEN session_id END)::int AS catalog,
+        count(distinct CASE WHEN page LIKE '/product/%' THEN session_id END)::int AS product,
+        count(distinct CASE WHEN page = '/cart' THEN session_id END)::int AS cart,
+        count(distinct CASE WHEN page = '/checkout' THEN session_id END)::int AS checkout_page
+      FROM page_views
+      WHERE created_at >= ${since}
+    `);
+    const funnel = (funnelData as any[])[0] ?? {};
+    const [ordersRow] = await db.execute(sql`
+      SELECT count(distinct ae.session_id)::int AS placed
+      FROM analytics_events ae
+      WHERE ae.created_at >= ${since} AND ae.event_name = 'order_placed'
+    `);
+    const funnelSteps = [
+      { step: "catalog", label: "Каталог", sessions: Number(funnel.catalog ?? 0) },
+      { step: "product", label: "Товар", sessions: Number(funnel.product ?? 0) },
+      { step: "cart", label: "Корзина", sessions: Number(funnel.cart ?? 0) },
+      { step: "checkout", label: "Оформление", sessions: Number(funnel.checkout_page ?? 0) },
+      { step: "order_placed", label: "Заказ", sessions: Number((ordersRow as any)?.placed ?? 0) },
+    ];
+
+    // --- Top search queries ---
+    const searchRows = await db.execute(sql`
+      SELECT (properties->>'query') AS query, count(*)::int AS count
+      FROM analytics_events
+      WHERE created_at >= ${since} AND event_name = 'search_query' AND properties->>'query' IS NOT NULL
+      GROUP BY query
+      ORDER BY count DESC
+      LIMIT 10
+    `);
+    const topSearchQueries = (searchRows as any[]).map((r: any) => ({ query: r.query as string, count: Number(r.count) }));
+
+    // --- UTM breakdown ---
+    const utmRows = await db.execute(sql`
+      SELECT utm_source, count(distinct session_id)::int AS sessions, count(*)::int AS views
+      FROM page_views
+      WHERE created_at >= ${since} AND utm_source IS NOT NULL
+      GROUP BY utm_source
+      ORDER BY sessions DESC
+      LIMIT 10
+    `);
+    const utmBreakdown = (utmRows as any[]).map((r: any) => ({
+      utmSource: r.utm_source as string,
+      sessions: Number(r.sessions),
+      views: Number(r.views),
+    }));
+
+    // --- Abandoned carts ---
+    const [abandonedRow] = await db.execute(sql`
+      SELECT count(distinct ae.session_id)::int AS count
+      FROM analytics_events ae
+      WHERE ae.created_at >= ${since} AND ae.event_name = 'add_to_cart'
+        AND ae.session_id NOT IN (
+          SELECT DISTINCT session_id FROM analytics_events
+          WHERE created_at >= ${since} AND event_name = 'order_placed'
+        )
+    `);
+    const abandonedCarts = Number((abandonedRow as any)?.count ?? 0);
+
+    // --- Top products by views ---
+    const productViewRows = await db.execute(sql`
+      SELECT
+        (properties->>'productId') AS product_id,
+        (properties->>'productName') AS product_name,
+        count(*)::int AS views
+      FROM analytics_events
+      WHERE created_at >= ${since} AND event_name = 'product_view' AND properties->>'productId' IS NOT NULL
+      GROUP BY product_id, product_name
+      ORDER BY views DESC
+      LIMIT 10
+    `);
+    const cartAddRows = await db.execute(sql`
+      SELECT (properties->>'productId') AS product_id, count(*)::int AS count
+      FROM analytics_events
+      WHERE created_at >= ${since} AND event_name = 'add_to_cart' AND properties->>'productId' IS NOT NULL
+      GROUP BY product_id
+    `);
+    const cartAddMap: Record<string, number> = {};
+    for (const r of cartAddRows as any[]) cartAddMap[r.product_id] = Number(r.count);
+    const topProducts = (productViewRows as any[]).map((r: any) => ({
+      productId: r.product_id as string,
+      productName: (r.product_name ?? r.product_id) as string,
+      views: Number(r.views),
+      cartAdds: cartAddMap[r.product_id] ?? 0,
+    }));
+
+    // --- Top shops by views ---
+    const shopViewRows = await db.execute(sql`
+      SELECT
+        (properties->>'shopId') AS shop_id,
+        (properties->>'shopName') AS shop_name,
+        count(*)::int AS views
+      FROM analytics_events
+      WHERE created_at >= ${since} AND event_name = 'shop_view' AND properties->>'shopId' IS NOT NULL
+      GROUP BY shop_id, shop_name
+      ORDER BY views DESC
+      LIMIT 10
+    `);
+    const topShops = (shopViewRows as any[]).map((r: any) => ({
+      shopId: r.shop_id as string,
+      shopName: (r.shop_name ?? r.shop_id) as string,
+      views: Number(r.views),
+    }));
+
     return {
       totalViews: totalViewsRow?.count ?? 0,
       uniqueSessions: uniqueSessionsRow?.count ?? 0,
@@ -860,6 +1001,14 @@ export class DbStorage implements IStorage {
       deviceBreakdown,
       topEvents,
       dailyViews,
+      avgSessionDuration: durationRow?.avg ?? 0,
+      bounceRate,
+      funnelSteps,
+      topSearchQueries,
+      utmBreakdown,
+      abandonedCarts,
+      topProducts,
+      topShops,
     };
   }
 }

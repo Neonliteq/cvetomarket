@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "wouter";
+import { trackEvent } from "@/lib/analytics";
 import { Search, SlidersHorizontal, X, Tag } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -19,11 +20,22 @@ export default function Catalog() {
   const searchStr = useSearch();
   const [search, setSearch] = useState(() => new URLSearchParams(searchStr).get("q") || "");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const searchTrackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const q = new URLSearchParams(searchStr).get("q") || "";
     setSearch(q);
   }, [searchStr]);
+
+  useEffect(() => {
+    if (!search.trim()) return;
+    if (searchTrackTimer.current) clearTimeout(searchTrackTimer.current);
+    searchTrackTimer.current = setTimeout(() => {
+      trackEvent("search_query", { query: search.trim() });
+    }, 1500);
+    return () => { if (searchTrackTimer.current) clearTimeout(searchTrackTimer.current); };
+  }, [search]);
+
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);

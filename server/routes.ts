@@ -2149,10 +2149,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // Analytics — record page view (public)
   app.post("/api/analytics/pageview", async (req, res) => {
     try {
-      const { sessionId, page, referrer, deviceType } = req.body;
+      const { sessionId, page, referrer, deviceType, utmSource, utmMedium, utmCampaign, durationSeconds } = req.body;
       if (!sessionId || !page) return res.status(400).json({ error: "sessionId and page required" });
       const userId = (req.session as any)?.userId as string | undefined;
-      await storage.recordPageView({ sessionId, userId, page, referrer, deviceType: deviceType || "desktop" });
+      await storage.recordPageView({
+        sessionId, userId, page, referrer, deviceType: deviceType || "desktop",
+        utmSource: utmSource || null, utmMedium: utmMedium || null, utmCampaign: utmCampaign || null,
+        durationSeconds: typeof durationSeconds === "number" ? durationSeconds : null,
+      });
       res.json({ ok: true });
     } catch (e: any) {
       res.status(500).json({ error: e.message });

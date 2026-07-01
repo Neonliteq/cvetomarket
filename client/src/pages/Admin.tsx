@@ -6,7 +6,8 @@ import {
   BarChart3, MapPin, Tag, ShieldAlert, ShieldCheck, TrendingUp, DollarSign,
   Ban, UserCheck, Eye, ChevronDown, Edit, ShoppingBag, EyeOff, FileText,
   Wallet, Receipt, Percent, ArrowDownRight, Filter, ChevronsUpDown, Gift,
-  Star, Award, MessageSquare, AlertCircle, ChevronRight, Search, StickyNote, Bell
+  Star, Award, MessageSquare, AlertCircle, ChevronRight, Search, StickyNote, Bell,
+  Globe, Target, Timer, TrendingDown, ShoppingCart, ArrowRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -526,6 +527,14 @@ export default function Admin() {
     deviceBreakdown: { deviceType: string; count: number }[];
     topEvents: { eventName: string; count: number }[];
     dailyViews: { date: string; views: number; sessions: number }[];
+    avgSessionDuration: number;
+    bounceRate: number;
+    funnelSteps: { step: string; label: string; sessions: number }[];
+    topSearchQueries: { query: string; count: number }[];
+    utmBreakdown: { utmSource: string; sessions: number; views: number }[];
+    abandonedCarts: number;
+    topProducts: { productId: string; productName: string; views: number; cartAdds: number }[];
+    topShops: { shopId: string; shopName: string; views: number }[];
   }>({
     queryKey: ["/api/admin/site-analytics", trafficPeriod],
     queryFn: async () => {
@@ -2605,6 +2614,239 @@ export default function Admin() {
                       </div>
                     </CardContent>
                   </Card>
+                )}
+
+                {/* Session metrics: duration + bounce rate + abandoned carts */}
+                {siteAnalytics && (
+                  <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                    <Card data-testid="card-session-duration">
+                      <CardContent className="pt-5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900 flex items-center justify-center">
+                            <Timer className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                          </div>
+                          <div>
+                            <div className="text-xs text-muted-foreground">Ср. время на стр.</div>
+                            <div className="text-2xl font-bold" data-testid="text-session-duration">
+                              {siteAnalytics.avgSessionDuration > 0
+                                ? `${Math.floor(siteAnalytics.avgSessionDuration / 60)}м ${siteAnalytics.avgSessionDuration % 60}с`
+                                : "—"}
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card data-testid="card-bounce-rate">
+                      <CardContent className="pt-5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center">
+                            <TrendingDown className="w-5 h-5 text-red-600 dark:text-red-400" />
+                          </div>
+                          <div>
+                            <div className="text-xs text-muted-foreground">Отказы</div>
+                            <div className="text-2xl font-bold" data-testid="text-bounce-rate">{siteAnalytics.bounceRate}%</div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card className="col-span-2 lg:col-span-1" data-testid="card-abandoned-carts">
+                      <CardContent className="pt-5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center">
+                            <ShoppingCart className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                          </div>
+                          <div>
+                            <div className="text-xs text-muted-foreground">Брошенных корзин</div>
+                            <div className="text-2xl font-bold" data-testid="text-abandoned-carts">{siteAnalytics.abandonedCarts}</div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+
+                {/* Funnel */}
+                {siteAnalytics && siteAnalytics.funnelSteps.length > 0 && siteAnalytics.funnelSteps[0].sessions > 0 && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center gap-2">
+                        <Target className="w-4 h-4 text-muted-foreground" />
+                        <CardTitle className="text-sm font-medium">Воронка продаж</CardTitle>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {siteAnalytics.funnelSteps.map((step, i) => {
+                          const prev = i > 0 ? siteAnalytics.funnelSteps[i - 1].sessions : step.sessions;
+                          const convPct = prev > 0 ? Math.round((step.sessions / prev) * 100) : 0;
+                          const maxSessions = siteAnalytics.funnelSteps[0].sessions || 1;
+                          const barPct = Math.round((step.sessions / maxSessions) * 100);
+                          return (
+                            <div key={step.step} className="flex items-center gap-2">
+                              <div className="min-w-[90px] text-center" data-testid={`funnel-step-${step.step}`}>
+                                <div className="text-lg font-bold">{step.sessions.toLocaleString()}</div>
+                                <div className="text-xs text-muted-foreground">{step.label}</div>
+                                <div className="mt-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                                  <div className="h-full bg-primary rounded-full" style={{ width: `${barPct}%` }} />
+                                </div>
+                                {i > 0 && (
+                                  <div className={`text-xs mt-0.5 font-medium ${convPct < 30 ? "text-red-500" : convPct < 60 ? "text-amber-500" : "text-green-500"}`}>
+                                    {convPct}%
+                                  </div>
+                                )}
+                              </div>
+                              {i < siteAnalytics.funnelSteps.length - 1 && (
+                                <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0" />
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Search queries + UTM sources */}
+                {siteAnalytics && (siteAnalytics.topSearchQueries.length > 0 || siteAnalytics.utmBreakdown.length > 0) && (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {siteAnalytics.topSearchQueries.length > 0 && (
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <div className="flex items-center gap-2">
+                            <Search className="w-4 h-4 text-muted-foreground" />
+                            <CardTitle className="text-sm font-medium">Поисковые запросы</CardTitle>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-2">
+                            {siteAnalytics.topSearchQueries.map((q, i) => {
+                              const max = siteAnalytics.topSearchQueries[0].count || 1;
+                              return (
+                                <div key={q.query} className="flex items-center gap-2 text-sm" data-testid={`row-search-query-${i}`}>
+                                  <span className="w-4 text-muted-foreground shrink-0 font-mono text-xs">{i + 1}</span>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <span className="truncate text-xs font-medium">{q.query}</span>
+                                      <div className="flex-1 bg-muted rounded-full h-1.5">
+                                        <div className="h-full bg-primary rounded-full" style={{ width: `${Math.round((q.count / max) * 100)}%` }} />
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <span className="text-xs font-medium shrink-0 w-6 text-right">{q.count}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+                    {siteAnalytics.utmBreakdown.length > 0 && (
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <div className="flex items-center gap-2">
+                            <Globe className="w-4 h-4 text-muted-foreground" />
+                            <CardTitle className="text-sm font-medium">Источники трафика (UTM)</CardTitle>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-2">
+                            {siteAnalytics.utmBreakdown.map((u, i) => {
+                              const max = siteAnalytics.utmBreakdown[0].sessions || 1;
+                              return (
+                                <div key={u.utmSource} className="flex items-center gap-2 text-sm" data-testid={`row-utm-${i}`}>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <span className="truncate text-xs font-medium">{u.utmSource}</span>
+                                      <div className="flex-1 bg-muted rounded-full h-1.5">
+                                        <div className="h-full bg-blue-500 rounded-full" style={{ width: `${Math.round((u.sessions / max) * 100)}%` }} />
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <span className="text-xs text-muted-foreground shrink-0">{u.sessions} сессий</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
+                )}
+
+                {/* Top products and top shops */}
+                {siteAnalytics && (siteAnalytics.topProducts.length > 0 || siteAnalytics.topShops.length > 0) && (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {siteAnalytics.topProducts.length > 0 && (
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <div className="flex items-center gap-2">
+                            <Package className="w-4 h-4 text-muted-foreground" />
+                            <CardTitle className="text-sm font-medium">Топ товаров по просмотрам</CardTitle>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-2">
+                            {siteAnalytics.topProducts.map((p, i) => {
+                              const max = siteAnalytics.topProducts[0].views || 1;
+                              const convPct = p.views > 0 ? Math.round((p.cartAdds / p.views) * 100) : 0;
+                              return (
+                                <div key={p.productId} className="text-sm" data-testid={`row-product-analytics-${i}`}>
+                                  <div className="flex items-center gap-2">
+                                    <span className="w-4 text-muted-foreground shrink-0 font-mono text-xs">{i + 1}</span>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2">
+                                        <span className="truncate text-xs font-medium">{p.productName}</span>
+                                        <div className="flex-1 bg-muted rounded-full h-1.5">
+                                          <div className="h-full bg-primary rounded-full" style={{ width: `${Math.round((p.views / max) * 100)}%` }} />
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <span className="text-xs font-medium shrink-0 w-8 text-right">{p.views}</span>
+                                  </div>
+                                  {p.cartAdds > 0 && (
+                                    <div className="ml-6 text-xs text-muted-foreground mt-0.5">
+                                      В корзину: {p.cartAdds} ({convPct}%)
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+                    {siteAnalytics.topShops.length > 0 && (
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <div className="flex items-center gap-2">
+                            <Store className="w-4 h-4 text-muted-foreground" />
+                            <CardTitle className="text-sm font-medium">Топ магазинов по просмотрам</CardTitle>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-2">
+                            {siteAnalytics.topShops.map((s, i) => {
+                              const max = siteAnalytics.topShops[0].views || 1;
+                              return (
+                                <div key={s.shopId} className="flex items-center gap-2 text-sm" data-testid={`row-shop-analytics-${i}`}>
+                                  <span className="w-4 text-muted-foreground shrink-0 font-mono text-xs">{i + 1}</span>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <span className="truncate text-xs font-medium">{s.shopName}</span>
+                                      <div className="flex-1 bg-muted rounded-full h-1.5">
+                                        <div className="h-full bg-green-500 rounded-full" style={{ width: `${Math.round((s.views / max) * 100)}%` }} />
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <span className="text-xs font-medium shrink-0 w-8 text-right">{s.views}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
                 )}
 
                 {!siteAnalytics || (siteAnalytics.totalViews === 0) ? (
