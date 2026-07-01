@@ -954,12 +954,19 @@ export class DbStorage implements IStorage {
       noResultsCount: Number(r.no_results_count ?? 0),
     }));
 
-    // --- UTM breakdown: source + medium + campaign (direct = no UTM, unknown = internal) ---
+    // --- UTM breakdown: direct/internal/referral/campaign buckets ---
+    // Frontend always classifies and sends utmSource:
+    //   'direct'   — no referrer, no UTM params
+    //   'internal' — same-host referrer (SPA hard reload or bookmarked internal URL)
+    //   'referral' — external referrer, utmMedium = referring domain
+    //   <string>   — actual utm_source param value for tagged campaigns
+    // Legacy rows (before this feature) have NULL → bucketed as 'direct'.
     const utmRows = await db.execute(sql`
       SELECT
         COALESCE(utm_source, 'direct') AS utm_source,
-        CASE WHEN utm_source IS NULL THEN NULL ELSE utm_medium END AS utm_medium,
-        CASE WHEN utm_source IS NULL THEN NULL ELSE utm_campaign END AS utm_campaign,
+        utm_medium,
+        CASE WHEN utm_source NOT IN ('direct','internal','referral') AND utm_source IS NOT NULL
+             THEN utm_campaign ELSE NULL END AS utm_campaign,
         count(distinct session_id)::int AS sessions,
         count(*)::int AS views
       FROM page_views
