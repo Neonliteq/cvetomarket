@@ -1900,10 +1900,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.get("/api/admin/crm/customers/:id", requireRole("admin"), async (req, res) => {
     try {
       const uid = req.params.id;
-      const [orderList, reviewList, bonusData] = await Promise.all([
+      const [orderList, reviewList, bonusData, userViews, userMessages] = await Promise.all([
         storage.getOrdersByBuyer(uid),
         storage.getReviewsByBuyer(uid),
         storage.getBonusTransactions(uid),
+        storage.getPageViewsByUser(uid, 20),
+        storage.getMessagesByUser(uid),
       ]);
       const enrichedOrders = await Promise.all(orderList.map(async (o) => {
         const items = await storage.getOrderItems(o.id);
@@ -1911,7 +1913,50 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return { ...o, items, shopName: shop?.name || "" };
       }));
       const bonusBalance = await storage.getBonusBalance(uid);
-      res.json({ orders: enrichedOrders, reviews: reviewList, bonusTransactions: bonusData, bonusBalance });
+      const targetUser = await storage.getUser(uid);
+      let referredBy: { id: string; name: string; email: string } | null = null;
+      let referrals: { id: string; name: string; email: string }[] = [];
+      if (targetUser) {
+        const referredByCode = (targetUser as any).referredBy;
+        if (referredByCode) {
+          const refUser = await storage.getUserByReferralCode(referredByCode);
+          if (refUser) referredBy = { id: refUser.id, name: refUser.name, email: refUser.email };
+        }
+        const allUsers = await storage.getAllUsers();
+        referrals = allUsers
+          .filter(u => (u as any).referredBy === ((targetUser as any).referralCode || ""))
+          .map(u => ({ id: u.id, name: u.name, email: u.email }))
+          .slice(0, 10);
+      }
+      const chats = userMessages.reduce<{ partnerId: string; partnerName?: string; lastMessage: string; lastAt: string | null; count: number }[]>((acc, msg: any) => {
+        const partnerId = msg.senderId === uid ? msg.receiverId : msg.senderId;
+        const existing = acc.find(c => c.partnerId === partnerId);
+        if (existing) { existing.count++; }
+        else acc.push({ partnerId, lastMessage: (msg.content || "").slice(0, 80), lastAt: msg.createdAt, count: 1 });
+        return acc;
+      }, []);
+      res.json({
+        orders: enrichedOrders,
+        reviews: reviewList,
+        bonusTransactions: bonusData,
+        bonusBalance,
+        pageViews: userViews,
+        chats,
+        referralInfo: { referredBy, referrals },
+      });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get("/api/admin/crm/abandoned-carts", requireRole("admin"), async (_req, res) => {
+    try {
+      const users = await storage.getAbandonedCartUsers();
+      const withSubs = await Promise.all(users.map(async (u) => {
+        const subs = await storage.getPushSubscriptionsByUser(u.id);
+        return { ...u, hasPushSubscription: (subs?.length || 0) > 0 };
+      }));
+      res.json(withSubs);
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
@@ -1953,6 +1998,49 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         link: "/cart",
       });
       res.json({ ok: true, result });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get("/api/shops/:id/customers", requireAuth, async (req, res) => {
+    try {
+      const shopId = req.params.id;
+      const userId = (req.session as any).userId;
+      const shop = await storage.getShop(shopId);
+      if (!shop) return res.status(404).json({ error: "Магазин не найден" });
+      const role = (req.session as any).role;
+      if (role !== "admin") {
+        const isOwner = shop.ownerId === userId;
+        const isWorker = await storage.isShopWorker(shopId, userId);
+        if (!isOwner && !isWorker) return res.status(403).json({ error: "Нет доступа" });
+      }
+      const customers = await storage.getShopCRMCustomers(shopId);
+      res.json(customers);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get("/api/shops/:id/customers/:userId", requireAuth, async (req, res) => {
+    try {
+      const shopId = req.params.id;
+      const targetUserId = req.params.userId;
+      const sessionUserId = (req.session as any).userId;
+      const shop = await storage.getShop(shopId);
+      if (!shop) return res.status(404).json({ error: "Магазин не найден" });
+      const role = (req.session as any).role;
+      if (role !== "admin") {
+        const isOwner = shop.ownerId === sessionUserId;
+        const isWorker = await storage.isShopWorker(shopId, sessionUserId);
+        if (!isOwner && !isWorker) return res.status(403).json({ error: "Нет доступа" });
+      }
+      const shopOrders = await storage.getOrdersByBuyerAndShop(targetUserId, shopId);
+      const enriched = await Promise.all(shopOrders.map(async (o) => {
+        const items = await storage.getOrderItems(o.id);
+        return { ...o, items };
+      }));
+      res.json({ orders: enriched });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }

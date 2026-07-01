@@ -54,6 +54,12 @@ type CRMProfile = {
   reviews: any[];
   bonusTransactions: any[];
   bonusBalance: number;
+  pageViews: any[];
+  chats: any[];
+  referralInfo: {
+    referredBy: { id: string; name: string; email: string } | null;
+    referrals: { id: string; name: string; email: string }[];
+  } | null;
 };
 
 const CRM_SEGMENT_LABELS: Record<CRMSegment, string> = {
@@ -279,6 +285,12 @@ export default function Admin() {
     queryKey: ["/api/admin/crm/customers", crmSelectedCustomer?.id, "profile"],
     queryFn: () => fetch(`/api/admin/crm/customers/${crmSelectedCustomer!.id}`, { credentials: "include" }).then((r) => r.json()),
     enabled: isAdmin && !!crmSelectedCustomer,
+  });
+
+  const { data: abandonedCartUsers, isLoading: loadingAbandonedCarts } = useQuery<Array<{ id: string; name: string; email: string; hasPushSubscription: boolean }>>({
+    queryKey: ["/api/admin/crm/abandoned-carts"],
+    queryFn: () => fetch("/api/admin/crm/abandoned-carts", { credentials: "include" }).then(r => r.json()),
+    enabled: isAdmin,
   });
 
   const saveNotesMutation = useMutation({
@@ -1966,6 +1978,9 @@ export default function Admin() {
               } else if (crmSegmentFilter === "churned_60") {
                 const lastOrderAge = c.lastOrderAt ? now - new Date(c.lastOrderAt).getTime() : Infinity;
                 matchSeg = lastOrderAge > 60 * 24 * 60 * 60 * 1000;
+              } else if (crmSegmentFilter === "abandoned_cart") {
+                const abandonedIds = new Set((abandonedCartUsers || []).map(u => u.id));
+                matchSeg = abandonedIds.has(c.id);
               } else {
                 matchSeg = c.segment === crmSegmentFilter;
               }
@@ -1997,6 +2012,7 @@ export default function Admin() {
                       <SelectItem value="vip_inactive">VIP без заказов 30+ дн. ({(crmCustomers || []).filter(c => { const age = c.lastOrderAt ? now - new Date(c.lastOrderAt).getTime() : Infinity; return c.segment === "vip" && age > 30*24*60*60*1000; }).length})</SelectItem>
                       <SelectItem value="new_no_repeat">Новые без повтора 14+ дн. ({(crmCustomers || []).filter(c => { const regAge = c.createdAt ? now - new Date(c.createdAt).getTime() : 0; return c.orderCount <= 1 && regAge > 14*24*60*60*1000; }).length})</SelectItem>
                       <SelectItem value="churned_60">Не покупали 60+ дн. ({(crmCustomers || []).filter(c => { const age = c.lastOrderAt ? now - new Date(c.lastOrderAt).getTime() : Infinity; return age > 60*24*60*60*1000; }).length})</SelectItem>
+                      <SelectItem value="abandoned_cart">Брошенная корзина ({(abandonedCartUsers || []).length})</SelectItem>
                     </SelectContent>
                   </Select>
                   {crmCities.length > 0 && (
@@ -2381,7 +2397,7 @@ export default function Admin() {
                   <Separator className="mb-4" />
 
                   {/* Reviews */}
-                  <div>
+                  <div className="mb-4">
                     <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
                       <Star className="w-4 h-4" /> Отзывы
                     </h4>
@@ -2409,6 +2425,89 @@ export default function Admin() {
                       </div>
                     )}
                   </div>
+
+                  <Separator className="mb-4" />
+
+                  {/* Chats */}
+                  <div className="mb-4">
+                    <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+                      <MessageSquare className="w-4 h-4" /> Чаты
+                    </h4>
+                    {loadingCrmProfile ? (
+                      <Skeleton className="h-10 rounded" />
+                    ) : !crmProfile?.chats?.length ? (
+                      <p className="text-sm text-muted-foreground">Переписок нет</p>
+                    ) : (
+                      <div className="space-y-1.5 max-h-36 overflow-y-auto">
+                        {crmProfile.chats.map((chat: any, i: number) => (
+                          <div key={i} className="flex items-center justify-between text-xs border rounded p-2" data-testid={`crm-chat-${chat.partnerId}`}>
+                            <div className="flex-1 min-w-0">
+                              <span className="text-muted-foreground mr-1">ID партнёра:</span>
+                              <span className="font-mono text-[10px]">{chat.partnerId.slice(-8)}</span>
+                              {chat.lastMessage && <p className="truncate text-muted-foreground mt-0.5">{chat.lastMessage}</p>}
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0 ml-2">
+                              <Badge variant="secondary" className="text-[10px]">{chat.count} сообщ.</Badge>
+                              <Button size="sm" variant="ghost" className="h-6 px-1.5 text-[10px]"
+                                onClick={() => window.open(`/chat?userId=${chat.partnerId}`, "_blank")}
+                                data-testid={`button-crm-open-chat-${chat.partnerId}`}
+                              >→ Чат</Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <Separator className="mb-4" />
+
+                  {/* Page Visits */}
+                  <div className="mb-4">
+                    <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+                      <Eye className="w-4 h-4" /> Визиты (последние 20)
+                    </h4>
+                    {loadingCrmProfile ? (
+                      <Skeleton className="h-20 rounded" />
+                    ) : !crmProfile?.pageViews?.length ? (
+                      <p className="text-sm text-muted-foreground">Нет данных о визитах</p>
+                    ) : (
+                      <div className="space-y-1 max-h-40 overflow-y-auto">
+                        {crmProfile.pageViews.map((pv: any, i: number) => (
+                          <div key={i} className="flex items-center justify-between text-xs border-b py-1" data-testid={`crm-pageview-${i}`}>
+                            <span className="font-mono truncate flex-1">{pv.page}</span>
+                            <span className="text-muted-foreground shrink-0 ml-2">
+                              {pv.createdAt ? format(new Date(pv.createdAt), "d MMM HH:mm", { locale: ru }) : ""}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Referral Info */}
+                  {!loadingCrmProfile && crmProfile?.referralInfo && (crmProfile.referralInfo.referredBy || crmProfile.referralInfo.referrals.length > 0) && (
+                    <>
+                      <Separator className="mb-4" />
+                      <div>
+                        <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+                          <Gift className="w-4 h-4" /> Реферальная программа
+                        </h4>
+                        {crmProfile.referralInfo.referredBy && (
+                          <p className="text-xs text-muted-foreground mb-1">
+                            Приглашён: <span className="font-medium text-foreground">{crmProfile.referralInfo.referredBy.name}</span> ({crmProfile.referralInfo.referredBy.email})
+                          </p>
+                        )}
+                        {crmProfile.referralInfo.referrals.length > 0 && (
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">Привлёк {crmProfile.referralInfo.referrals.length} польз.:</p>
+                            {crmProfile.referralInfo.referrals.map(r => (
+                              <p key={r.id} className="text-xs">{r.name} ({r.email})</p>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </>
               )}
             </SheetContent>
@@ -2817,7 +2916,7 @@ export default function Admin() {
                             size="sm"
                             variant="outline"
                             className="w-full gap-1.5 text-orange-700 border-orange-200 hover:bg-orange-50"
-                            onClick={() => setCrmSegmentFilter("churned_60")}
+                            onClick={() => setCrmSegmentFilter("abandoned_cart")}
                             data-testid="button-abandoned-go-crm"
                           >
                             <Bell className="w-3.5 h-3.5" />
@@ -2827,6 +2926,52 @@ export default function Admin() {
                       </CardContent>
                     </Card>
                   </div>
+                )}
+
+                {/* Abandoned Cart Users List */}
+                {(abandonedCartUsers && abandonedCartUsers.length > 0) && (
+                  <Card data-testid="card-abandoned-cart-users">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center gap-2">
+                        <ShoppingCart className="w-4 h-4 text-orange-500" />
+                        <CardTitle className="text-sm font-medium">Пользователи с брошенными корзинами</CardTitle>
+                        <Badge variant="secondary" className="ml-auto text-xs">{abandonedCartUsers.length}</Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      {loadingAbandonedCarts ? (
+                        <div className="space-y-2">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-9 rounded" />)}</div>
+                      ) : (
+                        <div className="space-y-2 max-h-64 overflow-y-auto">
+                          {abandonedCartUsers.map((u) => (
+                            <div key={u.id} className="flex items-center justify-between gap-2 rounded border px-3 py-2 text-sm" data-testid={`row-abandoned-cart-${u.id}`}>
+                              <div className="flex-1 min-w-0">
+                                <span className="font-medium">{u.name}</span>
+                                <span className="text-muted-foreground ml-2 text-xs">{u.email}</span>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                {u.hasPushSubscription ? (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 text-xs gap-1 text-orange-700 border-orange-200 hover:bg-orange-50"
+                                    onClick={() => crmCartReminderMutation.mutate(u.id)}
+                                    disabled={crmCartReminderMutation.isPending}
+                                    data-testid={`button-send-reminder-${u.id}`}
+                                  >
+                                    <Bell className="w-3 h-3" />
+                                    Напомнить
+                                  </Button>
+                                ) : (
+                                  <Badge variant="outline" className="text-xs text-muted-foreground">Нет push</Badge>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
                 )}
 
                 {/* Funnel */}

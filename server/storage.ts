@@ -159,6 +159,9 @@ export interface IStorage {
   updateUserTags(userId: string, tags: string[]): Promise<void>;
   getShopCRMCustomers(shopId: string): Promise<CRMCustomer[]>;
   getOrdersByBuyerAndShop(buyerId: string, shopId: string): Promise<Order[]>;
+  getPageViewsByUser(userId: string, limit?: number): Promise<PageView[]>;
+  getMessagesByUser(userId: string): Promise<Message[]>;
+  getAbandonedCartUsers(): Promise<Array<{ id: string; name: string; email: string }>>;
 
   // Order Supplements
   createOrderSupplement(data: InsertOrderSupplement): Promise<OrderSupplement>;
@@ -726,6 +729,51 @@ export class DbStorage implements IStorage {
     return db.select().from(orders)
       .where(and(eq(orders.buyerId, buyerId), eq(orders.shopId, shopId)))
       .orderBy(desc(orders.createdAt));
+  }
+
+  async getPageViewsByUser(userId: string, limit = 20): Promise<PageView[]> {
+    const rows = await db.select().from(pageViews)
+      .where(eq(pageViews.userId, userId))
+      .orderBy(desc(pageViews.createdAt))
+      .limit(limit);
+    return rows;
+  }
+
+  async getMessagesByUser(userId: string): Promise<Message[]> {
+    return db.select().from(messages)
+      .where(or(eq(messages.senderId, userId), eq(messages.receiverId, userId)))
+      .orderBy(desc(messages.createdAt))
+      .limit(50);
+  }
+
+  async getAbandonedCartUsers(): Promise<Array<{ id: string; name: string; email: string }>> {
+    const sevenDays = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const cartAdders = await db.selectDistinct({ userId: analyticsEvents.userId })
+      .from(analyticsEvents)
+      .where(and(
+        eq(analyticsEvents.eventName, "add_to_cart"),
+        sql`${analyticsEvents.userId} IS NOT NULL`,
+        sql`${analyticsEvents.createdAt} > ${sevenDays.toISOString()}`
+      ));
+    const cartUserIds = cartAdders.map(r => r.userId).filter(Boolean) as string[];
+    if (cartUserIds.length === 0) return [];
+
+    const orderers = await db.selectDistinct({ userId: analyticsEvents.userId })
+      .from(analyticsEvents)
+      .where(and(
+        eq(analyticsEvents.eventName, "order_placed"),
+        sql`${analyticsEvents.userId} IS NOT NULL`,
+        sql`${analyticsEvents.createdAt} > ${sevenDays.toISOString()}`
+      ));
+    const ordererIds = new Set(orderers.map(r => r.userId).filter(Boolean) as string[]);
+
+    const abandonedIds = cartUserIds.filter(id => !ordererIds.has(id));
+    if (abandonedIds.length === 0) return [];
+
+    const buyerList = await db.select({ id: users.id, name: users.name, email: users.email })
+      .from(users)
+      .where(inArray(users.id, abandonedIds));
+    return buyerList;
   }
 
   async createOrderSupplement(data: InsertOrderSupplement): Promise<OrderSupplement> {
