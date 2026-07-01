@@ -205,6 +205,7 @@ export default function Admin() {
   const [newCityName, setNewCityName] = useState("");
   const [commission, setCommission] = useState("");
   const [deliveryCost, setDeliveryCost] = useState("");
+  const [adminTab, setAdminTab] = useState("shops");
   const [shopFilter, setShopFilter] = useState("all");
   const [orderFilter, setOrderFilter] = useState("all");
   const [orderSearch, setOrderSearch] = useState("");
@@ -680,80 +681,128 @@ export default function Admin() {
         ))}
       </div>
 
-      <Tabs defaultValue="shops">
-        <div className="overflow-x-auto -mx-4 px-4 mb-6">
-        <TabsList className="h-auto flex-wrap min-w-max gap-1 p-1">
-          <TabsTrigger value="shops" className="gap-1 text-xs sm:text-sm" data-testid="tab-shops">
-            <Store className="w-4 h-4 shrink-0" />
-            <span>Магазины</span>
-            {pendingShops.length > 0 && <Badge className="ml-0.5 h-4 px-1 text-[10px]">{pendingShops.length}</Badge>}
-          </TabsTrigger>
-          <TabsTrigger value="users" className="gap-1 text-xs sm:text-sm" data-testid="tab-users">
-            <Users className="w-4 h-4 shrink-0" />
-            <span>Пользователи</span>
-          </TabsTrigger>
-          <TabsTrigger value="orders" className="gap-1 text-xs sm:text-sm" data-testid="tab-orders">
-            <Package className="w-4 h-4 shrink-0" />
-            <span>Заказы</span>
-          </TabsTrigger>
-          <TabsTrigger value="products" className="gap-1 text-xs sm:text-sm" data-testid="tab-products">
-            <ShoppingBag className="w-4 h-4 shrink-0" />
-            <span>Товары</span>
-          </TabsTrigger>
-          <TabsTrigger value="categories" className="gap-1 text-xs sm:text-sm" data-testid="tab-categories">
-            <Tag className="w-4 h-4 shrink-0" />
-            <span>Категории</span>
-          </TabsTrigger>
-          <TabsTrigger value="cities" className="gap-1 text-xs sm:text-sm" data-testid="tab-cities">
-            <MapPin className="w-4 h-4 shrink-0" />
-            <span>Города</span>
-          </TabsTrigger>
-          <TabsTrigger value="payouts" className="gap-1 text-xs sm:text-sm" data-testid="tab-payouts">
-            <Wallet className="w-4 h-4 shrink-0" />
-            <span>Выплаты</span>
-          </TabsTrigger>
-          <TabsTrigger value="finances" className="gap-1 text-xs sm:text-sm" data-testid="tab-finances">
-            <BarChart3 className="w-4 h-4 shrink-0" />
-            <span>Финансы</span>
-          </TabsTrigger>
-          <TabsTrigger value="analytics" className="gap-1 text-xs sm:text-sm" data-testid="tab-analytics">
-            <TrendingUp className="w-4 h-4 shrink-0" />
-            <span>Аналитика</span>
-          </TabsTrigger>
-          <TabsTrigger value="reviews" className="gap-1 text-xs sm:text-sm" data-testid="tab-reviews">
-            <Star className="w-4 h-4 shrink-0" />
-            <span>Отзывы</span>
-            {adminReviews && adminReviews.filter((r: any) => r.status === "pending").length > 0 && (
-              <span className="ml-0.5 bg-amber-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
-                {adminReviews.filter((r: any) => r.status === "pending").length}
-              </span>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="crm" className="gap-1 text-xs sm:text-sm" data-testid="tab-crm">
-            <Users className="w-4 h-4 shrink-0" />
-            <span>CRM</span>
-          </TabsTrigger>
-          <TabsTrigger value="settings" className="gap-1 text-xs sm:text-sm" data-testid="tab-settings">
-            <Settings className="w-4 h-4 shrink-0" />
-            <span>Настройки</span>
-          </TabsTrigger>
-          <TabsTrigger value="promo" className="gap-1 text-xs sm:text-sm" data-testid="tab-promo">
-            <Tag className="w-4 h-4 shrink-0" />
-            <span>Промокоды</span>
-          </TabsTrigger>
-          <TabsTrigger value="traffic" className="gap-1 text-xs sm:text-sm" data-testid="tab-traffic">
-            <TrendingUp className="w-4 h-4 shrink-0" />
-            <span>Трафик</span>
-          </TabsTrigger>
-          <TabsTrigger value="push-failures" className="gap-1 text-xs sm:text-sm" data-testid="tab-push-failures">
-            <Bell className="w-4 h-4 shrink-0" />
-            <span>Push-ошибки</span>
-            {pushFailures && pushFailures.length > 0 && (
-              <Badge variant="destructive" className="ml-0.5 h-4 px-1 text-[10px]">{pushFailures.length}</Badge>
-            )}
-          </TabsTrigger>
-        </TabsList>
+      <Tabs value={adminTab} onValueChange={setAdminTab}>
+        <div className="flex gap-6 items-start">
+        {/* Sidebar nav */}
+        <aside className="hidden md:flex flex-col w-52 shrink-0 gap-1 sticky top-4">
+          {([
+            {
+              group: "Маркетплейс",
+              items: [
+                { value: "shops", label: "Магазины", icon: Store, badge: pendingShops.length > 0 ? pendingShops.length : null, badgeVariant: "default" as const },
+                { value: "users", label: "Пользователи", icon: Users, badge: null },
+                { value: "orders", label: "Заказы", icon: Package, badge: null },
+                { value: "products", label: "Товары", icon: ShoppingBag, badge: null },
+                { value: "reviews", label: "Отзывы", icon: Star, badge: adminReviews ? adminReviews.filter((r: any) => r.status === "pending").length || null : null, badgeVariant: "secondary" as const },
+                { value: "crm", label: "CRM", icon: Users, badge: null },
+              ],
+            },
+            {
+              group: "Финансы",
+              items: [
+                { value: "payouts", label: "Выплаты", icon: Wallet, badge: null },
+                { value: "finances", label: "Финансы", icon: BarChart3, badge: null },
+                { value: "promo", label: "Промокоды", icon: Tag, badge: null },
+              ],
+            },
+            {
+              group: "Аналитика",
+              items: [
+                { value: "analytics", label: "Аналитика", icon: TrendingUp, badge: null },
+                { value: "traffic", label: "Трафик", icon: Globe, badge: null },
+              ],
+            },
+            {
+              group: "Справочники",
+              items: [
+                { value: "categories", label: "Категории", icon: Tag, badge: null },
+                { value: "cities", label: "Города", icon: MapPin, badge: null },
+              ],
+            },
+            {
+              group: "Система",
+              items: [
+                { value: "settings", label: "Настройки", icon: Settings, badge: null },
+                { value: "push-failures", label: "Push-ошибки", icon: Bell, badge: pushFailures && pushFailures.length > 0 ? pushFailures.length : null, badgeVariant: "destructive" as const },
+              ],
+            },
+          ] as const).map((section) => (
+            <div key={section.group} className="mb-2">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-3 mb-1">{section.group}</p>
+              {section.items.map((item) => {
+                const Icon = item.icon;
+                const isActive = adminTab === item.value;
+                return (
+                  <button
+                    key={item.value}
+                    onClick={() => setAdminTab(item.value)}
+                    data-testid={`tab-${item.value}`}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left ${
+                      isActive
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    }`}
+                  >
+                    <Icon className="w-4 h-4 shrink-0" />
+                    <span className="flex-1 truncate">{item.label}</span>
+                    {item.badge != null && (
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none ${
+                        isActive
+                          ? "bg-primary-foreground/20 text-primary-foreground"
+                          : item.badgeVariant === "destructive"
+                            ? "bg-red-100 text-red-700"
+                            : "bg-primary/10 text-primary"
+                      }`}>
+                        {item.badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </aside>
+
+        {/* Mobile: horizontal scrollable chips */}
+        <div className="md:hidden overflow-x-auto -mx-4 px-4 mb-4 w-full">
+          <div className="flex gap-1.5 min-w-max pb-1">
+            {[
+              { value: "shops", label: "Магазины", icon: Store },
+              { value: "users", label: "Пользователи", icon: Users },
+              { value: "orders", label: "Заказы", icon: Package },
+              { value: "products", label: "Товары", icon: ShoppingBag },
+              { value: "reviews", label: "Отзывы", icon: Star },
+              { value: "crm", label: "CRM", icon: Users },
+              { value: "payouts", label: "Выплаты", icon: Wallet },
+              { value: "finances", label: "Финансы", icon: BarChart3 },
+              { value: "promo", label: "Промокоды", icon: Tag },
+              { value: "analytics", label: "Аналитика", icon: TrendingUp },
+              { value: "traffic", label: "Трафик", icon: Globe },
+              { value: "categories", label: "Категории", icon: Tag },
+              { value: "cities", label: "Города", icon: MapPin },
+              { value: "settings", label: "Настройки", icon: Settings },
+              { value: "push-failures", label: "Push", icon: Bell },
+            ].map((item) => {
+              const Icon = item.icon;
+              const isActive = adminTab === item.value;
+              return (
+                <button
+                  key={item.value}
+                  onClick={() => setAdminTab(item.value)}
+                  data-testid={`tab-mobile-${item.value}`}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
+                    isActive ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
+
+        <div className="flex-1 min-w-0">
 
         {/* ==================== SHOPS ==================== */}
         <TabsContent value="shops">
@@ -3357,6 +3406,8 @@ export default function Admin() {
             )}
           </div>
         </TabsContent>
+        </div>{/* flex-1 min-w-0 */}
+        </div>{/* flex gap-6 */}
       </Tabs>
 
       <Dialog open={!!bonusViewUser} onOpenChange={(open) => { if (!open) { setBonusViewUser(null); setBonusGrantUser(null); setBonusAmount(""); setBonusDesc(""); } }}>
