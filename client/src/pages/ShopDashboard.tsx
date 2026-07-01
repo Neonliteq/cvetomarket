@@ -515,7 +515,7 @@ export default function ShopDashboard() {
   });
 
   const tabParam = new URLSearchParams(searchStr).get("tab");
-  const validTabs = ["products", "orders", "reviews", "settings", "workers"];
+  const validTabs = ["products", "orders", "reviews", "customers", "settings", "workers"];
   const [activeTab, setActiveTab] = useState(validTabs.includes(tabParam || "") ? tabParam! : "products");
   useEffect(() => {
     if (tabParam && validTabs.includes(tabParam)) setActiveTab(tabParam);
@@ -549,6 +549,17 @@ export default function ShopDashboard() {
   });
 
   const { data: categories } = useQuery<Category[]>({ queryKey: ["/api/categories"] });
+
+  type ShopCRMCustomer = {
+    id: string; name: string; email: string; phone: string | null;
+    orderCount: number; totalSpent: number; lastOrderAt: string | null;
+    segment: "new" | "active" | "vip" | "churned"; city: string | null; tags: string[];
+  };
+  const { data: shopCustomers, isLoading: loadingCustomers } = useQuery<ShopCRMCustomer[]>({
+    queryKey: [`/api/shops/${myShop?.id}/crm/customers`],
+    queryFn: () => fetch(`/api/shops/${myShop!.id}/crm/customers`, { credentials: "include" }).then(r => r.json()),
+    enabled: !!myShop?.id,
+  });
 
   type WorkerUser = { id: string; name: string; email: string; avatarUrl?: string | null };
   type ShopWorkerWithUser = { id: string; shopId: string; userId: string; createdAt?: string; user?: WorkerUser };
@@ -720,8 +731,11 @@ export default function ShopDashboard() {
             Заказы {pendingOrders > 0 && <Badge className="ml-1.5">{pendingOrders}</Badge>}
           </TabsTrigger>
           <TabsTrigger value="reviews">Отзывы</TabsTrigger>
-          {isOwner && <TabsTrigger value="workers" data-testid="tab-workers">
+          <TabsTrigger value="customers" data-testid="tab-customers">
             <Users className="w-4 h-4 mr-1.5" />
+            Покупатели {shopCustomers && shopCustomers.length > 0 && <Badge variant="secondary" className="ml-1.5">{shopCustomers.length}</Badge>}
+          </TabsTrigger>
+          {isOwner && <TabsTrigger value="workers" data-testid="tab-workers">
             Сотрудники {workers.length > 0 && <Badge variant="secondary" className="ml-1.5">{workers.length}</Badge>}
           </TabsTrigger>}
           {isOwner && <TabsTrigger value="settings">Настройки</TabsTrigger>}
@@ -1180,6 +1194,76 @@ export default function ShopDashboard() {
               <p>Отзывов пока нет</p>
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="customers">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-lg">Покупатели ({shopCustomers?.length || 0})</h3>
+            </div>
+            {loadingCustomers ? (
+              <div className="space-y-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-14 rounded-lg" />)}</div>
+            ) : !shopCustomers?.length ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <Users className="w-10 h-10 mx-auto opacity-20 mb-3" />
+                <p>Покупателей пока нет</p>
+              </div>
+            ) : (
+              <div className="rounded-lg border overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/50">
+                      <tr>
+                        <th className="text-left px-4 py-2 font-medium">Покупатель</th>
+                        <th className="text-left px-4 py-2 font-medium hidden sm:table-cell">Сегмент</th>
+                        <th className="text-right px-4 py-2 font-medium hidden md:table-cell">Заказов</th>
+                        <th className="text-right px-4 py-2 font-medium">Выручка</th>
+                        <th className="text-right px-4 py-2 font-medium hidden lg:table-cell">Посл. заказ</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {shopCustomers.map((c) => {
+                        const segColors: Record<string, string> = {
+                          new: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+                          active: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+                          vip: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200",
+                          churned: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+                        };
+                        const segLabels: Record<string, string> = {
+                          new: "Новый", active: "Активный", vip: "VIP", churned: "Не заходил",
+                        };
+                        return (
+                          <tr key={c.id} className="border-t hover:bg-muted/30 transition-colors" data-testid={`row-shop-customer-${c.id}`}>
+                            <td className="px-4 py-3">
+                              <div className="font-medium">{c.name}</div>
+                              <div className="text-xs text-muted-foreground">{c.email}</div>
+                              {c.tags && c.tags.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {c.tags.map(tag => (
+                                    <span key={tag} className="px-1.5 py-0 rounded text-[10px] bg-primary/10 text-primary">{tag}</span>
+                                  ))}
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 hidden sm:table-cell">
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${segColors[c.segment]}`}>
+                                {segLabels[c.segment]}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-right hidden md:table-cell">{c.orderCount}</td>
+                            <td className="px-4 py-3 text-right font-medium">{c.totalSpent.toLocaleString("ru-RU")} ₽</td>
+                            <td className="px-4 py-3 text-right text-xs text-muted-foreground hidden lg:table-cell">
+                              {c.lastOrderAt ? format(new Date(c.lastOrderAt), "d MMM yyyy", { locale: ru }) : "—"}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
         </TabsContent>
 
         <TabsContent value="workers">

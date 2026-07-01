@@ -36,6 +36,7 @@ export type CRMCustomer = {
   segment: CRMSegment;
   city: string | null;
   adminNotes: string | null;
+  tags: string[];
   createdAt: Date | null;
 };
 
@@ -154,6 +155,8 @@ export interface IStorage {
   // CRM
   getCRMCustomers(): Promise<CRMCustomer[]>;
   updateUserAdminNotes(userId: string, notes: string): Promise<void>;
+  updateUserTags(userId: string, tags: string[]): Promise<void>;
+  getShopCRMCustomers(shopId: string): Promise<CRMCustomer[]>;
 
   // Order Supplements
   createOrderSupplement(data: InsertOrderSupplement): Promise<OrderSupplement>;
@@ -652,6 +655,7 @@ export class DbStorage implements IStorage {
         segment,
         city: u.buyerCity ?? null,
         adminNotes: u.adminNotes ?? null,
+        tags: (u as any).tags ?? [],
         createdAt: u.createdAt,
       };
     });
@@ -659,6 +663,59 @@ export class DbStorage implements IStorage {
 
   async updateUserAdminNotes(userId: string, notes: string): Promise<void> {
     await db.update(users).set({ adminNotes: notes }).where(eq(users.id, userId));
+  }
+
+  async updateUserTags(userId: string, tags: string[]): Promise<void> {
+    await db.update(users).set({ tags } as any).where(eq(users.id, userId));
+  }
+
+  async getShopCRMCustomers(shopId: string): Promise<CRMCustomer[]> {
+    const shopOrders = await db.select().from(orders).where(eq(orders.shopId, shopId));
+    const buyerIds = [...new Set(shopOrders.filter(o => o.buyerId).map(o => o.buyerId!))];
+    if (buyerIds.length === 0) return [];
+    const buyers = await db.select().from(users).where(inArray(users.id, buyerIds));
+    const now = Date.now();
+    const sixtyDays = 60 * 24 * 60 * 60 * 1000;
+    const thirtyDays = 30 * 24 * 60 * 60 * 1000;
+    return buyers.map((u) => {
+      const userOrders = shopOrders.filter((o) => o.buyerId === u.id && o.status !== "cancelled");
+      const orderCount = userOrders.length;
+      const totalSpent = userOrders.reduce((sum, o) => sum + parseFloat(o.totalAmount || "0"), 0);
+      const lastOrderAt = userOrders.length > 0
+        ? userOrders.reduce<Date | null>((latest, o) => {
+            if (!o.createdAt) return latest;
+            const d = new Date(o.createdAt);
+            return !latest || d > latest ? d : latest;
+          }, null)
+        : null;
+      const registeredDaysAgo = u.createdAt ? now - new Date(u.createdAt).getTime() : Infinity;
+      const lastOrderAge = lastOrderAt ? now - lastOrderAt.getTime() : Infinity;
+      let segment: CRMSegment;
+      if (totalSpent > 10000) {
+        segment = "vip";
+      } else if ((orderCount === 0 || orderCount === 1) && registeredDaysAgo < thirtyDays) {
+        segment = "new";
+      } else if (orderCount >= 2 && lastOrderAge <= sixtyDays) {
+        segment = "active";
+      } else {
+        segment = "churned";
+      }
+      return {
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        phone: u.phone ?? null,
+        bonusBalance: u.bonusBalance ?? 0,
+        orderCount,
+        totalSpent,
+        lastOrderAt,
+        segment,
+        city: u.buyerCity ?? null,
+        adminNotes: u.adminNotes ?? null,
+        tags: (u as any).tags ?? [],
+        createdAt: u.createdAt,
+      };
+    });
   }
 
   async createOrderSupplement(data: InsertOrderSupplement): Promise<OrderSupplement> {

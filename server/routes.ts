@@ -1927,6 +1927,53 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  app.patch("/api/admin/users/:id/tags", requireRole("admin"), async (req, res) => {
+    try {
+      const { tags } = req.body;
+      if (!Array.isArray(tags)) return res.status(400).json({ error: "tags must be an array" });
+      await storage.updateUserTags(req.params.id, tags.map(String));
+      res.json({ ok: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post("/api/admin/push/cart-reminder/:userId", requireRole("admin"), async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ error: "Пользователь не найден" });
+      const { sendPushToUser } = await import("./webpush");
+      const result = await sendPushToUser(userId, {
+        title: "Вы кое-что забыли 🛒",
+        body: "В вашей корзине остались товары. Оформите заказ сейчас!",
+        link: "/cart",
+      });
+      res.json({ ok: true, result });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get("/api/shops/:id/crm/customers", requireAuth, async (req, res) => {
+    try {
+      const shopId = req.params.id;
+      const userId = (req.session as any).userId;
+      const shop = await storage.getShop(shopId);
+      if (!shop) return res.status(404).json({ error: "Магазин не найден" });
+      const role = (req.session as any).role;
+      if (role !== "admin") {
+        const isOwner = shop.ownerId === userId;
+        const isWorker = await storage.isShopWorker(shopId, userId);
+        if (!isOwner && !isWorker) return res.status(403).json({ error: "Нет доступа" });
+      }
+      const customers = await storage.getShopCRMCustomers(shopId);
+      res.json(customers);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   // ── Order Supplements ────────────────────────────────────────────────────
 
   // Create a supplement invoice (shop/worker/admin)

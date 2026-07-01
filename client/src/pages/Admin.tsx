@@ -45,6 +45,7 @@ type CRMCustomer = {
   segment: CRMSegment;
   city: string | null;
   adminNotes: string | null;
+  tags: string[];
   createdAt: string | null;
 };
 type CRMProfile = {
@@ -218,6 +219,9 @@ export default function Admin() {
   const [crmGrantAmount, setCrmGrantAmount] = useState("");
   const [crmGrantDesc, setCrmGrantDesc] = useState("");
   const [crmGrantOpen, setCrmGrantOpen] = useState(false);
+  const [crmTagInput, setCrmTagInput] = useState("");
+  const [crmTagFilter, setCrmTagFilter] = useState("all");
+  const [crmCartReminderSent, setCrmCartReminderSent] = useState<string | null>(null);
 
   const [promoForm, setPromoForm] = useState({ code: "", discountType: "percent", discountValue: "", minOrderAmount: "", maxUses: "", expiresAt: "", description: "" });
   const [promoFormOpen, setPromoFormOpen] = useState(false);
@@ -307,6 +311,24 @@ export default function Admin() {
       qc.invalidateQueries({ queryKey: ["/api/admin/users"] });
       qc.invalidateQueries({ queryKey: ["/api/admin/crm/customers"] });
     },
+  });
+
+  const crmUpdateTagsMutation = useMutation({
+    mutationFn: ({ userId, tags }: { userId: string; tags: string[] }) =>
+      apiRequest("PATCH", `/api/admin/users/${userId}/tags`, { tags }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/admin/crm/customers"] });
+    },
+    onError: () => toast({ title: "Ошибка сохранения тегов", variant: "destructive" }),
+  });
+
+  const crmCartReminderMutation = useMutation({
+    mutationFn: (userId: string) => apiRequest("POST", `/api/admin/push/cart-reminder/${userId}`, {}),
+    onSuccess: (_data, userId) => {
+      toast({ title: "Push-уведомление отправлено" });
+      setCrmCartReminderSent(userId);
+    },
+    onError: () => toast({ title: "Ошибка отправки push", variant: "destructive" }),
   });
 
   const moderateShopMutation = useMutation({
@@ -1921,12 +1943,14 @@ export default function Admin() {
         <TabsContent value="crm">
           {(() => {
             const crmCities = Array.from(new Set((crmCustomers || []).map((c) => c.city).filter(Boolean))) as string[];
+            const crmAllTags = Array.from(new Set((crmCustomers || []).flatMap((c) => c.tags || []))).sort();
             const filteredCRM = (crmCustomers || []).filter((c) => {
               const q = crmSearch.toLowerCase();
               const matchSearch = !q || c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q);
               const matchSeg = crmSegmentFilter === "all" || c.segment === crmSegmentFilter;
               const matchCity = crmCityFilter === "all" || c.city === crmCityFilter;
-              return matchSearch && matchSeg && matchCity;
+              const matchTag = crmTagFilter === "all" || (c.tags || []).includes(crmTagFilter);
+              return matchSearch && matchSeg && matchCity && matchTag;
             });
             return (
               <>
@@ -1942,15 +1966,15 @@ export default function Admin() {
                     />
                   </div>
                   <Select value={crmSegmentFilter} onValueChange={setCrmSegmentFilter}>
-                    <SelectTrigger className="w-40" data-testid="select-crm-segment">
+                    <SelectTrigger className="w-48" data-testid="select-crm-segment">
                       <SelectValue placeholder="Все сегменты" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Все сегменты</SelectItem>
-                      <SelectItem value="new">Новые</SelectItem>
-                      <SelectItem value="active">Активные</SelectItem>
-                      <SelectItem value="vip">VIP</SelectItem>
-                      <SelectItem value="churned">Отток</SelectItem>
+                      <SelectItem value="all">Все сегменты ({(crmCustomers || []).length})</SelectItem>
+                      <SelectItem value="new">Новые ({(crmCustomers || []).filter(c => c.segment === "new").length})</SelectItem>
+                      <SelectItem value="active">Активные ({(crmCustomers || []).filter(c => c.segment === "active").length})</SelectItem>
+                      <SelectItem value="vip">VIP ({(crmCustomers || []).filter(c => c.segment === "vip").length})</SelectItem>
+                      <SelectItem value="churned">Отток ({(crmCustomers || []).filter(c => c.segment === "churned").length})</SelectItem>
                     </SelectContent>
                   </Select>
                   {crmCities.length > 0 && (
@@ -1961,6 +1985,17 @@ export default function Admin() {
                       <SelectContent>
                         <SelectItem value="all">Все города</SelectItem>
                         {crmCities.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  )}
+                  {crmAllTags.length > 0 && (
+                    <Select value={crmTagFilter} onValueChange={setCrmTagFilter}>
+                      <SelectTrigger className="w-44" data-testid="select-crm-tag">
+                        <SelectValue placeholder="Все теги" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Все теги</SelectItem>
+                        {crmAllTags.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   )}
@@ -1996,12 +2031,21 @@ export default function Admin() {
                                 setCrmGrantOpen(false);
                                 setCrmGrantAmount("");
                                 setCrmGrantDesc("");
+                                setCrmTagInput("");
+                                setCrmCartReminderSent(null);
                               }}
                               data-testid={`row-crm-customer-${c.id}`}
                             >
                               <td className="px-4 py-3">
                                 <div className="font-medium">{c.name}</div>
                                 <div className="text-xs text-muted-foreground">{c.email}</div>
+                                {(c.tags || []).length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {(c.tags || []).map((tag) => (
+                                      <span key={tag} className="px-1.5 py-0 rounded text-[10px] bg-primary/10 text-primary">{tag}</span>
+                                    ))}
+                                  </div>
+                                )}
                               </td>
                               <td className="px-4 py-3 hidden sm:table-cell">
                                 <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${CRM_SEGMENT_COLORS[c.segment]}`}>
@@ -2033,7 +2077,7 @@ export default function Admin() {
           })()}
 
           {/* Customer Profile Sheet */}
-          <Sheet open={!!crmSelectedCustomer} onOpenChange={(open) => { if (!open) { setCrmSelectedCustomer(null); setCrmGrantOpen(false); } }}>
+          <Sheet open={!!crmSelectedCustomer} onOpenChange={(open) => { if (!open) { setCrmSelectedCustomer(null); setCrmGrantOpen(false); setCrmTagInput(""); setCrmCartReminderSent(null); } }}>
             <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
               {crmSelectedCustomer && (
                 <>
@@ -2070,8 +2114,72 @@ export default function Admin() {
                     ))}
                   </div>
 
+                  {/* Tags */}
+                  {(() => {
+                    const tags = crmSelectedCustomer.tags || [];
+                    return (
+                      <div className="mb-3">
+                        <div className="flex flex-wrap gap-1.5 mb-2">
+                          {tags.map((tag) => (
+                            <span key={tag} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-primary/10 text-primary font-medium" data-testid={`crm-tag-${tag}`}>
+                              {tag}
+                              <button
+                                className="hover:text-destructive transition-colors"
+                                onClick={() => {
+                                  const newTags = tags.filter(t => t !== tag);
+                                  crmUpdateTagsMutation.mutate({ userId: crmSelectedCustomer.id, tags: newTags });
+                                  setCrmSelectedCustomer({ ...crmSelectedCustomer, tags: newTags });
+                                }}
+                                data-testid={`button-remove-tag-${tag}`}
+                              >×</button>
+                            </span>
+                          ))}
+                          {tags.length === 0 && <span className="text-xs text-muted-foreground">Нет тегов</span>}
+                        </div>
+                        <div className="flex gap-2">
+                          <Input
+                            placeholder="Новый тег..."
+                            value={crmTagInput}
+                            onChange={(e) => setCrmTagInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && crmTagInput.trim()) {
+                                const newTag = crmTagInput.trim();
+                                if (!tags.includes(newTag)) {
+                                  const newTags = [...tags, newTag];
+                                  crmUpdateTagsMutation.mutate({ userId: crmSelectedCustomer.id, tags: newTags });
+                                  setCrmSelectedCustomer({ ...crmSelectedCustomer, tags: newTags });
+                                }
+                                setCrmTagInput("");
+                              }
+                            }}
+                            className="h-7 text-xs flex-1"
+                            data-testid="input-crm-tag"
+                          />
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2 text-xs"
+                            onClick={() => {
+                              const newTag = crmTagInput.trim();
+                              if (newTag && !tags.includes(newTag)) {
+                                const newTags = [...tags, newTag];
+                                crmUpdateTagsMutation.mutate({ userId: crmSelectedCustomer.id, tags: newTags });
+                                setCrmSelectedCustomer({ ...crmSelectedCustomer, tags: newTags });
+                              }
+                              setCrmTagInput("");
+                            }}
+                            disabled={!crmTagInput.trim()}
+                            data-testid="button-add-tag"
+                          >
+                            + Добавить
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                   {/* Quick actions */}
-                  <div className="flex gap-2 mb-4">
+                  <div className="flex flex-wrap gap-2 mb-4">
                     <Button
                       size="sm"
                       variant="outline"
@@ -2080,6 +2188,17 @@ export default function Admin() {
                       data-testid="button-crm-grant-bonus"
                     >
                       <Gift className="w-3.5 h-3.5" /> Начислить бонусы
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5 flex-1"
+                      onClick={() => crmCartReminderMutation.mutate(crmSelectedCustomer.id)}
+                      disabled={crmCartReminderMutation.isPending || crmCartReminderSent === crmSelectedCustomer.id}
+                      data-testid="button-crm-cart-reminder"
+                    >
+                      <ShoppingCart className="w-3.5 h-3.5" />
+                      {crmCartReminderSent === crmSelectedCustomer.id ? "Отправлено ✓" : "Напомнить о корзине"}
                     </Button>
                     <Button
                       size="sm"

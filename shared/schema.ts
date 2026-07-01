@@ -29,6 +29,7 @@ export const users = pgTable("users", {
   referredBy: varchar("referred_by"),
   adminNotes: text("admin_notes"),
   vkId: text("vk_id").unique(),
+  tags: text("tags").array().default([]),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
