@@ -395,17 +395,30 @@ export function Header() {
                   )}
 
                   {user.role === "admin" && (
-                    <DropdownMenuItem asChild>
-                      <Link href="/admin" className="flex items-center gap-3 px-3 py-2 cursor-pointer w-full rounded-sm hover:bg-accent transition-colors">
-                        <div className="w-7 h-7 rounded-md bg-red-100 dark:bg-red-900 flex items-center justify-center shrink-0">
-                          <Shield className="w-3.5 h-3.5 text-red-600 dark:text-red-300" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium">Администрирование</p>
-                          <p className="text-xs text-muted-foreground">Управление платформой</p>
-                        </div>
-                      </Link>
-                    </DropdownMenuItem>
+                    <>
+                      <DropdownMenuItem asChild>
+                        <Link href="/admin" className="flex items-center gap-3 px-3 py-2 cursor-pointer w-full rounded-sm hover:bg-accent transition-colors" data-testid="link-admin-panel">
+                          <div className="w-7 h-7 rounded-md bg-red-100 dark:bg-red-900 flex items-center justify-center shrink-0">
+                            <Shield className="w-3.5 h-3.5 text-red-600 dark:text-red-300" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium">Администрирование</p>
+                            <p className="text-xs text-muted-foreground">Управление платформой</p>
+                          </div>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/account" className="flex items-center gap-3 px-3 py-2 cursor-pointer w-full rounded-sm hover:bg-accent transition-colors" data-testid="link-admin-profile">
+                          <div className="w-7 h-7 rounded-md bg-muted flex items-center justify-center shrink-0">
+                            <User className="w-3.5 h-3.5 text-muted-foreground" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium">Мой профиль</p>
+                            <p className="text-xs text-muted-foreground">Настройки аккаунта</p>
+                          </div>
+                        </Link>
+                      </DropdownMenuItem>
+                    </>
                   )}
 
                   <DropdownMenuItem asChild>
