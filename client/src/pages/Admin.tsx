@@ -682,6 +682,45 @@ export default function Admin() {
       </div>
 
       <Tabs value={adminTab} onValueChange={setAdminTab}>
+        {/* Mobile: horizontal scrollable chips — outside flex row to prevent overflow */}
+        <div className="md:hidden overflow-x-auto mb-4" style={{ marginLeft: "-1rem", marginRight: "-1rem", paddingLeft: "1rem", paddingRight: "1rem" }}>
+          <div className="flex gap-1.5 min-w-max pb-1">
+            {[
+              { value: "shops", label: "Магазины", icon: Store },
+              { value: "users", label: "Пользователи", icon: Users },
+              { value: "orders", label: "Заказы", icon: Package },
+              { value: "products", label: "Товары", icon: ShoppingBag },
+              { value: "reviews", label: "Отзывы", icon: Star },
+              { value: "crm", label: "CRM", icon: Users },
+              { value: "payouts", label: "Выплаты", icon: Wallet },
+              { value: "finances", label: "Финансы", icon: BarChart3 },
+              { value: "promo", label: "Промокоды", icon: Tag },
+              { value: "analytics", label: "Аналитика", icon: TrendingUp },
+              { value: "traffic", label: "Трафик", icon: Globe },
+              { value: "categories", label: "Категории", icon: Tag },
+              { value: "cities", label: "Города", icon: MapPin },
+              { value: "settings", label: "Настройки", icon: Settings },
+              { value: "push-failures", label: "Push", icon: Bell },
+            ].map((item) => {
+              const Icon = item.icon;
+              const isActive = adminTab === item.value;
+              return (
+                <button
+                  key={item.value}
+                  onClick={() => setAdminTab(item.value)}
+                  data-testid={`tab-mobile-${item.value}`}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
+                    isActive ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <div className="flex gap-6 items-start">
         {/* Sidebar nav */}
         <aside className="hidden md:flex flex-col w-52 shrink-0 gap-1 sticky top-4">
@@ -762,45 +801,6 @@ export default function Admin() {
             </div>
           ))}
         </aside>
-
-        {/* Mobile: horizontal scrollable chips */}
-        <div className="md:hidden overflow-x-auto -mx-4 px-4 mb-4 w-full">
-          <div className="flex gap-1.5 min-w-max pb-1">
-            {[
-              { value: "shops", label: "Магазины", icon: Store },
-              { value: "users", label: "Пользователи", icon: Users },
-              { value: "orders", label: "Заказы", icon: Package },
-              { value: "products", label: "Товары", icon: ShoppingBag },
-              { value: "reviews", label: "Отзывы", icon: Star },
-              { value: "crm", label: "CRM", icon: Users },
-              { value: "payouts", label: "Выплаты", icon: Wallet },
-              { value: "finances", label: "Финансы", icon: BarChart3 },
-              { value: "promo", label: "Промокоды", icon: Tag },
-              { value: "analytics", label: "Аналитика", icon: TrendingUp },
-              { value: "traffic", label: "Трафик", icon: Globe },
-              { value: "categories", label: "Категории", icon: Tag },
-              { value: "cities", label: "Города", icon: MapPin },
-              { value: "settings", label: "Настройки", icon: Settings },
-              { value: "push-failures", label: "Push", icon: Bell },
-            ].map((item) => {
-              const Icon = item.icon;
-              const isActive = adminTab === item.value;
-              return (
-                <button
-                  key={item.value}
-                  onClick={() => setAdminTab(item.value)}
-                  data-testid={`tab-mobile-${item.value}`}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
-                    isActive ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  <Icon className="w-3.5 h-3.5" />
-                  {item.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
 
         <div className="flex-1 min-w-0">
 
