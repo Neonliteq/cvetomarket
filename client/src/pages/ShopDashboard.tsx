@@ -555,9 +555,11 @@ export default function ShopDashboard() {
     orderCount: number; totalSpent: number; avgCheck: number; lastOrderAt: string | null;
     segment: "new" | "active" | "vip" | "churned"; city: string | null; tags: string[];
   };
+  const CUSTOMERS_PER_PAGE = 50;
   const [customerSearch, setCustomerSearch] = useState("");
   const [customerSort, setCustomerSort] = useState<"totalSpent" | "orderCount" | "lastOrderAt">("totalSpent");
   const [customerSortDir, setCustomerSortDir] = useState<"desc" | "asc">("desc");
+  const [customerPage, setCustomerPage] = useState(1);
   const [selectedShopCustomer, setSelectedShopCustomer] = useState<ShopCRMCustomer | null>(null);
 
   const { data: shopCustomers, isLoading: loadingCustomers } = useQuery<ShopCRMCustomer[]>({
@@ -1223,7 +1225,7 @@ export default function ShopDashboard() {
                     className="pl-8 h-8 text-sm"
                     placeholder="Поиск по имени или email..."
                     value={customerSearch}
-                    onChange={(e) => setCustomerSearch(e.target.value)}
+                    onChange={(e) => { setCustomerSearch(e.target.value); setCustomerPage(1); }}
                     data-testid="input-customer-search"
                   />
                 </div>
@@ -1267,7 +1269,11 @@ export default function ShopDashboard() {
                     }
                     return customerSortDir === "desc" ? -cmp : cmp;
                   });
+                  const totalPages = Math.ceil(sorted.length / CUSTOMERS_PER_PAGE);
+                  const safePage = Math.min(customerPage, totalPages || 1);
+                  const paginated = sorted.slice((safePage - 1) * CUSTOMERS_PER_PAGE, safePage * CUSTOMERS_PER_PAGE);
                   return (
+                    <>
                     <div className="rounded-lg border overflow-hidden">
                       <div className="overflow-x-auto">
                         <table className="w-full text-sm">
@@ -1275,20 +1281,20 @@ export default function ShopDashboard() {
                             <tr>
                               <th className="text-left px-4 py-2 font-medium">Покупатель</th>
                               <th className="text-left px-4 py-2 font-medium hidden sm:table-cell">Сегмент</th>
-                              <th className="text-right px-4 py-2 font-medium hidden md:table-cell cursor-pointer select-none" onClick={() => toggleCustomerSort("orderCount")}>
+                              <th className="text-right px-4 py-2 font-medium hidden md:table-cell cursor-pointer select-none" onClick={() => { toggleCustomerSort("orderCount"); setCustomerPage(1); }}>
                                 Заказов <SortIcon field="orderCount" />
                               </th>
-                              <th className="text-right px-4 py-2 font-medium hidden sm:table-cell cursor-pointer select-none" onClick={() => toggleCustomerSort("totalSpent")}>
+                              <th className="text-right px-4 py-2 font-medium hidden sm:table-cell cursor-pointer select-none" onClick={() => { toggleCustomerSort("totalSpent"); setCustomerPage(1); }}>
                                 Выручка <SortIcon field="totalSpent" />
                               </th>
                               <th className="text-right px-4 py-2 font-medium hidden lg:table-cell">Ср. чек</th>
-                              <th className="text-right px-4 py-2 font-medium hidden lg:table-cell cursor-pointer select-none" onClick={() => toggleCustomerSort("lastOrderAt")}>
+                              <th className="text-right px-4 py-2 font-medium hidden lg:table-cell cursor-pointer select-none" onClick={() => { toggleCustomerSort("lastOrderAt"); setCustomerPage(1); }}>
                                 Посл. заказ <SortIcon field="lastOrderAt" />
                               </th>
                             </tr>
                           </thead>
                           <tbody>
-                            {sorted.map((c) => (
+                            {paginated.map((c) => (
                               <tr
                                 key={c.id}
                                 className="border-t hover:bg-muted/30 transition-colors cursor-pointer"
@@ -1325,6 +1331,48 @@ export default function ShopDashboard() {
                         </table>
                       </div>
                     </div>
+                    {totalPages > 1 && (
+                      <div className="flex items-center justify-between pt-2">
+                        <span className="text-xs text-muted-foreground">
+                          {(safePage - 1) * CUSTOMERS_PER_PAGE + 1}–{Math.min(safePage * CUSTOMERS_PER_PAGE, sorted.length)} из {sorted.length}
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 px-2 text-xs"
+                            disabled={safePage <= 1}
+                            onClick={() => setCustomerPage(p => Math.max(1, p - 1))}
+                            data-testid="btn-customer-prev-page"
+                          >
+                            ← Назад
+                          </Button>
+                          {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                            <Button
+                              key={p}
+                              variant={p === safePage ? "default" : "outline"}
+                              size="sm"
+                              className="h-7 w-7 p-0 text-xs"
+                              onClick={() => setCustomerPage(p)}
+                              data-testid={`btn-customer-page-${p}`}
+                            >
+                              {p}
+                            </Button>
+                          ))}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 px-2 text-xs"
+                            disabled={safePage >= totalPages}
+                            onClick={() => setCustomerPage(p => Math.min(totalPages, p + 1))}
+                            data-testid="btn-customer-next-page"
+                          >
+                            Вперёд →
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    </>
                   );
                 })()}
 
