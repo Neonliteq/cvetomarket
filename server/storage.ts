@@ -198,12 +198,15 @@ export interface IStorage {
     topEvents: { eventName: string; count: number }[];
     dailyViews: { date: string; views: number; sessions: number }[];
     avgSessionDuration: number;
+    medianSessionDuration: number;
     bounceRate: number;
     funnelSteps: { step: string; label: string; sessions: number }[];
-    topSearchQueries: { query: string; count: number }[];
-    utmBreakdown: { utmSource: string; sessions: number; views: number }[];
+    topSearchQueries: { query: string; count: number; noResultsCount: number }[];
+    utmBreakdown: { utmSource: string; utmMedium: string | null; utmCampaign: string | null; sessions: number; views: number }[];
     abandonedCarts: number;
-    topProducts: { productId: string; productName: string; views: number; cartAdds: number }[];
+    abandonedCartUsers: number;
+    topProducts: { productId: string; productName: string; views: number; cartAdds: number; conversionPct: number }[];
+    topByConversion: { productId: string; productName: string; views: number; cartAdds: number; conversionPct: number }[];
     topShops: { shopId: string; shopName: string; views: number }[];
   }>;
 }
@@ -864,11 +867,16 @@ export class DbStorage implements IStorage {
       .groupBy(sql`date_trunc('day', ${pageViews.createdAt})`)
       .orderBy(sql`date_trunc('day', ${pageViews.createdAt})`);
 
-    // --- Session duration (avg of non-null duration_seconds) ---
-    const [durationRow] = await db
-      .select({ avg: sql<number>`round(avg(${pageViews.durationSeconds}))::int` })
-      .from(pageViews)
-      .where(sql`${pageViews.createdAt} >= ${since} and ${pageViews.durationSeconds} is not null and ${pageViews.durationSeconds} > 0`);
+    // --- Session duration: avg + median ---
+    const [durationRow] = await db.execute(sql`
+      SELECT
+        round(avg(duration_seconds))::int AS avg_dur,
+        percentile_cont(0.5) WITHIN GROUP (ORDER BY duration_seconds)::int AS median_dur
+      FROM page_views
+      WHERE created_at >= ${since} AND duration_seconds IS NOT NULL AND duration_seconds > 0
+    `);
+    const avgSessionDuration = Number((durationRow as any)?.avg_dur ?? 0);
+    const medianSessionDuration = Number((durationRow as any)?.median_dur ?? 0);
 
     // --- Bounce rate: sessions with only 1 page view ---
     const [bounceRow] = await db.execute(sql`
@@ -900,90 +908,120 @@ export class DbStorage implements IStorage {
     const [ordersRow] = await db.execute(sql`
       SELECT count(distinct ae.session_id)::int AS placed
       FROM analytics_events ae
-      WHERE ae.created_at >= ${since} AND ae.event_name = 'order_placed'
+      WHERE ae.created_at >= ${since} AND ae.event_name = 'checkout_complete'
     `);
     const funnelSteps = [
       { step: "catalog", label: "Каталог", sessions: Number(funnel.catalog ?? 0) },
       { step: "product", label: "Товар", sessions: Number(funnel.product ?? 0) },
       { step: "cart", label: "Корзина", sessions: Number(funnel.cart ?? 0) },
       { step: "checkout", label: "Оформление", sessions: Number(funnel.checkout_page ?? 0) },
-      { step: "order_placed", label: "Заказ", sessions: Number((ordersRow as any)?.placed ?? 0) },
+      { step: "checkout_complete", label: "Заказ", sessions: Number((ordersRow as any)?.placed ?? 0) },
     ];
 
-    // --- Top search queries ---
+    // --- Top search queries with no-results count ---
     const searchRows = await db.execute(sql`
-      SELECT (properties->>'query') AS query, count(*)::int AS count
+      SELECT
+        (properties->>'query') AS query,
+        count(*)::int AS count,
+        count(*) FILTER (WHERE (properties->>'hasResults')::boolean = false)::int AS no_results_count
       FROM analytics_events
       WHERE created_at >= ${since} AND event_name = 'search_query' AND properties->>'query' IS NOT NULL
       GROUP BY query
       ORDER BY count DESC
       LIMIT 10
     `);
-    const topSearchQueries = (searchRows as any[]).map((r: any) => ({ query: r.query as string, count: Number(r.count) }));
+    const topSearchQueries = (searchRows as any[]).map((r: any) => ({
+      query: r.query as string,
+      count: Number(r.count),
+      noResultsCount: Number(r.no_results_count ?? 0),
+    }));
 
-    // --- UTM breakdown ---
+    // --- UTM breakdown: source + medium + campaign ---
     const utmRows = await db.execute(sql`
-      SELECT utm_source, count(distinct session_id)::int AS sessions, count(*)::int AS views
+      SELECT
+        utm_source,
+        utm_medium,
+        utm_campaign,
+        count(distinct session_id)::int AS sessions,
+        count(*)::int AS views
       FROM page_views
       WHERE created_at >= ${since} AND utm_source IS NOT NULL
-      GROUP BY utm_source
+      GROUP BY utm_source, utm_medium, utm_campaign
       ORDER BY sessions DESC
-      LIMIT 10
+      LIMIT 20
     `);
     const utmBreakdown = (utmRows as any[]).map((r: any) => ({
       utmSource: r.utm_source as string,
+      utmMedium: (r.utm_medium ?? null) as string | null,
+      utmCampaign: (r.utm_campaign ?? null) as string | null,
       sessions: Number(r.sessions),
       views: Number(r.views),
     }));
 
-    // --- Abandoned carts ---
+    // --- Abandoned carts: sessions + unique users ---
     const [abandonedRow] = await db.execute(sql`
-      SELECT count(distinct ae.session_id)::int AS count
+      SELECT
+        count(distinct ae.session_id)::int AS sessions,
+        count(distinct ae.user_id)::int AS users
       FROM analytics_events ae
-      WHERE ae.created_at >= ${since} AND ae.event_name = 'add_to_cart'
+      WHERE ae.created_at >= ${since} AND ae.event_name = 'cart_add'
         AND ae.session_id NOT IN (
           SELECT DISTINCT session_id FROM analytics_events
-          WHERE created_at >= ${since} AND event_name = 'order_placed'
+          WHERE created_at >= ${since} AND event_name = 'checkout_complete'
         )
     `);
-    const abandonedCarts = Number((abandonedRow as any)?.count ?? 0);
+    const abandonedCarts = Number((abandonedRow as any)?.sessions ?? 0);
+    const abandonedCartUsers = Number((abandonedRow as any)?.users ?? 0);
 
-    // --- Top products by views ---
+    // --- Top products by views with cart conversion + top by conversion ---
     const productViewRows = await db.execute(sql`
+      WITH views AS (
+        SELECT
+          (properties->>'productId') AS product_id,
+          max(properties->>'productName') AS product_name,
+          count(*)::int AS views
+        FROM analytics_events
+        WHERE created_at >= ${since} AND event_name = 'product_view' AND properties->>'productId' IS NOT NULL
+        GROUP BY product_id
+      ),
+      cart_adds AS (
+        SELECT (properties->>'productId') AS product_id, count(*)::int AS cart_adds
+        FROM analytics_events
+        WHERE created_at >= ${since} AND event_name = 'cart_add' AND properties->>'productId' IS NOT NULL
+        GROUP BY product_id
+      )
       SELECT
-        (properties->>'productId') AS product_id,
-        (properties->>'productName') AS product_name,
-        count(*)::int AS views
-      FROM analytics_events
-      WHERE created_at >= ${since} AND event_name = 'product_view' AND properties->>'productId' IS NOT NULL
-      GROUP BY product_id, product_name
-      ORDER BY views DESC
+        v.product_id, v.product_name, v.views,
+        coalesce(c.cart_adds, 0) AS cart_adds,
+        CASE WHEN v.views > 0 THEN round((coalesce(c.cart_adds, 0)::numeric / v.views) * 100, 1) ELSE 0 END AS conv_pct
+      FROM views v
+      LEFT JOIN cart_adds c ON c.product_id = v.product_id
+      ORDER BY v.views DESC
       LIMIT 10
     `);
-    const cartAddRows = await db.execute(sql`
-      SELECT (properties->>'productId') AS product_id, count(*)::int AS count
-      FROM analytics_events
-      WHERE created_at >= ${since} AND event_name = 'add_to_cart' AND properties->>'productId' IS NOT NULL
-      GROUP BY product_id
-    `);
-    const cartAddMap: Record<string, number> = {};
-    for (const r of cartAddRows as any[]) cartAddMap[r.product_id] = Number(r.count);
     const topProducts = (productViewRows as any[]).map((r: any) => ({
       productId: r.product_id as string,
       productName: (r.product_name ?? r.product_id) as string,
       views: Number(r.views),
-      cartAdds: cartAddMap[r.product_id] ?? 0,
+      cartAdds: Number(r.cart_adds),
+      conversionPct: Number(r.conv_pct ?? 0),
     }));
+
+    // Top by conversion (min 3 views, sorted by conv pct)
+    const topByConversion = [...topProducts]
+      .filter((p) => p.views >= 3)
+      .sort((a, b) => b.conversionPct - a.conversionPct)
+      .slice(0, 5);
 
     // --- Top shops by views ---
     const shopViewRows = await db.execute(sql`
       SELECT
         (properties->>'shopId') AS shop_id,
-        (properties->>'shopName') AS shop_name,
+        max(properties->>'shopName') AS shop_name,
         count(*)::int AS views
       FROM analytics_events
       WHERE created_at >= ${since} AND event_name = 'shop_view' AND properties->>'shopId' IS NOT NULL
-      GROUP BY shop_id, shop_name
+      GROUP BY shop_id
       ORDER BY views DESC
       LIMIT 10
     `);
@@ -1001,13 +1039,16 @@ export class DbStorage implements IStorage {
       deviceBreakdown,
       topEvents,
       dailyViews,
-      avgSessionDuration: durationRow?.avg ?? 0,
+      avgSessionDuration,
+      medianSessionDuration,
       bounceRate,
       funnelSteps,
       topSearchQueries,
       utmBreakdown,
       abandonedCarts,
+      abandonedCartUsers,
       topProducts,
+      topByConversion,
       topShops,
     };
   }

@@ -54,7 +54,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       if (existing) return prev.map((i) => i.product.id === product.id ? { ...i, quantity: i.quantity + 1 } : i);
       return [...prev, { product, quantity: 1 }];
     });
-    trackEvent("add_to_cart", { productId: product.id, productName: product.name, price: product.price });
+    trackEvent("cart_add", { productId: product.id, productName: product.name, price: product.price, shopId: newShopId });
     return true;
   };
 

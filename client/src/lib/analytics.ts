@@ -109,15 +109,16 @@ export function useAnalytics() {
       if (!lastPage.current) return;
       const duration = Math.round((Date.now() - pageEnterTime.current) / 1000);
       if (duration > 0) {
+        const payload = JSON.stringify({
+          sessionId: getOrCreateSession(),
+          page: lastPage.current,
+          deviceType: getDeviceType(),
+          ...getUtmParams(),
+          durationSeconds: duration,
+        });
         navigator.sendBeacon(
           "/api/analytics/pageview",
-          JSON.stringify({
-            sessionId: getOrCreateSession(),
-            page: lastPage.current,
-            deviceType: getDeviceType(),
-            ...getUtmParams(),
-            durationSeconds: duration,
-          })
+          new Blob([payload], { type: "application/json" })
         );
       }
     };

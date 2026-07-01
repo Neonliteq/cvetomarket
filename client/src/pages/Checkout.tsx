@@ -189,6 +189,7 @@ export default function Checkout() {
       });
     },
     onSuccess: (data) => {
+      trackEvent("checkout_complete", { orderId: data.order?.id, total: total + DELIVERY });
       trackEvent("order_placed", { orderId: data.order?.id, total: total + DELIVERY });
       clearCart();
       if (data.paymentUrl) {

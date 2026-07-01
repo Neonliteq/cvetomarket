@@ -528,12 +528,15 @@ export default function Admin() {
     topEvents: { eventName: string; count: number }[];
     dailyViews: { date: string; views: number; sessions: number }[];
     avgSessionDuration: number;
+    medianSessionDuration: number;
     bounceRate: number;
     funnelSteps: { step: string; label: string; sessions: number }[];
-    topSearchQueries: { query: string; count: number }[];
-    utmBreakdown: { utmSource: string; sessions: number; views: number }[];
+    topSearchQueries: { query: string; count: number; noResultsCount: number }[];
+    utmBreakdown: { utmSource: string; utmMedium: string | null; utmCampaign: string | null; sessions: number; views: number }[];
     abandonedCarts: number;
-    topProducts: { productId: string; productName: string; views: number; cartAdds: number }[];
+    abandonedCartUsers: number;
+    topProducts: { productId: string; productName: string; views: number; cartAdds: number; conversionPct: number }[];
+    topByConversion: { productId: string; productName: string; views: number; cartAdds: number; conversionPct: number }[];
     topShops: { shopId: string; shopName: string; views: number }[];
   }>({
     queryKey: ["/api/admin/site-analytics", trafficPeriod],
@@ -2626,12 +2629,17 @@ export default function Admin() {
                             <Timer className="w-5 h-5 text-amber-600 dark:text-amber-400" />
                           </div>
                           <div>
-                            <div className="text-xs text-muted-foreground">Ср. время на стр.</div>
+                            <div className="text-xs text-muted-foreground">Ср./медиана время на стр.</div>
                             <div className="text-2xl font-bold" data-testid="text-session-duration">
                               {siteAnalytics.avgSessionDuration > 0
                                 ? `${Math.floor(siteAnalytics.avgSessionDuration / 60)}м ${siteAnalytics.avgSessionDuration % 60}с`
                                 : "—"}
                             </div>
+                            {siteAnalytics.medianSessionDuration > 0 && (
+                              <div className="text-xs text-muted-foreground mt-0.5">
+                                медиана: {Math.floor(siteAnalytics.medianSessionDuration / 60)}м {siteAnalytics.medianSessionDuration % 60}с
+                              </div>
+                            )}
                           </div>
                         </div>
                       </CardContent>
@@ -2658,6 +2666,9 @@ export default function Admin() {
                           <div>
                             <div className="text-xs text-muted-foreground">Брошенных корзин</div>
                             <div className="text-2xl font-bold" data-testid="text-abandoned-carts">{siteAnalytics.abandonedCarts}</div>
+                            {siteAnalytics.abandonedCartUsers > 0 && (
+                              <div className="text-xs text-muted-foreground mt-0.5">{siteAnalytics.abandonedCartUsers} польз.</div>
+                            )}
                           </div>
                         </div>
                       </CardContent>
@@ -2722,17 +2733,24 @@ export default function Admin() {
                             {siteAnalytics.topSearchQueries.map((q, i) => {
                               const max = siteAnalytics.topSearchQueries[0].count || 1;
                               return (
-                                <div key={q.query} className="flex items-center gap-2 text-sm" data-testid={`row-search-query-${i}`}>
-                                  <span className="w-4 text-muted-foreground shrink-0 font-mono text-xs">{i + 1}</span>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2">
-                                      <span className="truncate text-xs font-medium">{q.query}</span>
-                                      <div className="flex-1 bg-muted rounded-full h-1.5">
-                                        <div className="h-full bg-primary rounded-full" style={{ width: `${Math.round((q.count / max) * 100)}%` }} />
+                                <div key={q.query} className="text-sm" data-testid={`row-search-query-${i}`}>
+                                  <div className="flex items-center gap-2">
+                                    <span className="w-4 text-muted-foreground shrink-0 font-mono text-xs">{i + 1}</span>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2">
+                                        <span className="truncate text-xs font-medium">{q.query}</span>
+                                        <div className="flex-1 bg-muted rounded-full h-1.5">
+                                          <div className="h-full bg-primary rounded-full" style={{ width: `${Math.round((q.count / max) * 100)}%` }} />
+                                        </div>
                                       </div>
                                     </div>
+                                    <span className="text-xs font-medium shrink-0 w-6 text-right">{q.count}</span>
                                   </div>
-                                  <span className="text-xs font-medium shrink-0 w-6 text-right">{q.count}</span>
+                                  {q.noResultsCount > 0 && (
+                                    <div className="ml-6 text-xs text-red-500 mt-0.5">
+                                      {q.noResultsCount}× без результатов
+                                    </div>
+                                  )}
                                 </div>
                               );
                             })}
@@ -2752,17 +2770,20 @@ export default function Admin() {
                           <div className="space-y-2">
                             {siteAnalytics.utmBreakdown.map((u, i) => {
                               const max = siteAnalytics.utmBreakdown[0].sessions || 1;
+                              const label = [u.utmSource, u.utmMedium, u.utmCampaign].filter(Boolean).join(" / ");
                               return (
-                                <div key={u.utmSource} className="flex items-center gap-2 text-sm" data-testid={`row-utm-${i}`}>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2">
-                                      <span className="truncate text-xs font-medium">{u.utmSource}</span>
-                                      <div className="flex-1 bg-muted rounded-full h-1.5">
-                                        <div className="h-full bg-blue-500 rounded-full" style={{ width: `${Math.round((u.sessions / max) * 100)}%` }} />
+                                <div key={`${u.utmSource}-${u.utmMedium}-${u.utmCampaign}-${i}`} className="text-sm" data-testid={`row-utm-${i}`}>
+                                  <div className="flex items-center gap-2">
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2">
+                                        <span className="truncate text-xs font-medium">{label}</span>
+                                        <div className="flex-1 bg-muted rounded-full h-1.5">
+                                          <div className="h-full bg-blue-500 rounded-full" style={{ width: `${Math.round((u.sessions / max) * 100)}%` }} />
+                                        </div>
                                       </div>
                                     </div>
+                                    <span className="text-xs text-muted-foreground shrink-0">{u.sessions} сес.</span>
                                   </div>
-                                  <span className="text-xs text-muted-foreground shrink-0">{u.sessions} сессий</span>
                                 </div>
                               );
                             })}
@@ -2788,7 +2809,6 @@ export default function Admin() {
                           <div className="space-y-2">
                             {siteAnalytics.topProducts.map((p, i) => {
                               const max = siteAnalytics.topProducts[0].views || 1;
-                              const convPct = p.views > 0 ? Math.round((p.cartAdds / p.views) * 100) : 0;
                               return (
                                 <div key={p.productId} className="text-sm" data-testid={`row-product-analytics-${i}`}>
                                   <div className="flex items-center gap-2">
@@ -2805,12 +2825,34 @@ export default function Admin() {
                                   </div>
                                   {p.cartAdds > 0 && (
                                     <div className="ml-6 text-xs text-muted-foreground mt-0.5">
-                                      В корзину: {p.cartAdds} ({convPct}%)
+                                      В корзину: {p.cartAdds} ({p.conversionPct}%)
                                     </div>
                                   )}
                                 </div>
                               );
                             })}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+                    {siteAnalytics.topByConversion && siteAnalytics.topByConversion.length > 0 && (
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <div className="flex items-center gap-2">
+                            <TrendingUp className="w-4 h-4 text-muted-foreground" />
+                            <CardTitle className="text-sm font-medium">Топ товаров по конверсии (просмотр → корзина)</CardTitle>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-2">
+                            {siteAnalytics.topByConversion.map((p, i) => (
+                              <div key={p.productId} className="flex items-center gap-2 text-sm" data-testid={`row-product-conv-${i}`}>
+                                <span className="w-4 text-muted-foreground shrink-0 font-mono text-xs">{i + 1}</span>
+                                <span className="flex-1 truncate text-xs font-medium">{p.productName}</span>
+                                <span className="text-xs text-muted-foreground shrink-0">{p.views} пр.</span>
+                                <span className="text-xs font-semibold text-green-600 dark:text-green-400 shrink-0 w-10 text-right">{p.conversionPct}%</span>
+                              </div>
+                            ))}
                           </div>
                         </CardContent>
                       </Card>

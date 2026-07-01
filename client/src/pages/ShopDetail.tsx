@@ -1,4 +1,5 @@
 import { useParams, Link, useLocation } from "wouter";
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, MapPin, Clock, MessageCircle, TrendingUp, Tag, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";

@@ -31,10 +31,11 @@ export default function Catalog() {
     if (!search.trim()) return;
     if (searchTrackTimer.current) clearTimeout(searchTrackTimer.current);
     searchTrackTimer.current = setTimeout(() => {
-      trackEvent("search_query", { query: search.trim() });
+      const resultsCount = filtered.length;
+      trackEvent("search_query", { query: search.trim(), resultsCount, hasResults: resultsCount > 0 });
     }, 1500);
     return () => { if (searchTrackTimer.current) clearTimeout(searchTrackTimer.current); };
-  }, [search]);
+  }, [search, filtered.length]);
 
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<string | null>(null);
