@@ -41,6 +41,7 @@ type CRMCustomer = {
   bonusBalance: number;
   orderCount: number;
   totalSpent: number;
+  avgCheck: number;
   lastOrderAt: string | null;
   segment: CRMSegment;
   city: string | null;
@@ -328,7 +329,11 @@ export default function Admin() {
       toast({ title: "Push-уведомление отправлено" });
       setCrmCartReminderSent(userId);
     },
-    onError: () => toast({ title: "Ошибка отправки push", variant: "destructive" }),
+    onError: (err: any) => {
+      let msg = "Ошибка отправки push";
+      try { msg = JSON.parse(err.message.slice(err.message.indexOf("{"))).error; } catch {}
+      toast({ title: msg, variant: "destructive" });
+    },
   });
 
   const moderateShopMutation = useMutation({
@@ -1944,12 +1949,26 @@ export default function Admin() {
           {(() => {
             const crmCities = Array.from(new Set((crmCustomers || []).map((c) => c.city).filter(Boolean))) as string[];
             const crmAllTags = Array.from(new Set((crmCustomers || []).flatMap((c) => c.tags || []))).sort();
+            const now = Date.now();
             const filteredCRM = (crmCustomers || []).filter((c) => {
               const q = crmSearch.toLowerCase();
               const matchSearch = !q || c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q);
-              const matchSeg = crmSegmentFilter === "all" || c.segment === crmSegmentFilter;
               const matchCity = crmCityFilter === "all" || c.city === crmCityFilter;
               const matchTag = crmTagFilter === "all" || (c.tags || []).includes(crmTagFilter);
+              let matchSeg = true;
+              if (crmSegmentFilter === "all") matchSeg = true;
+              else if (crmSegmentFilter === "vip_inactive") {
+                const lastOrderAge = c.lastOrderAt ? now - new Date(c.lastOrderAt).getTime() : Infinity;
+                matchSeg = c.segment === "vip" && lastOrderAge > 30 * 24 * 60 * 60 * 1000;
+              } else if (crmSegmentFilter === "new_no_repeat") {
+                const registeredAge = c.createdAt ? now - new Date(c.createdAt).getTime() : 0;
+                matchSeg = c.orderCount <= 1 && registeredAge > 14 * 24 * 60 * 60 * 1000;
+              } else if (crmSegmentFilter === "churned_60") {
+                const lastOrderAge = c.lastOrderAt ? now - new Date(c.lastOrderAt).getTime() : Infinity;
+                matchSeg = lastOrderAge > 60 * 24 * 60 * 60 * 1000;
+              } else {
+                matchSeg = c.segment === crmSegmentFilter;
+              }
               return matchSearch && matchSeg && matchCity && matchTag;
             });
             return (
@@ -1966,7 +1985,7 @@ export default function Admin() {
                     />
                   </div>
                   <Select value={crmSegmentFilter} onValueChange={setCrmSegmentFilter}>
-                    <SelectTrigger className="w-48" data-testid="select-crm-segment">
+                    <SelectTrigger className="w-56" data-testid="select-crm-segment">
                       <SelectValue placeholder="Все сегменты" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1975,6 +1994,9 @@ export default function Admin() {
                       <SelectItem value="active">Активные ({(crmCustomers || []).filter(c => c.segment === "active").length})</SelectItem>
                       <SelectItem value="vip">VIP ({(crmCustomers || []).filter(c => c.segment === "vip").length})</SelectItem>
                       <SelectItem value="churned">Отток ({(crmCustomers || []).filter(c => c.segment === "churned").length})</SelectItem>
+                      <SelectItem value="vip_inactive">VIP без заказов 30+ дн. ({(crmCustomers || []).filter(c => { const age = c.lastOrderAt ? now - new Date(c.lastOrderAt).getTime() : Infinity; return c.segment === "vip" && age > 30*24*60*60*1000; }).length})</SelectItem>
+                      <SelectItem value="new_no_repeat">Новые без повтора 14+ дн. ({(crmCustomers || []).filter(c => { const regAge = c.createdAt ? now - new Date(c.createdAt).getTime() : 0; return c.orderCount <= 1 && regAge > 14*24*60*60*1000; }).length})</SelectItem>
+                      <SelectItem value="churned_60">Не покупали 60+ дн. ({(crmCustomers || []).filter(c => { const age = c.lastOrderAt ? now - new Date(c.lastOrderAt).getTime() : Infinity; return age > 60*24*60*60*1000; }).length})</SelectItem>
                     </SelectContent>
                   </Select>
                   {crmCities.length > 0 && (
@@ -2782,13 +2804,25 @@ export default function Admin() {
                           <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center">
                             <ShoppingCart className="w-5 h-5 text-orange-600 dark:text-orange-400" />
                           </div>
-                          <div>
+                          <div className="flex-1">
                             <div className="text-xs text-muted-foreground">Брошенных корзин</div>
                             <div className="text-2xl font-bold" data-testid="text-abandoned-carts">{siteAnalytics.abandonedCarts}</div>
                             {siteAnalytics.abandonedCartUsers > 0 && (
                               <div className="text-xs text-muted-foreground mt-0.5">{siteAnalytics.abandonedCartUsers} польз.</div>
                             )}
                           </div>
+                        </div>
+                        <div className="mt-3">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="w-full gap-1.5 text-orange-700 border-orange-200 hover:bg-orange-50"
+                            onClick={() => setCrmSegmentFilter("churned_60")}
+                            data-testid="button-abandoned-go-crm"
+                          >
+                            <Bell className="w-3.5 h-3.5" />
+                            Найти в CRM и отправить push
+                          </Button>
                         </div>
                       </CardContent>
                     </Card>

@@ -155,6 +155,10 @@ export async function runMigrations() {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_last_notified_at timestamp;
     `);
 
+    await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS tags text[] DEFAULT '{}'::text[];
+    `);
+
     console.log("[migrate] Schema up to date");
   } catch (err) {
     console.error("[migrate] Migration error:", err);

@@ -1943,7 +1943,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const { userId } = req.params;
       const user = await storage.getUser(userId);
       if (!user) return res.status(404).json({ error: "Пользователь не найден" });
-      const { sendPushToUser } = await import("./webpush");
+      const subs = await storage.getPushSubscriptionsByUser(userId);
+      if (!subs || subs.length === 0) {
+        return res.status(400).json({ error: "У пользователя нет активных push-подписок" });
+      }
       const result = await sendPushToUser(userId, {
         title: "Вы кое-что забыли 🛒",
         body: "В вашей корзине остались товары. Оформите заказ сейчас!",
@@ -1969,6 +1972,30 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
       const customers = await storage.getShopCRMCustomers(shopId);
       res.json(customers);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get("/api/shops/:id/crm/customers/:userId", requireAuth, async (req, res) => {
+    try {
+      const shopId = req.params.id;
+      const targetUserId = req.params.userId;
+      const sessionUserId = (req.session as any).userId;
+      const shop = await storage.getShop(shopId);
+      if (!shop) return res.status(404).json({ error: "Магазин не найден" });
+      const role = (req.session as any).role;
+      if (role !== "admin") {
+        const isOwner = shop.ownerId === sessionUserId;
+        const isWorker = await storage.isShopWorker(shopId, sessionUserId);
+        if (!isOwner && !isWorker) return res.status(403).json({ error: "Нет доступа" });
+      }
+      const shopOrders = await storage.getOrdersByBuyerAndShop(targetUserId, shopId);
+      const enriched = await Promise.all(shopOrders.map(async (o) => {
+        const items = await storage.getOrderItems(o.id);
+        return { ...o, items };
+      }));
+      res.json({ orders: enriched });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }

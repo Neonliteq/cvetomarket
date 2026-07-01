@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Plus, Edit, Trash2, Package, ShoppingBag, BarChart2, MessageCircle,
   Eye, EyeOff, Star, MapPin, Phone, Calendar, Clock, User, FileText, Send, Settings, Truck,
-  Upload, Image, X, Users, UserPlus, UserMinus, Crown, Tag, CheckCircle, ExternalLink
+  Upload, Image, X, Users, UserPlus, UserMinus, Crown, Tag, CheckCircle, ExternalLink, Search
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -552,14 +552,30 @@ export default function ShopDashboard() {
 
   type ShopCRMCustomer = {
     id: string; name: string; email: string; phone: string | null;
-    orderCount: number; totalSpent: number; lastOrderAt: string | null;
+    orderCount: number; totalSpent: number; avgCheck: number; lastOrderAt: string | null;
     segment: "new" | "active" | "vip" | "churned"; city: string | null; tags: string[];
   };
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [customerSort, setCustomerSort] = useState<"totalSpent" | "orderCount" | "lastOrderAt">("totalSpent");
+  const [customerSortDir, setCustomerSortDir] = useState<"desc" | "asc">("desc");
+  const [selectedShopCustomer, setSelectedShopCustomer] = useState<ShopCRMCustomer | null>(null);
+
   const { data: shopCustomers, isLoading: loadingCustomers } = useQuery<ShopCRMCustomer[]>({
     queryKey: [`/api/shops/${myShop?.id}/crm/customers`],
     queryFn: () => fetch(`/api/shops/${myShop!.id}/crm/customers`, { credentials: "include" }).then(r => r.json()),
     enabled: !!myShop?.id,
   });
+
+  const { data: shopCustomerDetail, isLoading: loadingCustomerDetail } = useQuery<{ orders: any[] }>({
+    queryKey: [`/api/shops/${myShop?.id}/crm/customers/${selectedShopCustomer?.id}`],
+    queryFn: () => fetch(`/api/shops/${myShop!.id}/crm/customers/${selectedShopCustomer!.id}`, { credentials: "include" }).then(r => r.json()),
+    enabled: !!myShop?.id && !!selectedShopCustomer,
+  });
+
+  function toggleCustomerSort(field: typeof customerSort) {
+    if (customerSort === field) setCustomerSortDir(d => d === "desc" ? "asc" : "desc");
+    else { setCustomerSort(field); setCustomerSortDir("desc"); }
+  }
 
   type WorkerUser = { id: string; name: string; email: string; avatarUrl?: string | null };
   type ShopWorkerWithUser = { id: string; shopId: string; userId: string; createdAt?: string; user?: WorkerUser };
@@ -1198,8 +1214,20 @@ export default function ShopDashboard() {
 
         <TabsContent value="customers">
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center gap-3">
               <h3 className="font-semibold text-lg">Покупатели ({shopCustomers?.length || 0})</h3>
+              {(shopCustomers?.length || 0) > 0 && (
+                <div className="relative flex-1 min-w-48">
+                  <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    className="pl-8 h-8 text-sm"
+                    placeholder="Поиск по имени или email..."
+                    value={customerSearch}
+                    onChange={(e) => setCustomerSearch(e.target.value)}
+                    data-testid="input-customer-search"
+                  />
+                </div>
+              )}
             </div>
             {loadingCustomers ? (
               <div className="space-y-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-14 rounded-lg" />)}</div>
@@ -1209,59 +1237,170 @@ export default function ShopDashboard() {
                 <p>Покупателей пока нет</p>
               </div>
             ) : (
-              <div className="rounded-lg border overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-muted/50">
-                      <tr>
-                        <th className="text-left px-4 py-2 font-medium">Покупатель</th>
-                        <th className="text-left px-4 py-2 font-medium hidden sm:table-cell">Сегмент</th>
-                        <th className="text-right px-4 py-2 font-medium hidden md:table-cell">Заказов</th>
-                        <th className="text-right px-4 py-2 font-medium">Выручка</th>
-                        <th className="text-right px-4 py-2 font-medium hidden lg:table-cell">Посл. заказ</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {shopCustomers.map((c) => {
-                        const segColors: Record<string, string> = {
-                          new: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-                          active: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-                          vip: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200",
-                          churned: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
-                        };
-                        const segLabels: Record<string, string> = {
-                          new: "Новый", active: "Активный", vip: "VIP", churned: "Не заходил",
-                        };
-                        return (
-                          <tr key={c.id} className="border-t hover:bg-muted/30 transition-colors" data-testid={`row-shop-customer-${c.id}`}>
-                            <td className="px-4 py-3">
-                              <div className="font-medium">{c.name}</div>
-                              <div className="text-xs text-muted-foreground">{c.email}</div>
-                              {c.tags && c.tags.length > 0 && (
-                                <div className="flex flex-wrap gap-1 mt-1">
-                                  {c.tags.map(tag => (
-                                    <span key={tag} className="px-1.5 py-0 rounded text-[10px] bg-primary/10 text-primary">{tag}</span>
-                                  ))}
+              <>
+                {(() => {
+                  const segColors: Record<string, string> = {
+                    new: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+                    active: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+                    vip: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200",
+                    churned: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+                  };
+                  const segLabels: Record<string, string> = {
+                    new: "Новый", active: "Активный", vip: "VIP", churned: "Не заходил",
+                  };
+                  const SortIcon = ({ field }: { field: typeof customerSort }) => {
+                    if (customerSort !== field) return <span className="text-muted-foreground ml-1">↕</span>;
+                    return <span className="text-primary ml-1">{customerSortDir === "desc" ? "↓" : "↑"}</span>;
+                  };
+                  const filtered = (shopCustomers || []).filter(c => {
+                    const q = customerSearch.toLowerCase();
+                    return !q || c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q);
+                  });
+                  const sorted = [...filtered].sort((a, b) => {
+                    let cmp = 0;
+                    if (customerSort === "totalSpent") cmp = a.totalSpent - b.totalSpent;
+                    else if (customerSort === "orderCount") cmp = a.orderCount - b.orderCount;
+                    else if (customerSort === "lastOrderAt") {
+                      const ta = a.lastOrderAt ? new Date(a.lastOrderAt).getTime() : 0;
+                      const tb = b.lastOrderAt ? new Date(b.lastOrderAt).getTime() : 0;
+                      cmp = ta - tb;
+                    }
+                    return customerSortDir === "desc" ? -cmp : cmp;
+                  });
+                  return (
+                    <div className="rounded-lg border overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead className="bg-muted/50">
+                            <tr>
+                              <th className="text-left px-4 py-2 font-medium">Покупатель</th>
+                              <th className="text-left px-4 py-2 font-medium hidden sm:table-cell">Сегмент</th>
+                              <th className="text-right px-4 py-2 font-medium hidden md:table-cell cursor-pointer select-none" onClick={() => toggleCustomerSort("orderCount")}>
+                                Заказов <SortIcon field="orderCount" />
+                              </th>
+                              <th className="text-right px-4 py-2 font-medium hidden sm:table-cell cursor-pointer select-none" onClick={() => toggleCustomerSort("totalSpent")}>
+                                Выручка <SortIcon field="totalSpent" />
+                              </th>
+                              <th className="text-right px-4 py-2 font-medium hidden lg:table-cell">Ср. чек</th>
+                              <th className="text-right px-4 py-2 font-medium hidden lg:table-cell cursor-pointer select-none" onClick={() => toggleCustomerSort("lastOrderAt")}>
+                                Посл. заказ <SortIcon field="lastOrderAt" />
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {sorted.map((c) => (
+                              <tr
+                                key={c.id}
+                                className="border-t hover:bg-muted/30 transition-colors cursor-pointer"
+                                onClick={() => setSelectedShopCustomer(c)}
+                                data-testid={`row-shop-customer-${c.id}`}
+                              >
+                                <td className="px-4 py-3">
+                                  <div className="font-medium">{c.name}</div>
+                                  <div className="text-xs text-muted-foreground">{c.email}</div>
+                                  {c.tags && c.tags.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mt-1">
+                                      {c.tags.map(tag => (
+                                        <span key={tag} className="px-1.5 py-0 rounded text-[10px] bg-primary/10 text-primary">{tag}</span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3 hidden sm:table-cell">
+                                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${segColors[c.segment]}`}>
+                                    {segLabels[c.segment]}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-right hidden md:table-cell">{c.orderCount}</td>
+                                <td className="px-4 py-3 text-right font-medium hidden sm:table-cell">{c.totalSpent.toLocaleString("ru-RU")} ₽</td>
+                                <td className="px-4 py-3 text-right text-xs text-muted-foreground hidden lg:table-cell">
+                                  {c.avgCheck > 0 ? `${Math.round(c.avgCheck).toLocaleString("ru-RU")} ₽` : "—"}
+                                </td>
+                                <td className="px-4 py-3 text-right text-xs text-muted-foreground hidden lg:table-cell">
+                                  {c.lastOrderAt ? format(new Date(c.lastOrderAt), "d MMM yyyy", { locale: ru }) : "—"}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                <Dialog open={!!selectedShopCustomer} onOpenChange={(o) => !o && setSelectedShopCustomer(null)}>
+                  <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>{selectedShopCustomer?.name}</DialogTitle>
+                    </DialogHeader>
+                    {selectedShopCustomer && (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="bg-muted/50 rounded-lg p-3">
+                            <div className="text-xs text-muted-foreground">Заказов в магазине</div>
+                            <div className="text-xl font-bold">{selectedShopCustomer.orderCount}</div>
+                          </div>
+                          <div className="bg-muted/50 rounded-lg p-3">
+                            <div className="text-xs text-muted-foreground">Выручка</div>
+                            <div className="text-xl font-bold">{selectedShopCustomer.totalSpent.toLocaleString("ru-RU")} ₽</div>
+                          </div>
+                          <div className="bg-muted/50 rounded-lg p-3">
+                            <div className="text-xs text-muted-foreground">Средний чек</div>
+                            <div className="text-xl font-bold">
+                              {selectedShopCustomer.avgCheck > 0 ? `${Math.round(selectedShopCustomer.avgCheck).toLocaleString("ru-RU")} ₽` : "—"}
+                            </div>
+                          </div>
+                          <div className="bg-muted/50 rounded-lg p-3">
+                            <div className="text-xs text-muted-foreground">Последний заказ</div>
+                            <div className="text-sm font-medium">
+                              {selectedShopCustomer.lastOrderAt ? format(new Date(selectedShopCustomer.lastOrderAt), "d MMM yyyy", { locale: ru }) : "—"}
+                            </div>
+                          </div>
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-semibold mb-2">Заказы в вашем магазине</h4>
+                          {loadingCustomerDetail ? (
+                            <div className="space-y-2">{Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-16" />)}</div>
+                          ) : !shopCustomerDetail?.orders?.length ? (
+                            <p className="text-sm text-muted-foreground">Нет заказов</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {shopCustomerDetail.orders.map((o: any) => (
+                                <div key={o.id} className="border rounded-lg p-3 text-sm">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className="font-medium">Заказ №{o.orderNumber}</span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {o.createdAt ? format(new Date(o.createdAt), "d MMM yyyy", { locale: ru }) : ""}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center justify-between">
+                                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                      o.status === "delivered" ? "bg-green-100 text-green-800" :
+                                      o.status === "cancelled" ? "bg-red-100 text-red-800" :
+                                      "bg-blue-100 text-blue-800"
+                                    }`}>{STATUS_LABELS[o.status] || o.status}</span>
+                                    <span className="font-bold">{parseFloat(o.totalAmount || "0").toLocaleString("ru-RU")} ₽</span>
+                                  </div>
                                 </div>
-                              )}
-                            </td>
-                            <td className="px-4 py-3 hidden sm:table-cell">
-                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${segColors[c.segment]}`}>
-                                {segLabels[c.segment]}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-right hidden md:table-cell">{c.orderCount}</td>
-                            <td className="px-4 py-3 text-right font-medium">{c.totalSpent.toLocaleString("ru-RU")} ₽</td>
-                            <td className="px-4 py-3 text-right text-xs text-muted-foreground hidden lg:table-cell">
-                              {c.lastOrderAt ? format(new Date(c.lastOrderAt), "d MMM yyyy", { locale: ru }) : "—"}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        {selectedShopCustomer.tags && selectedShopCustomer.tags.length > 0 && (
+                          <div>
+                            <h4 className="text-sm font-semibold mb-2">Теги</h4>
+                            <div className="flex flex-wrap gap-1">
+                              {selectedShopCustomer.tags.map(tag => (
+                                <span key={tag} className="px-2 py-0.5 rounded-full text-xs bg-primary/10 text-primary">{tag}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </DialogContent>
+                </Dialog>
+              </>
             )}
           </div>
         </TabsContent>

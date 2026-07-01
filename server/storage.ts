@@ -32,6 +32,7 @@ export type CRMCustomer = {
   bonusBalance: number;
   orderCount: number;
   totalSpent: number;
+  avgCheck: number;
   lastOrderAt: Date | null;
   segment: CRMSegment;
   city: string | null;
@@ -157,6 +158,7 @@ export interface IStorage {
   updateUserAdminNotes(userId: string, notes: string): Promise<void>;
   updateUserTags(userId: string, tags: string[]): Promise<void>;
   getShopCRMCustomers(shopId: string): Promise<CRMCustomer[]>;
+  getOrdersByBuyerAndShop(buyerId: string, shopId: string): Promise<Order[]>;
 
   // Order Supplements
   createOrderSupplement(data: InsertOrderSupplement): Promise<OrderSupplement>;
@@ -651,6 +653,7 @@ export class DbStorage implements IStorage {
         bonusBalance: u.bonusBalance ?? 0,
         orderCount,
         totalSpent,
+        avgCheck: orderCount > 0 ? totalSpent / orderCount : 0,
         lastOrderAt,
         segment,
         city: u.buyerCity ?? null,
@@ -708,6 +711,7 @@ export class DbStorage implements IStorage {
         bonusBalance: u.bonusBalance ?? 0,
         orderCount,
         totalSpent,
+        avgCheck: orderCount > 0 ? totalSpent / orderCount : 0,
         lastOrderAt,
         segment,
         city: u.buyerCity ?? null,
@@ -716,6 +720,12 @@ export class DbStorage implements IStorage {
         createdAt: u.createdAt,
       };
     });
+  }
+
+  async getOrdersByBuyerAndShop(buyerId: string, shopId: string): Promise<Order[]> {
+    return db.select().from(orders)
+      .where(and(eq(orders.buyerId, buyerId), eq(orders.shopId, shopId)))
+      .orderBy(desc(orders.createdAt));
   }
 
   async createOrderSupplement(data: InsertOrderSupplement): Promise<OrderSupplement> {
