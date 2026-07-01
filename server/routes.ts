@@ -2149,14 +2149,37 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // Analytics — record page view (public)
   app.post("/api/analytics/pageview", async (req, res) => {
     try {
-      const { sessionId, page, referrer, deviceType, utmSource, utmMedium, utmCampaign, durationSeconds } = req.body;
+      const { sessionId, page, referrer, deviceType, utmSource, utmMedium, utmCampaign } = req.body;
       if (!sessionId || !page) return res.status(400).json({ error: "sessionId and page required" });
       const userId = (req.session as any)?.userId as string | undefined;
       await storage.recordPageView({
         sessionId, userId, page, referrer, deviceType: deviceType || "desktop",
         utmSource: utmSource || null, utmMedium: utmMedium || null, utmCampaign: utmCampaign || null,
-        durationSeconds: typeof durationSeconds === "number" ? durationSeconds : null,
       });
+      res.json({ ok: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Analytics — update page view duration via fetch PATCH (called on navigation away)
+  app.patch("/api/analytics/pageview", async (req, res) => {
+    try {
+      const { sessionId, page, durationSeconds } = req.body;
+      if (!sessionId || !page || typeof durationSeconds !== "number") return res.status(400).json({ error: "sessionId, page and durationSeconds required" });
+      if (durationSeconds > 0) await storage.updatePageViewDuration(sessionId, page, durationSeconds);
+      res.json({ ok: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Analytics — update page view duration via sendBeacon POST (called on pagehide)
+  app.post("/api/analytics/pageview/duration", async (req, res) => {
+    try {
+      const { sessionId, page, durationSeconds } = req.body;
+      if (!sessionId || !page || typeof durationSeconds !== "number") return res.status(400).json({ error: "sessionId, page and durationSeconds required" });
+      if (durationSeconds > 0) await storage.updatePageViewDuration(sessionId, page, durationSeconds);
       res.json({ ok: true });
     } catch (e: any) {
       res.status(500).json({ error: e.message });

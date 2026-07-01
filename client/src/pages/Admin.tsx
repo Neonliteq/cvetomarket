@@ -537,7 +537,7 @@ export default function Admin() {
     abandonedCartUsers: number;
     topProducts: { productId: string; productName: string; views: number; cartAdds: number; conversionPct: number }[];
     topByConversion: { productId: string; productName: string; views: number; cartAdds: number; conversionPct: number }[];
-    topShops: { shopId: string; shopName: string; views: number }[];
+    topShops: { shopId: string; shopName: string; views: number; productViews: number; orderSessions: number; orderConvPct: number }[];
   }>({
     queryKey: ["/api/admin/site-analytics", trafficPeriod],
     queryFn: async () => {
@@ -2870,17 +2870,23 @@ export default function Admin() {
                             {siteAnalytics.topShops.map((s, i) => {
                               const max = siteAnalytics.topShops[0].views || 1;
                               return (
-                                <div key={s.shopId} className="flex items-center gap-2 text-sm" data-testid={`row-shop-analytics-${i}`}>
-                                  <span className="w-4 text-muted-foreground shrink-0 font-mono text-xs">{i + 1}</span>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2">
-                                      <span className="truncate text-xs font-medium">{s.shopName}</span>
-                                      <div className="flex-1 bg-muted rounded-full h-1.5">
-                                        <div className="h-full bg-green-500 rounded-full" style={{ width: `${Math.round((s.views / max) * 100)}%` }} />
+                                <div key={s.shopId} className="text-sm" data-testid={`row-shop-analytics-${i}`}>
+                                  <div className="flex items-center gap-2">
+                                    <span className="w-4 text-muted-foreground shrink-0 font-mono text-xs">{i + 1}</span>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2">
+                                        <span className="truncate text-xs font-medium">{s.shopName}</span>
+                                        <div className="flex-1 bg-muted rounded-full h-1.5">
+                                          <div className="h-full bg-green-500 rounded-full" style={{ width: `${Math.round((s.views / max) * 100)}%` }} />
+                                        </div>
                                       </div>
                                     </div>
+                                    <span className="text-xs font-medium shrink-0 w-8 text-right">{s.views}</span>
                                   </div>
-                                  <span className="text-xs font-medium shrink-0 w-8 text-right">{s.views}</span>
+                                  <div className="ml-6 flex gap-3 text-xs text-muted-foreground mt-0.5">
+                                    {s.productViews > 0 && <span>товары: {s.productViews}</span>}
+                                    {s.orderSessions > 0 && <span className="text-green-600 dark:text-green-400">заказы: {s.orderSessions} ({s.orderConvPct}%)</span>}
+                                  </div>
                                 </div>
                               );
                             })}

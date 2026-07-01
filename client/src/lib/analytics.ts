@@ -46,7 +46,7 @@ function getOrCreateSession(): string {
   return id;
 }
 
-async function sendPageView(page: string, durationSeconds?: number) {
+async function sendPageView(page: string) {
   try {
     const utm = getUtmParams();
     await fetch("/api/analytics/pageview", {
@@ -59,7 +59,22 @@ async function sendPageView(page: string, durationSeconds?: number) {
         referrer: document.referrer || undefined,
         deviceType: getDeviceType(),
         ...utm,
-        ...(durationSeconds !== undefined ? { durationSeconds } : {}),
+      }),
+    });
+  } catch {}
+}
+
+async function patchPageViewDuration(page: string, durationSeconds: number) {
+  if (durationSeconds <= 0) return;
+  try {
+    await fetch("/api/analytics/pageview", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({
+        sessionId: getOrCreateSession(),
+        page,
+        durationSeconds,
       }),
     });
   } catch {}
@@ -92,13 +107,15 @@ export function useAnalytics() {
 
   useEffect(() => {
     if (lastPage.current === location) return;
-    const prevPage = lastPage.current;
-    const duration = prevPage ? Math.round((Date.now() - pageEnterTime.current) / 1000) : undefined;
 
-    if (prevPage && duration !== undefined && duration > 0) {
-      sendPageView(prevPage, duration);
+    // Update duration for the page we're leaving (PATCH — no new row)
+    const prevPage = lastPage.current;
+    if (prevPage) {
+      const duration = Math.round((Date.now() - pageEnterTime.current) / 1000);
+      patchPageViewDuration(prevPage, duration);
     }
 
+    // Record a fresh pageview for the new page (POST — one row per page visit)
     lastPage.current = location;
     pageEnterTime.current = Date.now();
     sendPageView(location);
@@ -108,19 +125,17 @@ export function useAnalytics() {
     const onUnload = () => {
       if (!lastPage.current) return;
       const duration = Math.round((Date.now() - pageEnterTime.current) / 1000);
-      if (duration > 0) {
-        const payload = JSON.stringify({
-          sessionId: getOrCreateSession(),
-          page: lastPage.current,
-          deviceType: getDeviceType(),
-          ...getUtmParams(),
-          durationSeconds: duration,
-        });
-        navigator.sendBeacon(
-          "/api/analytics/pageview",
-          new Blob([payload], { type: "application/json" })
-        );
-      }
+      if (duration <= 0) return;
+      // Use sendBeacon for reliability on page close (still PATCH semantics via POST to a beacon-friendly endpoint)
+      const payload = JSON.stringify({
+        sessionId: getOrCreateSession(),
+        page: lastPage.current,
+        durationSeconds: duration,
+      });
+      navigator.sendBeacon(
+        "/api/analytics/pageview/duration",
+        new Blob([payload], { type: "application/json" })
+      );
     };
     window.addEventListener("pagehide", onUnload);
     return () => window.removeEventListener("pagehide", onUnload);

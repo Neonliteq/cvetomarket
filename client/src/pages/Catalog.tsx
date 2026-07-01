@@ -27,16 +27,6 @@ export default function Catalog() {
     setSearch(q);
   }, [searchStr]);
 
-  useEffect(() => {
-    if (!search.trim()) return;
-    if (searchTrackTimer.current) clearTimeout(searchTrackTimer.current);
-    searchTrackTimer.current = setTimeout(() => {
-      const resultsCount = filtered.length;
-      trackEvent("search_query", { query: search.trim(), resultsCount, hasResults: resultsCount > 0 });
-    }, 1500);
-    return () => { if (searchTrackTimer.current) clearTimeout(searchTrackTimer.current); };
-  }, [search, filtered.length]);
-
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
@@ -67,6 +57,16 @@ export default function Catalog() {
     if (price < priceRange[0] || price > priceRange[1]) return false;
     return true;
   });
+
+  useEffect(() => {
+    if (!search.trim()) return;
+    if (searchTrackTimer.current) clearTimeout(searchTrackTimer.current);
+    searchTrackTimer.current = setTimeout(() => {
+      const resultsCount = filtered.length;
+      trackEvent("search_query", { query: search.trim(), resultsCount, hasResults: resultsCount > 0 });
+    }, 1500);
+    return () => { if (searchTrackTimer.current) clearTimeout(searchTrackTimer.current); };
+  }, [search, filtered.length]);
 
   const sorted = [...filtered].sort((a, b) => {
     if (sortBy === "price_asc") return Number(a.price) - Number(b.price);

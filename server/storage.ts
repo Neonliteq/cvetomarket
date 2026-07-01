@@ -187,7 +187,8 @@ export interface IStorage {
   getPushDeliveryFailures(sinceDate?: Date): Promise<PushDeliveryFailure[]>;
 
   // Analytics
-  recordPageView(data: { sessionId: string; userId?: string; page: string; referrer?: string; deviceType: string; utmSource?: string | null; utmMedium?: string | null; utmCampaign?: string | null; durationSeconds?: number | null }): Promise<void>;
+  recordPageView(data: { sessionId: string; userId?: string; page: string; referrer?: string; deviceType: string; utmSource?: string | null; utmMedium?: string | null; utmCampaign?: string | null }): Promise<void>;
+  updatePageViewDuration(sessionId: string, page: string, durationSeconds: number): Promise<void>;
   recordAnalyticsEvent(data: { sessionId: string; userId?: string; eventName: string; properties?: Record<string, unknown>; page: string }): Promise<void>;
   getSiteAnalytics(since: Date): Promise<{
     totalViews: number;
@@ -207,7 +208,7 @@ export interface IStorage {
     abandonedCartUsers: number;
     topProducts: { productId: string; productName: string; views: number; cartAdds: number; conversionPct: number }[];
     topByConversion: { productId: string; productName: string; views: number; cartAdds: number; conversionPct: number }[];
-    topShops: { shopId: string; shopName: string; views: number }[];
+    topShops: { shopId: string; shopName: string; views: number; productViews: number; orderSessions: number; orderConvPct: number }[];
   }>;
 }
 
@@ -794,7 +795,7 @@ export class DbStorage implements IStorage {
     return db.select().from(pushDeliveryFailures).orderBy(desc(pushDeliveryFailures.failureCount));
   }
 
-  async recordPageView(data: { sessionId: string; userId?: string; page: string; referrer?: string; deviceType: string; utmSource?: string | null; utmMedium?: string | null; utmCampaign?: string | null; durationSeconds?: number | null }): Promise<void> {
+  async recordPageView(data: { sessionId: string; userId?: string; page: string; referrer?: string; deviceType: string; utmSource?: string | null; utmMedium?: string | null; utmCampaign?: string | null }): Promise<void> {
     await db.insert(pageViews).values({
       sessionId: data.sessionId,
       userId: data.userId ?? null,
@@ -804,8 +805,21 @@ export class DbStorage implements IStorage {
       utmSource: data.utmSource ?? null,
       utmMedium: data.utmMedium ?? null,
       utmCampaign: data.utmCampaign ?? null,
-      durationSeconds: data.durationSeconds ?? null,
+      durationSeconds: null,
     });
+  }
+
+  async updatePageViewDuration(sessionId: string, page: string, durationSeconds: number): Promise<void> {
+    await db.execute(sql`
+      UPDATE page_views
+      SET duration_seconds = ${durationSeconds}
+      WHERE id = (
+        SELECT id FROM page_views
+        WHERE session_id = ${sessionId} AND page = ${page}
+        ORDER BY created_at DESC
+        LIMIT 1
+      )
+    `);
   }
 
   async recordAnalyticsEvent(data: { sessionId: string; userId?: string; eventName: string; properties?: Record<string, unknown>; page: string }): Promise<void> {
@@ -867,13 +881,17 @@ export class DbStorage implements IStorage {
       .groupBy(sql`date_trunc('day', ${pageViews.createdAt})`)
       .orderBy(sql`date_trunc('day', ${pageViews.createdAt})`);
 
-    // --- Session duration: avg + median ---
+    // --- Session duration: avg + median computed per session (sum of page durations) ---
     const [durationRow] = await db.execute(sql`
       SELECT
-        round(avg(duration_seconds))::int AS avg_dur,
-        percentile_cont(0.5) WITHIN GROUP (ORDER BY duration_seconds)::int AS median_dur
-      FROM page_views
-      WHERE created_at >= ${since} AND duration_seconds IS NOT NULL AND duration_seconds > 0
+        round(avg(session_dur))::int AS avg_dur,
+        percentile_cont(0.5) WITHIN GROUP (ORDER BY session_dur)::int AS median_dur
+      FROM (
+        SELECT session_id, sum(duration_seconds) AS session_dur
+        FROM page_views
+        WHERE created_at >= ${since} AND duration_seconds IS NOT NULL AND duration_seconds > 0
+        GROUP BY session_id
+      ) s
     `);
     const avgSessionDuration = Number((durationRow as any)?.avg_dur ?? 0);
     const medianSessionDuration = Number((durationRow as any)?.median_dur ?? 0);
@@ -936,17 +954,17 @@ export class DbStorage implements IStorage {
       noResultsCount: Number(r.no_results_count ?? 0),
     }));
 
-    // --- UTM breakdown: source + medium + campaign ---
+    // --- UTM breakdown: source + medium + campaign (direct = no UTM, unknown = internal) ---
     const utmRows = await db.execute(sql`
       SELECT
-        utm_source,
-        utm_medium,
-        utm_campaign,
+        COALESCE(utm_source, 'direct') AS utm_source,
+        CASE WHEN utm_source IS NULL THEN NULL ELSE utm_medium END AS utm_medium,
+        CASE WHEN utm_source IS NULL THEN NULL ELSE utm_campaign END AS utm_campaign,
         count(distinct session_id)::int AS sessions,
         count(*)::int AS views
       FROM page_views
-      WHERE created_at >= ${since} AND utm_source IS NOT NULL
-      GROUP BY utm_source, utm_medium, utm_campaign
+      WHERE created_at >= ${since}
+      GROUP BY 1, 2, 3
       ORDER BY sessions DESC
       LIMIT 20
     `);
@@ -1013,22 +1031,47 @@ export class DbStorage implements IStorage {
       .sort((a, b) => b.conversionPct - a.conversionPct)
       .slice(0, 5);
 
-    // --- Top shops by views ---
+    // --- Top shops by views with product views and order conversion ---
     const shopViewRows = await db.execute(sql`
+      WITH shop_views AS (
+        SELECT
+          (properties->>'shopId') AS shop_id,
+          max(properties->>'shopName') AS shop_name,
+          count(*)::int AS views
+        FROM analytics_events
+        WHERE created_at >= ${since} AND event_name = 'shop_view' AND properties->>'shopId' IS NOT NULL
+        GROUP BY shop_id
+      ),
+      product_views_by_shop AS (
+        SELECT (properties->>'shopId') AS shop_id, count(*)::int AS product_views
+        FROM analytics_events
+        WHERE created_at >= ${since} AND event_name = 'product_view' AND properties->>'shopId' IS NOT NULL
+        GROUP BY shop_id
+      ),
+      orders_by_shop AS (
+        SELECT (properties->>'shopId') AS shop_id, count(distinct session_id)::int AS order_sessions
+        FROM analytics_events
+        WHERE created_at >= ${since} AND event_name = 'checkout_complete' AND properties->>'shopId' IS NOT NULL
+        GROUP BY shop_id
+      )
       SELECT
-        (properties->>'shopId') AS shop_id,
-        max(properties->>'shopName') AS shop_name,
-        count(*)::int AS views
-      FROM analytics_events
-      WHERE created_at >= ${since} AND event_name = 'shop_view' AND properties->>'shopId' IS NOT NULL
-      GROUP BY shop_id
-      ORDER BY views DESC
+        sv.shop_id, sv.shop_name, sv.views,
+        coalesce(pv.product_views, 0) AS product_views,
+        coalesce(ob.order_sessions, 0) AS order_sessions,
+        CASE WHEN sv.views > 0 THEN round((coalesce(ob.order_sessions, 0)::numeric / sv.views) * 100, 1) ELSE 0 END AS order_conv_pct
+      FROM shop_views sv
+      LEFT JOIN product_views_by_shop pv ON pv.shop_id = sv.shop_id
+      LEFT JOIN orders_by_shop ob ON ob.shop_id = sv.shop_id
+      ORDER BY sv.views DESC
       LIMIT 10
     `);
     const topShops = (shopViewRows as any[]).map((r: any) => ({
       shopId: r.shop_id as string,
       shopName: (r.shop_name ?? r.shop_id) as string,
       views: Number(r.views),
+      productViews: Number(r.product_views ?? 0),
+      orderSessions: Number(r.order_sessions ?? 0),
+      orderConvPct: Number(r.order_conv_pct ?? 0),
     }));
 
     return {

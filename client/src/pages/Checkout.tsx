@@ -189,8 +189,8 @@ export default function Checkout() {
       });
     },
     onSuccess: (data) => {
-      trackEvent("checkout_complete", { orderId: data.order?.id, total: total + DELIVERY });
-      trackEvent("order_placed", { orderId: data.order?.id, total: total + DELIVERY });
+      trackEvent("checkout_complete", { orderId: data.order?.id, total: total + DELIVERY, shopId: shopId || undefined });
+      trackEvent("order_placed", { orderId: data.order?.id, total: total + DELIVERY, shopId: shopId || undefined });
       clearCart();
       if (data.paymentUrl) {
         window.location.href = data.paymentUrl;
