@@ -882,7 +882,7 @@ export class DbStorage implements IStorage {
       .orderBy(sql`date_trunc('day', ${pageViews.createdAt})`);
 
     // --- Session duration: avg + median computed per session (sum of page durations) ---
-    const [durationRow] = await db.execute(sql`
+    const durationResult = await db.execute(sql`
       SELECT
         round(avg(session_dur))::int AS avg_dur,
         percentile_cont(0.5) WITHIN GROUP (ORDER BY session_dur)::int AS median_dur
@@ -893,11 +893,12 @@ export class DbStorage implements IStorage {
         GROUP BY session_id
       ) s
     `);
-    const avgSessionDuration = Number((durationRow as any)?.avg_dur ?? 0);
-    const medianSessionDuration = Number((durationRow as any)?.median_dur ?? 0);
+    const durationRow = durationResult.rows[0] as any;
+    const avgSessionDuration = Number(durationRow?.avg_dur ?? 0);
+    const medianSessionDuration = Number(durationRow?.median_dur ?? 0);
 
     // --- Bounce rate: sessions with only 1 page view ---
-    const [bounceRow] = await db.execute(sql`
+    const bounceResult = await db.execute(sql`
       SELECT
         count(*) FILTER (WHERE cnt = 1)::int AS bounced,
         count(*)::int AS total
@@ -908,12 +909,13 @@ export class DbStorage implements IStorage {
         GROUP BY session_id
       ) s
     `);
-    const bounced = Number((bounceRow as any)?.bounced ?? 0);
-    const totalSessions = Number((bounceRow as any)?.total ?? 1);
+    const bounceRow = bounceResult.rows[0] as any;
+    const bounced = Number(bounceRow?.bounced ?? 0);
+    const totalSessions = Number(bounceRow?.total ?? 1);
     const bounceRate = totalSessions > 0 ? Math.round((bounced / totalSessions) * 100) : 0;
 
     // --- Funnel analysis ---
-    const funnelData = await db.execute(sql`
+    const funnelResult = await db.execute(sql`
       SELECT
         count(distinct CASE WHEN page = '/catalog' THEN session_id END)::int AS catalog,
         count(distinct CASE WHEN page LIKE '/product/%' THEN session_id END)::int AS product,
@@ -922,22 +924,23 @@ export class DbStorage implements IStorage {
       FROM page_views
       WHERE created_at >= ${since}
     `);
-    const funnel = (funnelData as any[])[0] ?? {};
-    const [ordersRow] = await db.execute(sql`
+    const funnel = (funnelResult.rows[0] as any) ?? {};
+    const ordersResult = await db.execute(sql`
       SELECT count(distinct ae.session_id)::int AS placed
       FROM analytics_events ae
       WHERE ae.created_at >= ${since} AND ae.event_name = 'checkout_complete'
     `);
+    const ordersRow = ordersResult.rows[0] as any;
     const funnelSteps = [
       { step: "catalog", label: "Каталог", sessions: Number(funnel.catalog ?? 0) },
       { step: "product", label: "Товар", sessions: Number(funnel.product ?? 0) },
       { step: "cart", label: "Корзина", sessions: Number(funnel.cart ?? 0) },
       { step: "checkout", label: "Оформление", sessions: Number(funnel.checkout_page ?? 0) },
-      { step: "checkout_complete", label: "Заказ", sessions: Number((ordersRow as any)?.placed ?? 0) },
+      { step: "checkout_complete", label: "Заказ", sessions: Number(ordersRow?.placed ?? 0) },
     ];
 
     // --- Top search queries with no-results count ---
-    const searchRows = await db.execute(sql`
+    const searchResult = await db.execute(sql`
       SELECT
         (properties->>'query') AS query,
         count(*)::int AS count,
@@ -948,7 +951,7 @@ export class DbStorage implements IStorage {
       ORDER BY count DESC
       LIMIT 10
     `);
-    const topSearchQueries = (searchRows as any[]).map((r: any) => ({
+    const topSearchQueries = (searchResult.rows as any[]).map((r: any) => ({
       query: r.query as string,
       count: Number(r.count),
       noResultsCount: Number(r.no_results_count ?? 0),
@@ -961,7 +964,7 @@ export class DbStorage implements IStorage {
     //   'referral' — external referrer, utmMedium = referring domain
     //   <string>   — actual utm_source param value for tagged campaigns
     // Legacy rows (before this feature) have NULL → bucketed as 'direct'.
-    const utmRows = await db.execute(sql`
+    const utmResult = await db.execute(sql`
       SELECT
         COALESCE(utm_source, 'direct') AS utm_source,
         utm_medium,
@@ -975,7 +978,7 @@ export class DbStorage implements IStorage {
       ORDER BY sessions DESC
       LIMIT 20
     `);
-    const utmBreakdown = (utmRows as any[]).map((r: any) => ({
+    const utmBreakdown = (utmResult.rows as any[]).map((r: any) => ({
       utmSource: r.utm_source as string,
       utmMedium: (r.utm_medium ?? null) as string | null,
       utmCampaign: (r.utm_campaign ?? null) as string | null,
@@ -984,7 +987,7 @@ export class DbStorage implements IStorage {
     }));
 
     // --- Abandoned carts: sessions + unique users ---
-    const [abandonedRow] = await db.execute(sql`
+    const abandonedResult = await db.execute(sql`
       SELECT
         count(distinct ae.session_id)::int AS sessions,
         count(distinct ae.user_id)::int AS users
@@ -995,11 +998,12 @@ export class DbStorage implements IStorage {
           WHERE created_at >= ${since} AND event_name = 'checkout_complete'
         )
     `);
-    const abandonedCarts = Number((abandonedRow as any)?.sessions ?? 0);
-    const abandonedCartUsers = Number((abandonedRow as any)?.users ?? 0);
+    const abandonedRow = abandonedResult.rows[0] as any;
+    const abandonedCarts = Number(abandonedRow?.sessions ?? 0);
+    const abandonedCartUsers = Number(abandonedRow?.users ?? 0);
 
-    // --- Top products by views with cart conversion + top by conversion ---
-    const productViewRows = await db.execute(sql`
+    // --- Top products by views with cart conversion ---
+    const productViewResult = await db.execute(sql`
       WITH views AS (
         SELECT
           (properties->>'productId') AS product_id,
@@ -1024,7 +1028,7 @@ export class DbStorage implements IStorage {
       ORDER BY v.views DESC
       LIMIT 10
     `);
-    const topProducts = (productViewRows as any[]).map((r: any) => ({
+    const topProducts = (productViewResult.rows as any[]).map((r: any) => ({
       productId: r.product_id as string,
       productName: (r.product_name ?? r.product_id) as string,
       views: Number(r.views),
@@ -1032,11 +1036,40 @@ export class DbStorage implements IStorage {
       conversionPct: Number(r.conv_pct ?? 0),
     }));
 
-    // Top by conversion (min 3 views, sorted by conv pct)
-    const topByConversion = [...topProducts]
-      .filter((p) => p.views >= 3)
-      .sort((a, b) => b.conversionPct - a.conversionPct)
-      .slice(0, 5);
+    // Top by conversion — separate global query (min 3 views, not limited to top-by-views set)
+    const convResult = await db.execute(sql`
+      WITH views AS (
+        SELECT
+          (properties->>'productId') AS product_id,
+          max(properties->>'productName') AS product_name,
+          count(*)::int AS views
+        FROM analytics_events
+        WHERE created_at >= ${since} AND event_name = 'product_view' AND properties->>'productId' IS NOT NULL
+        GROUP BY product_id
+        HAVING count(*) >= 3
+      ),
+      cart_adds AS (
+        SELECT (properties->>'productId') AS product_id, count(*)::int AS cart_adds
+        FROM analytics_events
+        WHERE created_at >= ${since} AND event_name = 'cart_add' AND properties->>'productId' IS NOT NULL
+        GROUP BY product_id
+      )
+      SELECT
+        v.product_id, v.product_name, v.views,
+        coalesce(c.cart_adds, 0) AS cart_adds,
+        CASE WHEN v.views > 0 THEN round((coalesce(c.cart_adds, 0)::numeric / v.views) * 100, 1) ELSE 0 END AS conv_pct
+      FROM views v
+      LEFT JOIN cart_adds c ON c.product_id = v.product_id
+      ORDER BY conv_pct DESC, v.views DESC
+      LIMIT 5
+    `);
+    const topByConversion = (convResult.rows as any[]).map((r: any) => ({
+      productId: r.product_id as string,
+      productName: (r.product_name ?? r.product_id) as string,
+      views: Number(r.views),
+      cartAdds: Number(r.cart_adds),
+      conversionPct: Number(r.conv_pct ?? 0),
+    }));
 
     // --- Top shops by views with product views and order conversion ---
     const shopViewRows = await db.execute(sql`
@@ -1072,7 +1105,7 @@ export class DbStorage implements IStorage {
       ORDER BY sv.views DESC
       LIMIT 10
     `);
-    const topShops = (shopViewRows as any[]).map((r: any) => ({
+    const topShops = (shopViewRows.rows as any[]).map((r: any) => ({
       shopId: r.shop_id as string,
       shopName: (r.shop_name ?? r.shop_id) as string,
       views: Number(r.views),
