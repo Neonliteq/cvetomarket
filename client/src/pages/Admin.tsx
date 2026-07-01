@@ -7,7 +7,7 @@ import {
   Ban, UserCheck, Eye, ChevronDown, Edit, ShoppingBag, EyeOff, FileText,
   Wallet, Receipt, Percent, ArrowDownRight, Filter, ChevronsUpDown, Gift,
   Star, Award, MessageSquare, AlertCircle, ChevronRight, Search, StickyNote, Bell,
-  Globe, Target, Timer, TrendingDown, ShoppingCart, ArrowRight
+  Globe, Target, Timer, TrendingDown, ShoppingCart, ArrowRight, Smartphone, Monitor, Tablet
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -2471,11 +2471,15 @@ export default function Admin() {
                     ) : !crmProfile?.pageViews?.length ? (
                       <p className="text-sm text-muted-foreground">Нет данных о визитах</p>
                     ) : (
-                      <div className="space-y-1 max-h-40 overflow-y-auto">
+                      <div className="space-y-1 max-h-48 overflow-y-auto">
                         {crmProfile.pageViews.map((pv: any, i: number) => (
-                          <div key={i} className="flex items-center justify-between text-xs border-b py-1" data-testid={`crm-pageview-${i}`}>
+                          <div key={i} className="flex items-center gap-2 text-xs border-b py-1.5" data-testid={`crm-pageview-${i}`}>
+                            <Globe className="w-3 h-3 text-muted-foreground shrink-0" />
                             <span className="font-mono truncate flex-1">{pv.page}</span>
-                            <span className="text-muted-foreground shrink-0 ml-2">
+                            {pv.deviceType === "mobile" && <Smartphone className="w-3 h-3 text-muted-foreground shrink-0" title="Мобильный" />}
+                            {pv.deviceType === "tablet" && <Tablet className="w-3 h-3 text-muted-foreground shrink-0" title="Планшет" />}
+                            {(pv.deviceType === "desktop" || !pv.deviceType) && <Monitor className="w-3 h-3 text-muted-foreground shrink-0" title="Компьютер" />}
+                            <span className="text-muted-foreground shrink-0">
                               {pv.createdAt ? format(new Date(pv.createdAt), "d MMM HH:mm", { locale: ru }) : ""}
                             </span>
                           </div>
