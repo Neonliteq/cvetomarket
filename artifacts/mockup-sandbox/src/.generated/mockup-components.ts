@@ -4,5 +4,8 @@ export const modules: ModuleMap = {
   "./components/mockups/home-redesign/BotanicalCraft.tsx": () => import("../components/mockups/home-redesign/BotanicalCraft.tsx"),
   "./components/mockups/home-redesign/CuratedStories.tsx": () => import("../components/mockups/home-redesign/CuratedStories.tsx"),
   "./components/mockups/home-redesign/EditorialBoutique.tsx": () => import("../components/mockups/home-redesign/EditorialBoutique.tsx"),
-  "./components/mockups/home-redesign/ModernMarketplace.tsx": () => import("../components/mockups/home-redesign/ModernMarketplace.tsx")
+  "./components/mockups/home-redesign/ModernMarketplace.tsx": () => import("../components/mockups/home-redesign/ModernMarketplace.tsx"),
+  "./components/mockups/home-redesign/occasions-variants/EdgeScroller.tsx": () => import("../components/mockups/home-redesign/occasions-variants/EdgeScroller.tsx"),
+  "./components/mockups/home-redesign/occasions-variants/EditorialCards.tsx": () => import("../components/mockups/home-redesign/occasions-variants/EditorialCards.tsx"),
+  "./components/mockups/home-redesign/occasions-variants/TrendingSplit.tsx": () => import("../components/mockups/home-redesign/occasions-variants/TrendingSplit.tsx")
 };
