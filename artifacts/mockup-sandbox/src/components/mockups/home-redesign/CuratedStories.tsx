@@ -302,39 +302,52 @@ export function CuratedStories() {
         </section>
 
         {/* --- CTA For Shops --- */}
-        <section className="py-24 bg-[#4a1c40] relative overflow-hidden">
-          {/* Subtle bg pattern/noise */}
-          <div className="absolute inset-0 opacity-[0.03] mix-blend-overlay" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.65%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E")' }}></div>
-          
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-            <Store className="w-12 h-12 text-white/50 mx-auto mb-6" />
-            <h2 className="text-4xl sm:text-5xl font-bold tracking-tight text-white mb-6">
-              Откройте свой цветочный магазин
-            </h2>
-            <p className="text-lg text-white/70 mb-10 max-w-2xl mx-auto font-medium">
-              Присоединяйтесь к платформе и начните получать заказы уже сегодня. Мы берем на себя привлечение клиентов.
-            </p>
-            <Button className="h-14 px-10 bg-white text-[#4a1c40] hover:bg-white/90 rounded-full text-base font-bold shadow-xl hover:scale-105 transition-all">
-              Начать продавать <ChevronRight className="ml-2 w-5 h-5" />
+        <section className="py-10 bg-[#4a1c40] relative overflow-hidden">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 flex flex-col sm:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-4 text-center sm:text-left">
+              <Store className="w-8 h-8 text-white/50 shrink-0 hidden sm:block" />
+              <div>
+                <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white mb-1">
+                  Откройте свой цветочный магазин
+                </h2>
+                <p className="text-sm text-white/70 font-medium">
+                  Присоединяйтесь к платформе и начните получать заказы уже сегодня.
+                </p>
+              </div>
+            </div>
+            <Button className="h-11 px-6 bg-white text-[#4a1c40] hover:bg-white/90 rounded-full text-sm font-bold shadow-xl hover:scale-105 transition-all shrink-0">
+              Начать продавать <ChevronRight className="ml-2 w-4 h-4" />
             </Button>
           </div>
         </section>
 
       </main>
       
-      {/* Footer Minimal */}
-      <footer className="bg-white border-t border-[#f0eff5] py-12">
-         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
-           <div className="flex items-center gap-2">
-             <Flower className="w-5 h-5 text-[#8c889a]" />
-             <span className="font-bold text-[#4a4655]">ЦветоМаркет © 2024</span>
-           </div>
-           <div className="flex gap-6 text-sm font-medium text-[#8c889a]">
-             <a href="#" className="hover:text-[#1a1721]">О нас</a>
-             <a href="#" className="hover:text-[#1a1721]">Партнерам</a>
-             <a href="#" className="hover:text-[#1a1721]">Поддержка</a>
-           </div>
-         </div>
+      {/* Footer with hero-based background image */}
+      <footer className="relative overflow-hidden py-14">
+        <div className="absolute inset-0 z-0">
+          <img
+            src="/__mockup/images/curated-hero.png"
+            alt=""
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-[#1a1721]/90" />
+        </div>
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-8">
+            <div className="flex items-center gap-2">
+              <Flower className="w-5 h-5 text-white/70" />
+              <span className="font-bold text-white">ЦветоМаркет</span>
+            </div>
+            <div className="flex gap-6 text-sm font-medium text-white/60">
+              <a href="#" className="hover:text-white transition-colors">О нас</a>
+              <a href="#" className="hover:text-white transition-colors">Партнерам</a>
+              <a href="#" className="hover:text-white transition-colors">Поддержка</a>
+            </div>
+          </div>
+          <Separator className="bg-white/10 mb-6" />
+          <p className="text-center text-xs text-white/40 font-medium">© 2024 ЦветоМаркет. Все права защищены.</p>
+        </div>
       </footer>
     </div>
   );
