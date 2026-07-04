@@ -1,5 +1,4 @@
 uploads = []
-outputs = []
 
 [[generated]]
 id = "NsjSO9bYJXSc0BjXpv9d1"
@@ -12,3 +11,87 @@ id = "66mL-cbbvqTG4sx4Hz1df"
 uri = "file://attached_assets/hero_bg_generated.png"
 type = "image"
 title = "hero background flowers woman"
+
+[[generated]]
+id = "I3HbofV5l_ll2Ur_8Qcjq"
+uri = "file://artifacts/mockup-sandbox/public/images/editorial-hero.png"
+type = "image"
+title = "Editorial hero flower arrangement"
+
+[[generated]]
+id = "I2DY4JdraqXRwhEyiDeDH"
+uri = "file://artifacts/mockup-sandbox/public/images/category-wedding.png"
+type = "image"
+title = "Wedding flowers detail"
+
+[[generated]]
+id = "yS30yzTnwPpqk2juA353N"
+uri = "file://artifacts/mockup-sandbox/public/images/category-romance.png"
+type = "image"
+title = "Romantic red roses"
+
+[[generated]]
+id = "DkgrlvDAz5nM8mSUy5WY5"
+uri = "file://artifacts/mockup-sandbox/public/images/product-peonies.png"
+type = "image"
+title = "Pink peonies bouquet"
+
+[[generated]]
+id = "o-9QMq7eiYdKJeDtgbXUQ"
+uri = "file://artifacts/mockup-sandbox/public/images/shop-interior.png"
+type = "image"
+title = "Flower shop interior"
+
+[[generated]]
+id = "MoJNcy8YYzPxlitUViBiS"
+uri = "file://artifacts/mockup-sandbox/public/images/botanical-hero.png"
+type = "image"
+title = "Artisanal florist workshop hero image"
+
+[[generated]]
+id = "TdxTWL3heWXT8o68J6Z9r"
+uri = "file://artifacts/mockup-sandbox/public/images/botanical-bouquet-1.png"
+type = "image"
+title = "Beautiful artisanal bouquet of peonies"
+
+[[generated]]
+id = "t2L5pPgxY8ysHfhIc4yUC"
+uri = "file://artifacts/mockup-sandbox/public/images/botanical-shop-1.png"
+type = "image"
+title = "Cozy small batch flower shop"
+
+[[generated]]
+id = "8syNTBAd1CG6SlAGXLIUJ"
+uri = "file://artifacts/mockup-sandbox/public/images/modern-hero-flowers.png"
+type = "image"
+title = "vibrant neon pop art flowers"
+
+[[generated]]
+id = "64ERnkqyXSfbgdQNQrd7T"
+uri = "file://artifacts/mockup-sandbox/public/images/modern-product-1.png"
+type = "image"
+title = "red roses on blue background"
+
+[[generated]]
+id = "1UHxGDEqnOu31WClB3EmB"
+uri = "file://artifacts/mockup-sandbox/public/images/modern-product-2.png"
+type = "image"
+title = "pink peonies on yellow background"
+
+[[outputs]]
+id = "awVKkyK3TrST7_GXSQlR1"
+uri = "file://attached_assets/screenshots/d9e4cdad-4453-460c-ace5-19cb987463c2-00-ggvemk7ha3od_janeway_replit_dev_mockup_preview_home-redesign_EditorialBoutique.png"
+type = "image"
+title = "Editorial Boutique — вариант A"
+
+[[outputs]]
+id = "I-tmkl5AiytxOOopRacc5"
+uri = "file://attached_assets/screenshots/d9e4cdad-4453-460c-ace5-19cb987463c2-00-ggvemk7ha3od_janeway_replit_dev_mockup_preview_home-redesign_ModernMarketplace.png"
+type = "image"
+title = "Modern Marketplace — вариант B"
+
+[[outputs]]
+id = "Kj8Zl3rgY7eoQzvIj10CC"
+uri = "file://attached_assets/screenshots/d9e4cdad-4453-460c-ace5-19cb987463c2-00-ggvemk7ha3od_janeway_replit_dev_mockup_preview_home-redesign_BotanicalCraft.png"
+type = "image"
+title = "Botanical Craft — вариант C"
