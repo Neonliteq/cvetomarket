@@ -78,6 +78,30 @@ uri = "file://artifacts/mockup-sandbox/public/images/modern-product-2.png"
 type = "image"
 title = "pink peonies on yellow background"
 
+[[generated]]
+id = "AwqiERK6JzIttnMQeU0Dv"
+uri = "file://artifacts/mockup-sandbox/public/images/curated-hero.png"
+type = "image"
+title = "Soft focus hero flowers"
+
+[[generated]]
+id = "ag5Y96H3BE_3P97Uo9w6t"
+uri = "file://artifacts/mockup-sandbox/public/images/curated-product-1.png"
+type = "image"
+title = "Elegant bouquet of red roses"
+
+[[generated]]
+id = "ZEBpurOubh5-oAWh0bqC1"
+uri = "file://artifacts/mockup-sandbox/public/images/curated-product-2.png"
+type = "image"
+title = "Pastel peony bouquet"
+
+[[generated]]
+id = "iQSwrSFryPFeeiGkreU54"
+uri = "file://artifacts/mockup-sandbox/public/images/curated-product-3.png"
+type = "image"
+title = "White tulip arrangement"
+
 [[outputs]]
 id = "awVKkyK3TrST7_GXSQlR1"
 uri = "file://attached_assets/screenshots/d9e4cdad-4453-460c-ace5-19cb987463c2-00-ggvemk7ha3od_janeway_replit_dev_mockup_preview_home-redesign_EditorialBoutique.png"
@@ -95,3 +119,9 @@ id = "Kj8Zl3rgY7eoQzvIj10CC"
 uri = "file://attached_assets/screenshots/d9e4cdad-4453-460c-ace5-19cb987463c2-00-ggvemk7ha3od_janeway_replit_dev_mockup_preview_home-redesign_BotanicalCraft.png"
 type = "image"
 title = "Botanical Craft — вариант C"
+
+[[outputs]]
+id = "_Bhnl5BmIqHJF-Xo-ppUQ"
+uri = "file://attached_assets/screenshots/d9e4cdad-4453-460c-ace5-19cb987463c2-00-ggvemk7ha3od_janeway_replit_dev_mockup_preview_home-redesign_CuratedStories.png"
+type = "image"
+title = "Новый вариант B — Curated Stories"
