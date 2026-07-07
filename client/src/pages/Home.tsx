@@ -334,29 +334,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Footer ── */}
-      <footer className="relative overflow-hidden py-14">
-        <div className="absolute inset-0 z-0">
-          <img src={heroBg} alt="" className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-[#1a1721]/90" />
-        </div>
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-8">
-            <div className="flex items-center gap-2">
-              <Flower2 className="w-5 h-5 text-white/60" />
-              <span className="font-bold text-white">ЦветоМаркет</span>
-            </div>
-            <div className="flex gap-6 text-sm font-medium text-white/55">
-              <a href="#" className="hover:text-white transition-colors">О нас</a>
-              <a href="#" className="hover:text-white transition-colors">Партнёрам</a>
-              <a href="#" className="hover:text-white transition-colors">Поддержка</a>
-            </div>
-          </div>
-          <div className="border-t border-white/10 pt-6">
-            <p className="text-center text-xs text-white/35 font-medium">© 2024 ЦветоМаркет. Все права защищены.</p>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }
