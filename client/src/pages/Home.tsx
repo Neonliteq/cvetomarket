@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import heroBg from "@assets/hero_bg_generated.png";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -59,6 +59,11 @@ export default function Home() {
 
   const featuredCats = (popularCategories ?? []).filter(c => FEATURED_SLUGS.includes(c.slug));
   const moreCats = (popularCategories ?? []).filter(c => !FEATURED_SLUGS.includes(c.slug));
+
+  const bannerProduct = useMemo(() => {
+    if (!featured?.length) return null;
+    return featured[Math.floor(Math.random() * featured.length)];
+  }, [featured]);
 
   return (
     <div className="min-h-screen bg-[#fcfcfd] text-[#1a1721]">
@@ -140,103 +145,130 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Occasions ── */}
-      <section className="py-16">
+      {/* ── Promo Banner ── */}
+      <section className="py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-end justify-between mb-8">
-            <h2 className="text-xs tracking-widest uppercase font-bold text-[#8c889a]">По поводу</h2>
-            <Link href="/catalog">
-              <span className="text-sm font-semibold text-primary cursor-pointer hover:underline">
-                Все поводы
+          <div className="rounded-2xl overflow-hidden flex flex-col md:flex-row h-auto md:h-[400px] shadow-lg bg-white border border-[#e1dfeb]">
+
+            {/* Left — editorial text */}
+            <div className="flex-1 flex flex-col justify-center px-8 md:px-12 py-10 relative overflow-hidden">
+              {/* Decorative background letter */}
+              <span className="absolute -top-6 -left-3 text-[160px] font-black text-primary/5 leading-none select-none pointer-events-none">
+                Ц
               </span>
-            </Link>
-          </div>
 
-          {loadingCategories ? (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-6">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="aspect-[4/5] rounded-2xl" />
-              ))}
-            </div>
-          ) : (
-            <>
-              {/* 3 featured editorial photo cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-6">
-                {(featuredCats.length > 0 ? featuredCats : (popularCategories ?? []).slice(0, 3)).map((cat) => {
-                  const Icon = SLUG_ICONS[cat.slug] ?? Flower2;
-                  const img = CATEGORY_IMAGES[cat.slug];
-                  const count = Number(cat.productCount);
-                  return (
-                    <Link key={cat.slug} href={`/catalog?category=${cat.slug}`}>
-                      <div
-                        className="group relative rounded-2xl overflow-hidden cursor-pointer aspect-[4/5]"
-                        data-testid={`button-occasion-${cat.slug}`}
-                      >
-                        {img ? (
-                          <img
-                            src={img}
-                            alt={cat.name}
-                            className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                          />
-                        ) : (
-                          <div className="absolute inset-0 bg-gradient-to-br from-primary/40 to-primary/10" />
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#1a1721]/85 via-[#1a1721]/10 to-transparent" />
+              <div className="relative z-10">
+                <div className="flex items-center gap-2 mb-5">
+                  <div className="w-1 h-6 rounded-full bg-primary" />
+                  <span className="text-[11px] tracking-[0.2em] uppercase text-primary font-semibold">
+                    Для каждого случая
+                  </span>
+                </div>
 
-                        <div className="absolute top-4 left-4 w-9 h-9 rounded-full bg-white/15 backdrop-blur-md border border-white/25 flex items-center justify-center text-white">
-                          <Icon className="w-4 h-4 stroke-[1.5]" />
-                        </div>
-                        <div className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
-                          <ArrowUpRight className="w-4 h-4" />
-                        </div>
+                <h2 className="text-3xl md:text-[38px] font-black text-[#1a1721] leading-[1.15] mb-3">
+                  Найдите букет,<br />
+                  который{" "}
+                  <span className="text-primary relative inline-block">
+                    тронет
+                    <svg className="absolute -bottom-1 left-0 w-full" height="4" viewBox="0 0 100 4" preserveAspectRatio="none">
+                      <path d="M0 3 Q25 0 50 3 Q75 6 100 3" stroke="hsl(338 75% 45%)" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
+                    </svg>
+                  </span>{" "}
+                  сердце
+                </h2>
 
-                        <div className="absolute bottom-0 left-0 right-0 p-5">
-                          <h3 className="text-2xl text-white font-semibold mb-1 leading-tight">
+                <p className="text-[14px] text-[#6b5f78] leading-relaxed mb-7 max-w-xs">
+                  Ручная сборка от флористов, которые любят своё дело. Доставка по городу от 1 часа.
+                </p>
+
+                {/* Category chips */}
+                {(popularCategories ?? []).length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-8">
+                    {(popularCategories ?? []).slice(0, 5).map((cat) => {
+                      const Icon = SLUG_ICONS[cat.slug] ?? Flower2;
+                      return (
+                        <Link key={cat.slug} href={`/catalog?category=${cat.slug}`}>
+                          <span
+                            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full bg-[#f0eff5] text-[#4a4655] border border-[#e1dfeb] hover:bg-primary hover:text-white hover:border-transparent cursor-pointer transition-all"
+                            data-testid={`button-occasion-${cat.slug}`}
+                          >
+                            <Icon className="w-3 h-3 stroke-[1.5]" />
                             {cat.name}
-                          </h3>
-                          {count > 0 && (
-                            <span className="text-xs font-semibold text-white/65 uppercase tracking-wide">
-                              {count} {count === 1 ? "товар" : count < 5 ? "товара" : "товаров"}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </Link>
-                  );
-                })}
+                          </span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+                {loadingCategories && (
+                  <div className="flex gap-2 mb-8">
+                    {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-7 w-20 rounded-full" />)}
+                  </div>
+                )}
+
+                <Link href="/catalog">
+                  <Button className="bg-[#1a1721] hover:bg-[#2d1a35] text-white rounded-full px-7 font-bold" data-testid="button-banner-catalog">
+                    В каталог <ArrowRight className="w-4 h-4 ml-1.5" />
+                  </Button>
+                </Link>
               </div>
+            </div>
 
-              {/* Secondary occasions as pill buttons */}
-              {moreCats.length > 0 && (
-                <div className="flex flex-wrap gap-3">
-                  {moreCats.map((cat) => {
-                    const Icon = SLUG_ICONS[cat.slug] ?? Flower2;
-                    const count = Number(cat.productCount);
-                    return (
-                      <Link key={cat.slug} href={`/catalog?category=${cat.slug}`}>
-                        <button
-                          className="group flex items-center gap-2.5 pl-2.5 pr-4 py-2 rounded-full border border-[#e1dfeb] bg-white hover:border-primary hover:bg-primary transition-colors"
-                          data-testid={`button-occasion-${cat.slug}`}
-                        >
-                          <span className="w-6 h-6 rounded-full bg-[#f0eff5] group-hover:bg-white/15 flex items-center justify-center transition-colors">
-                            <Icon className="w-3.5 h-3.5 text-[#4a4655] group-hover:text-white stroke-[1.5]" />
-                          </span>
-                          <span className="text-sm font-semibold text-[#4a4655] group-hover:text-white transition-colors">
-                            {cat.name}
-                          </span>
-                          {count > 0 && (
-                            <span className="text-xs font-medium text-[#a8a4b5] group-hover:text-white/60 transition-colors">
-                              {count}
-                            </span>
-                          )}
-                        </button>
-                      </Link>
-                    );
-                  })}
+            {/* Right — random product in circle frame */}
+            <div className="w-full md:w-[380px] shrink-0 flex items-center justify-center relative overflow-hidden"
+              style={{ background: "linear-gradient(135deg, hsl(338 75% 96%) 0%, hsl(338 60% 92%) 50%, hsl(280 40% 93%) 100%)" }}>
+
+              {/* Decorative soft ring */}
+              <div className="absolute w-72 h-72 rounded-full border-[20px] border-white/50" />
+
+              {loadingFeatured ? (
+                <Skeleton className="w-60 h-60 rounded-full" />
+              ) : bannerProduct ? (
+                <Link href={`/product/${bannerProduct.id}`} data-testid="link-banner-product">
+                  <div className="relative z-10 w-64 h-64 rounded-full overflow-hidden shadow-2xl border-4 border-white cursor-pointer group">
+                    {bannerProduct.images?.[0] ? (
+                      <img
+                        src={bannerProduct.images[0]}
+                        alt={bannerProduct.name}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                    ) : (
+                      <img
+                        src="/images/hero-flowers.png"
+                        alt={bannerProduct.name}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                    )}
+                    {/* Hover overlay */}
+                    <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <span className="bg-white text-primary text-xs font-bold px-3 py-1.5 rounded-full shadow">
+                        Смотреть →
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              ) : (
+                <div className="relative z-10 w-64 h-64 rounded-full overflow-hidden shadow-2xl border-4 border-white">
+                  <img src="/images/hero-flowers.png" alt="Букет" className="w-full h-full object-cover" />
                 </div>
               )}
-            </>
-          )}
+
+              {/* Price badge */}
+              {bannerProduct && (
+                <Link href={`/product/${bannerProduct.id}`}>
+                  <div className="absolute bottom-10 left-8 z-20 bg-white rounded-2xl px-4 py-2.5 shadow-lg border border-[#f0eff5] cursor-pointer hover:shadow-xl transition-shadow">
+                    <p className="text-[11px] text-[#a8a4b5] font-medium leading-none mb-0.5">
+                      {bannerProduct.shopName ?? "Магазин"}
+                    </p>
+                    <p className="text-base font-black text-[#1a1721] leading-none">
+                      {Number(bannerProduct.price).toLocaleString("ru-RU")} ₽
+                    </p>
+                  </div>
+                </Link>
+              )}
+            </div>
+
+          </div>
         </div>
       </section>
 
