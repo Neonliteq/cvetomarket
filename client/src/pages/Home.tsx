@@ -345,21 +345,21 @@ export default function Home() {
       </section>
 
       {/* ── CTA Banner ── */}
-      <section className="py-10 bg-primary relative overflow-hidden">
+      <section className="py-10 bg-foreground relative overflow-hidden">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-4 text-center sm:text-left">
-            <Flower2 className="w-8 h-8 text-primary-foreground/50 shrink-0 hidden sm:block" />
+            <Flower2 className="w-8 h-8 text-background/30 shrink-0 hidden sm:block" />
             <div>
-              <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-primary-foreground mb-1">
+              <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-background mb-1">
                 Откройте свой цветочный магазин
               </h2>
-              <p className="text-sm text-primary-foreground/70 font-medium">
+              <p className="text-sm text-background/60 font-medium">
                 Присоединяйтесь к платформе и начните получать заказы уже сегодня.
               </p>
             </div>
           </div>
           <Link href="/seller-auth">
-            <Button className="h-11 px-6 bg-white text-primary hover:bg-white/90 rounded-full text-sm font-bold shadow-xl shrink-0">
+            <Button className="h-11 px-6 bg-primary text-primary-foreground hover:bg-primary/90 rounded-full text-sm font-bold shadow-xl shrink-0">
               Начать продавать <ArrowRight className="ml-2 w-4 h-4" />
             </Button>
           </Link>
