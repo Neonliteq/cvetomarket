@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { ShoppingCart, User, Flower2, Menu, X, ChevronDown, Bell, MessageCircle, Package, Star, ChevronRight, LogOut, LayoutDashboard, ShoppingBag, Shield, Clock, CheckCircle2, XCircle, Camera, ShoppingBag as OrderNewIcon, MapPin, Check, RefreshCw } from "lucide-react";
+import { ShoppingCart, User, Flower2, Menu, X, ChevronDown, Bell, MessageCircle, Package, Star, ChevronRight, LogOut, LayoutDashboard, ShoppingBag, Shield, Clock, CheckCircle2, XCircle, Camera, ShoppingBag as OrderNewIcon, MapPin, Check, RefreshCw, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -160,6 +160,12 @@ export function Header() {
     { href: "/", label: "Главная" },
     { href: "/catalog", label: "Каталог" },
     { href: "/shops", label: "Магазины" },
+  ];
+
+  const trustItems = [
+    { icon: Truck, text: "Быстрая доставка — 1–3 часа" },
+    { icon: Shield, text: "Гарантия свежести — Только проверенные" },
+    { icon: Clock, text: "Удобный заказ — Выберите время" },
   ];
 
   return (
@@ -500,6 +506,22 @@ export function Header() {
           ))}
         </div>
       )}
+
+      {/* Trust marquee strip */}
+      <div className="bg-primary/5 border-t border-primary/10 overflow-hidden flex items-center py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <div className="flex w-max animate-marquee">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="flex shrink-0">
+              {trustItems.map((item, j) => (
+                <div key={j} className="flex items-center mx-10 shrink-0 gap-2">
+                  <item.icon className="w-3.5 h-3.5 opacity-60 shrink-0" />
+                  <span>{item.text}</span>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
     </header>
   );
 }
