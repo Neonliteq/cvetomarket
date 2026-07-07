@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { ShoppingCart, User, Flower2, Menu, X, ChevronDown, Bell, MessageCircle, Package, Star, ChevronRight, LogOut, LayoutDashboard, ShoppingBag, Shield, Clock, CheckCircle2, XCircle, Camera, ShoppingBag as OrderNewIcon, MapPin, Check, RefreshCw, Truck } from "lucide-react";
+import { ShoppingCart, User, Flower2, Menu, X, ChevronDown, Bell, MessageCircle, Package, Star, ChevronRight, LogOut, LayoutDashboard, ShoppingBag, Shield, Clock, CheckCircle2, XCircle, Camera, ShoppingBag as OrderNewIcon, MapPin, Check, RefreshCw, Truck, Heart, Tag, Gift, Zap, Leaf, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -162,11 +162,25 @@ export function Header() {
     { href: "/shops", label: "Магазины" },
   ];
 
-  const trustItems = [
+  const MARQUEE_ICON_MAP: Record<string, LucideIcon> = {
+    truck: Truck, shield: Shield, clock: Clock, star: Star, heart: Heart,
+    tag: Tag, gift: Gift, zap: Zap, leaf: Leaf, package: Package,
+  };
+
+  const DEFAULT_TRUST = [
     { icon: Truck, text: "Быстрая доставка — 1–3 часа" },
     { icon: Shield, text: "Гарантия свежести — Только проверенные" },
     { icon: Clock, text: "Удобный заказ — Выберите время" },
   ];
+
+  const { data: marqueeData } = useQuery<{ text: string; icon: string }[]>({
+    queryKey: ["/api/marquee"],
+    staleTime: 60_000,
+  });
+
+  const trustItems = marqueeData?.length
+    ? marqueeData.map((m) => ({ icon: MARQUEE_ICON_MAP[m.icon] ?? Truck, text: m.text }))
+    : DEFAULT_TRUST;
 
   return (
     <header className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b border-border">

@@ -7,7 +7,8 @@ import {
   Ban, UserCheck, Eye, ChevronDown, Edit, ShoppingBag, EyeOff, FileText,
   Wallet, Receipt, Percent, ArrowDownRight, Filter, ChevronsUpDown, Gift,
   Star, Award, MessageSquare, AlertCircle, ChevronRight, Search, StickyNote, Bell,
-  Globe, Target, Timer, TrendingDown, ShoppingCart, ArrowRight, Smartphone, Monitor, Tablet
+  Globe, Target, Timer, TrendingDown, ShoppingCart, ArrowRight, Smartphone, Monitor, Tablet,
+  Truck, Shield, Clock, Heart, Zap, Leaf, GripVertical, Megaphone
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,6 +31,20 @@ import { ru } from "date-fns/locale";
 
 type ShopWithMeta = Shop & { cityName?: string; ownerName?: string };
 type ProductWithMeta = Product & { shopName?: string; categoryName?: string };
+type MarqueeItem = { text: string; icon: string };
+
+const MARQUEE_ICON_OPTIONS = [
+  { value: "truck", label: "Грузовик", Icon: Truck },
+  { value: "shield", label: "Щит", Icon: Shield },
+  { value: "clock", label: "Часы", Icon: Clock },
+  { value: "star", label: "Звезда", Icon: Star },
+  { value: "heart", label: "Сердце", Icon: Heart },
+  { value: "tag", label: "Тег", Icon: Tag },
+  { value: "gift", label: "Подарок", Icon: Gift },
+  { value: "zap", label: "Молния", Icon: Zap },
+  { value: "leaf", label: "Лист", Icon: Leaf },
+  { value: "package", label: "Пакет", Icon: Package },
+];
 type OrderWithMeta = Order & { buyerName?: string; shopName?: string };
 
 type CRMSegment = "new" | "active" | "vip" | "churned";
@@ -235,6 +250,10 @@ export default function Admin() {
   const [promoFormOpen, setPromoFormOpen] = useState(false);
 
   const [pushRetryForm, setPushRetryForm] = useState({ retryAttempts: 2, retryDelayMs: 1000 });
+
+  const [marqueeItems, setMarqueeItems] = useState<MarqueeItem[]>([]);
+  const [marqueeNewText, setMarqueeNewText] = useState("");
+  const [marqueeNewIcon, setMarqueeNewIcon] = useState("truck");
 
   const isAdmin = !!user && user.role === "admin";
 
@@ -553,6 +572,17 @@ export default function Admin() {
     },
   });
 
+  const saveMarqueeMutation = useMutation({
+    mutationFn: (items: MarqueeItem[]) =>
+      apiRequest("PATCH", "/api/admin/settings", { marqueeItems: items }),
+    onSuccess: () => {
+      toast({ title: "Бегущая строка сохранена" });
+      qc.invalidateQueries({ queryKey: ["/api/admin/settings"] });
+      qc.invalidateQueries({ queryKey: ["/api/marquee"] });
+    },
+    onError: () => toast({ title: "Ошибка", variant: "destructive" }),
+  });
+
   const { data: promoCodes } = useQuery<any[]>({
     queryKey: ["/api/admin/promo-codes"],
     enabled: isAdmin,
@@ -604,6 +634,12 @@ export default function Admin() {
       setPushRetryForm({ retryAttempts: pushConfigData.retryAttempts, retryDelayMs: pushConfigData.retryDelayMs });
     }
   }, [pushConfigData]);
+
+  useEffect(() => {
+    if (settings?.marqueeItems?.length) {
+      setMarqueeItems(settings.marqueeItems as MarqueeItem[]);
+    }
+  }, [settings]);
 
   const updatePushConfigMutation = useMutation({
     mutationFn: (data: { retryAttempts: number; retryDelayMs: number }) =>
@@ -2569,34 +2605,150 @@ export default function Admin() {
 
         {/* ==================== SETTINGS ==================== */}
         <TabsContent value="settings">
-          <Card>
-            <CardContent className="p-5 space-y-6">
-              <h3 className="font-semibold">Настройки платформы</h3>
-              <div className="space-y-2">
-                <Label>Комиссия платформы (%)</Label>
-                <div className="flex gap-3 items-center">
+          <div className="space-y-5">
+            <Card>
+              <CardContent className="p-5 space-y-6">
+                <h3 className="font-semibold">Настройки платформы</h3>
+                <div className="space-y-2">
+                  <Label>Комиссия платформы (%)</Label>
+                  <div className="flex gap-3 items-center">
+                    <Input
+                      type="number"
+                      placeholder={settings?.commissionRate?.toString() || "10"}
+                      value={commission}
+                      onChange={(e) => setCommission(e.target.value)}
+                      className="max-w-32"
+                      data-testid="input-commission"
+                    />
+                    {settings && (
+                      <span className="text-sm text-muted-foreground">Текущая: {settings.commissionRate}%</span>
+                    )}
+                  </div>
+                </div>
+                <Button
+                  onClick={() => updateSettingsMutation.mutate()}
+                  disabled={!commission || updateSettingsMutation.isPending}
+                  data-testid="button-save-settings"
+                >
+                  Сохранить настройки
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Marquee editor */}
+            <Card>
+              <CardContent className="p-5 space-y-4">
+                <div className="flex items-center gap-2">
+                  <Megaphone className="w-4 h-4 text-primary" />
+                  <h3 className="font-semibold">Бегущая строка</h3>
+                </div>
+                <p className="text-sm text-muted-foreground">Тексты, которые прокручиваются под навигацией на всех страницах.</p>
+
+                {/* Current items list */}
+                <div className="space-y-2">
+                  {marqueeItems.length === 0 && (
+                    <p className="text-sm text-muted-foreground italic">Нет элементов — используются значения по умолчанию.</p>
+                  )}
+                  {marqueeItems.map((item, idx) => {
+                    const opt = MARQUEE_ICON_OPTIONS.find((o) => o.value === item.icon);
+                    const IconComp = opt?.Icon ?? Truck;
+                    return (
+                      <div key={idx} className="flex items-center gap-2 p-2 rounded-md border bg-muted/30" data-testid={`marquee-item-${idx}`}>
+                        <GripVertical className="w-4 h-4 text-muted-foreground shrink-0" />
+                        <IconComp className="w-4 h-4 text-primary shrink-0" />
+                        <span className="flex-1 text-sm">{item.text}</span>
+                        <Select
+                          value={item.icon}
+                          onValueChange={(v) => setMarqueeItems((prev) => prev.map((it, i) => i === idx ? { ...it, icon: v } : it))}
+                        >
+                          <SelectTrigger className="w-32 h-7 text-xs" data-testid={`select-marquee-icon-${idx}`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {MARQUEE_ICON_OPTIONS.map((o) => (
+                              <SelectItem key={o.value} value={o.value}>
+                                <span className="flex items-center gap-1.5"><o.Icon className="w-3.5 h-3.5" />{o.label}</span>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7 text-destructive hover:bg-destructive/10"
+                          onClick={() => setMarqueeItems((prev) => prev.filter((_, i) => i !== idx))}
+                          data-testid={`button-delete-marquee-${idx}`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Add new item */}
+                <div className="flex gap-2 items-center pt-1">
+                  <Select value={marqueeNewIcon} onValueChange={setMarqueeNewIcon}>
+                    <SelectTrigger className="w-36 shrink-0" data-testid="select-marquee-new-icon">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MARQUEE_ICON_OPTIONS.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>
+                          <span className="flex items-center gap-1.5"><o.Icon className="w-3.5 h-3.5" />{o.label}</span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <Input
-                    type="number"
-                    placeholder={settings?.commissionRate?.toString() || "10"}
-                    value={commission}
-                    onChange={(e) => setCommission(e.target.value)}
-                    className="max-w-32"
-                    data-testid="input-commission"
+                    placeholder="Текст элемента..."
+                    value={marqueeNewText}
+                    onChange={(e) => setMarqueeNewText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && marqueeNewText.trim()) {
+                        setMarqueeItems((prev) => [...prev, { text: marqueeNewText.trim(), icon: marqueeNewIcon }]);
+                        setMarqueeNewText("");
+                      }
+                    }}
+                    data-testid="input-marquee-new-text"
                   />
-                  {settings && (
-                    <span className="text-sm text-muted-foreground">Текущая: {settings.commissionRate}%</span>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    disabled={!marqueeNewText.trim()}
+                    onClick={() => {
+                      setMarqueeItems((prev) => [...prev, { text: marqueeNewText.trim(), icon: marqueeNewIcon }]);
+                      setMarqueeNewText("");
+                    }}
+                    data-testid="button-add-marquee"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+
+                <div className="flex gap-2 pt-1">
+                  <Button
+                    onClick={() => saveMarqueeMutation.mutate(marqueeItems)}
+                    disabled={saveMarqueeMutation.isPending}
+                    data-testid="button-save-marquee"
+                  >
+                    Сохранить бегущую строку
+                  </Button>
+                  {marqueeItems.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      className="text-destructive hover:bg-destructive/10"
+                      onClick={() => { setMarqueeItems([]); saveMarqueeMutation.mutate([]); }}
+                      disabled={saveMarqueeMutation.isPending}
+                      data-testid="button-reset-marquee"
+                    >
+                      Сбросить к умолчанию
+                    </Button>
                   )}
                 </div>
-              </div>
-              <Button
-                onClick={() => updateSettingsMutation.mutate()}
-                disabled={!commission || updateSettingsMutation.isPending}
-                data-testid="button-save-settings"
-              >
-                Сохранить настройки
-              </Button>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         {/* ==================== PROMO CODES ==================== */}

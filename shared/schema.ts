@@ -166,12 +166,15 @@ export const shopWorkers = pgTable("shop_workers", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export type MarqueeItem = { text: string; icon: string };
+
 export const platformSettings = pgTable("platform_settings", {
   id: varchar("id").primaryKey().default("global"),
   commissionRate: decimal("commission_rate", { precision: 5, scale: 2 }).default("10"),
   deliveryCost: decimal("delivery_cost", { precision: 10, scale: 2 }).default("300"),
   pushRetryAttempts: integer("push_retry_attempts").default(2),
   pushRetryDelayMs: integer("push_retry_delay_ms").default(1000),
+  marqueeItems: jsonb("marquee_items").$type<MarqueeItem[]>(),
 });
 
 export const bonusTransactions = pgTable("bonus_transactions", {

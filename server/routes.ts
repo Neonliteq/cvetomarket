@@ -1460,6 +1460,18 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.json({ success: true });
   });
 
+  const DEFAULT_MARQUEE_ITEMS = [
+    { text: "Быстрая доставка — 1–3 часа", icon: "truck" },
+    { text: "Гарантия свежести — Только проверенные", icon: "shield" },
+    { text: "Удобный заказ — Выберите время", icon: "clock" },
+  ];
+
+  app.get("/api/marquee", async (_req, res) => {
+    const s = await storage.getSettings();
+    const items = s?.marqueeItems?.length ? s.marqueeItems : DEFAULT_MARQUEE_ITEMS;
+    res.json(items);
+  });
+
   app.get("/api/admin/settings", requireRole("admin"), async (_req, res) => {
     const s = await storage.getSettings();
     res.json(s || { commissionRate: "10", deliveryCost: "300" });

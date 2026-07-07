@@ -159,6 +159,10 @@ export async function runMigrations() {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS tags text[] DEFAULT '{}'::text[];
     `);
 
+    await client.query(`
+      ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS marquee_items jsonb;
+    `);
+
     console.log("[migrate] Schema up to date");
   } catch (err) {
     console.error("[migrate] Migration error:", err);
