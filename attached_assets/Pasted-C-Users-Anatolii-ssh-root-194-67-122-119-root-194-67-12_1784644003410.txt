@@ -1,0 +1,63 @@
+C:\Users\Anatolii>ssh root@194.67.122.119
+root@194.67.122.119's password:
+Welcome to Ubuntu 22.04.4 LTS (GNU/Linux 5.15.0-113-generic x86_64)
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/pro
+
+ System information as of Tue Jul 21 05:25:46 PM MSK 2026
+
+  System load:  0.0                Processes:             119
+  Usage of /:   10.6% of 39.29GB   Users logged in:       0
+  Memory usage: 17%                IPv4 address for ens3: 192.168.0.160
+  Swap usage:   0%
+
+ * Strictly confined Kubernetes makes edge and IoT secure. Learn how MicroK8s
+   just raised the bar for easy, resilient and secure K8s cluster deployment.
+
+   https://ubuntu.com/engage/secure-kubernetes-at-the-edge
+
+Expanded Security Maintenance for Applications is not enabled.
+
+263 updates can be applied immediately.
+To see these additional updates run: apt list --upgradable
+
+1 additional security update can be applied with ESM Apps.
+Learn more about enabling ESM Apps service at https://ubuntu.com/esm
+
+
+Last login: Tue Jul  7 17:18:53 2026 from 185.113.209.98
+root@cv6271581:~# certbot renew --force-renewal && systemctl reload nginx
+Saving debug log to /var/log/letsencrypt/letsencrypt.log
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Processing /etc/letsencrypt/renewal/cveto.market.conf
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Renewing an existing certificate for cveto.market and www.cveto.market
+
+Certbot failed to authenticate some domains (authenticator: nginx). The Certificate Authority reported these problems:
+  Domain: cveto.market
+  Type:   connection
+  Detail: 194.67.116.149: Fetching http://cveto.market/.well-known/acme-challenge/kNyfF4oCsvBhIgHd5J-bjIfgSNOsbloOYyDjW5iqLIY: Timeout during connect (likely firewall problem)
+
+Hint: The Certificate Authority failed to verify the temporary nginx configuration changes made by Certbot. Ensure the listed domains point to this nginx server and that it is accessible from the internet.
+
+Failed to renew certificate cveto.market with error: Some challenges have failed.
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Processing /etc/letsencrypt/renewal/cvetomarket.com.conf
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Renewing an existing certificate for cvetomarket.com and www.cvetomarket.com
+Reloading nginx server after certificate renewal
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+The following renewals succeeded:
+  /etc/letsencrypt/live/cvetomarket.com/fullchain.pem (success)
+
+The following renewals failed:
+  /etc/letsencrypt/live/cveto.market/fullchain.pem (failure)
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+1 renew failure(s), 0 parse failure(s)
+Ask for help or search for solutions at https://community.letsencrypt.org. See the logfile /var/log/letsencrypt/letsencrypt.log or re-run Certbot with -v for more details.
+root@cv6271581:~#

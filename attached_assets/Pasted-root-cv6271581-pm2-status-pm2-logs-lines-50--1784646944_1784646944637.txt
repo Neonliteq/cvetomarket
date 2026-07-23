@@ -1,0 +1,120 @@
+root@cv6271581:~# pm2 status
+pm2 logs --lines 50
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ cvetomarket        │ fork     │ 0    │ online    │ 0%       │ 72.1mb   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+[TAILING] Tailing last 50 lines for [all] processes (change the value with --lines option)
+/root/.pm2/pm2.log last 50 lines:
+PM2        | 2026-07-07T18:29:37: PM2 log: Stopping app:cvetomarket id:0
+PM2        | 2026-07-07T18:29:37: PM2 log: App [cvetomarket:0] exited with code [0] via signal [SIGINT]
+PM2        | 2026-07-07T18:29:37: PM2 log: pid=880073 msg=process killed
+PM2        | 2026-07-07T18:29:38: PM2 log: App [cvetomarket:0] starting in -fork mode-
+PM2        | 2026-07-07T18:29:38: PM2 log: App [cvetomarket:0] online
+PM2        | 2026-07-08T16:07:53: PM2 log: [PM2] This PM2 is not UP TO DATE
+PM2        | 2026-07-08T16:07:53: PM2 log: [PM2] Upgrade to version 7.0.3
+PM2        | 2026-07-09T16:07:53: PM2 log: [PM2] This PM2 is not UP TO DATE
+PM2        | 2026-07-09T16:07:53: PM2 log: [PM2] Upgrade to version 7.0.3
+PM2        | 2026-07-10T16:07:53: PM2 log: [PM2] This PM2 is not UP TO DATE
+PM2        | 2026-07-10T16:07:53: PM2 log: [PM2] Upgrade to version 7.0.3
+PM2        | 2026-07-11T16:07:53: PM2 log: [PM2] This PM2 is not UP TO DATE
+PM2        | 2026-07-11T16:07:53: PM2 log: [PM2] Upgrade to version 7.0.3
+PM2        | 2026-07-12T16:07:53: PM2 log: [PM2] This PM2 is not UP TO DATE
+PM2        | 2026-07-12T16:07:53: PM2 log: [PM2] Upgrade to version 7.0.3
+PM2        | 2026-07-13T16:07:53: PM2 log: [PM2] This PM2 is not UP TO DATE
+PM2        | 2026-07-13T16:07:53: PM2 log: [PM2] Upgrade to version 7.0.3
+PM2        | 2026-07-14T16:07:53: PM2 log: [PM2] This PM2 is not UP TO DATE
+PM2        | 2026-07-14T16:07:53: PM2 log: [PM2] Upgrade to version 7.0.3
+PM2        | 2026-07-15T16:07:53: PM2 log: [PM2] This PM2 is not UP TO DATE
+PM2        | 2026-07-15T16:07:53: PM2 log: [PM2] Upgrade to version 7.0.3
+PM2        | 2026-07-16T16:07:53: PM2 log: [PM2] This PM2 is not UP TO DATE
+PM2        | 2026-07-16T16:07:53: PM2 log: [PM2] Upgrade to version 7.0.3
+PM2        | 2026-07-17T16:07:53: PM2 log: [PM2] This PM2 is not UP TO DATE
+PM2        | 2026-07-17T16:07:53: PM2 log: [PM2] Upgrade to version 7.0.3
+PM2        | 2026-07-18T16:07:53: PM2 log: [PM2] This PM2 is not UP TO DATE
+PM2        | 2026-07-18T16:07:53: PM2 log: [PM2] Upgrade to version 7.0.3
+PM2        | 2026-07-19T16:07:53: PM2 log: [PM2] This PM2 is not UP TO DATE
+PM2        | 2026-07-19T16:07:53: PM2 log: [PM2] Upgrade to version 7.0.3
+PM2        | 2026-07-20T16:07:53: PM2 log: [PM2] This PM2 is not UP TO DATE
+PM2        | 2026-07-20T16:07:53: PM2 log: [PM2] Upgrade to version 7.0.3
+PM2        | 2026-07-21T08:36:43: PM2 log: ===============================================================================
+PM2        | 2026-07-21T08:36:43: PM2 log: --- New PM2 Daemon started ----------------------------------------------------
+PM2        | 2026-07-21T08:36:43: PM2 log: Time                 : Tue Jul 21 2026 08:36:43 GMT+0300 (Moscow Standard Time)
+PM2        | 2026-07-21T08:36:43: PM2 log: PM2 version          : 6.0.14
+PM2        | 2026-07-21T08:36:43: PM2 log: Node.js version      : 20.20.2
+PM2        | 2026-07-21T08:36:43: PM2 log: Current arch         : x64
+PM2        | 2026-07-21T08:36:43: PM2 log: PM2 home             : /root/.pm2
+PM2        | 2026-07-21T08:36:43: PM2 log: PM2 PID file         : /root/.pm2/pm2.pid
+PM2        | 2026-07-21T08:36:43: PM2 log: RPC socket file      : /root/.pm2/rpc.sock
+PM2        | 2026-07-21T08:36:43: PM2 log: BUS socket file      : /root/.pm2/pub.sock
+PM2        | 2026-07-21T08:36:43: PM2 log: Application log path : /root/.pm2/logs
+PM2        | 2026-07-21T08:36:43: PM2 log: Worker Interval      : 30000
+PM2        | 2026-07-21T08:36:43: PM2 log: Process dump file    : /root/.pm2/dump.pm2
+PM2        | 2026-07-21T08:36:43: PM2 log: Concurrent actions   : 2
+PM2        | 2026-07-21T08:36:43: PM2 log: SIGTERM timeout      : 1600
+PM2        | 2026-07-21T08:36:43: PM2 log: Runtime Binary       : /usr/bin/node
+PM2        | 2026-07-21T08:36:43: PM2 log: ===============================================================================
+PM2        | 2026-07-21T08:36:43: PM2 log: App [cvetomarket:0] starting in -fork mode-
+PM2        | 2026-07-21T08:36:43: PM2 log: App [cvetomarket:0] online
+
+/root/.pm2/logs/cvetomarket-error.log last 50 lines:
+0|cvetomar |     at Array.map (<anonymous>)
+0|cvetomar |     at /var/www/cvetomarket/dist/index.cjs:31:24324
+0|cvetomar |     at Array.<anonymous> (/var/www/cvetomarket/dist/index.cjs:31:24501)
+0|cvetomar |     at Qr.match (/var/www/cvetomarket/dist/index.cjs:31:28131)
+0|cvetomar |     at p6 (/var/www/cvetomarket/dist/index.cjs:31:34053)
+0|cvetomar |     at g (/var/www/cvetomarket/dist/index.cjs:31:32038)
+0|cvetomar |     at Ke.<anonymous> (/var/www/cvetomarket/dist/index.cjs:41:10086)
+0|cvetomar |     at Ke.emit (node:events:524:28)
+0|cvetomar | URIError: Failed to decode param '%D7'
+0|cvetomar |     at decodeURIComponent (<anonymous>)
+0|cvetomar |     at Hw (/var/www/cvetomarket/dist/index.cjs:31:28336)
+0|cvetomar |     at Array.map (<anonymous>)
+0|cvetomar |     at /var/www/cvetomarket/dist/index.cjs:31:24324
+0|cvetomar |     at Array.<anonymous> (/var/www/cvetomarket/dist/index.cjs:31:24501)
+0|cvetomar |     at Qr.match (/var/www/cvetomarket/dist/index.cjs:31:28131)
+0|cvetomar |     at p6 (/var/www/cvetomarket/dist/index.cjs:31:34053)
+0|cvetomar |     at g (/var/www/cvetomarket/dist/index.cjs:31:32038)
+0|cvetomar |     at Ke.<anonymous> (/var/www/cvetomarket/dist/index.cjs:41:10086)
+0|cvetomar |     at Ke.emit (node:events:524:28)
+0|cvetomar | URIError: Failed to decode param '%D0Pt%C0M=%D7ND%D3q4%0FO7'
+0|cvetomar |     at decodeURIComponent (<anonymous>)
+0|cvetomar |     at Hw (/var/www/cvetomarket/dist/index.cjs:31:28336)
+0|cvetomar |     at Array.map (<anonymous>)
+0|cvetomar |     at /var/www/cvetomarket/dist/index.cjs:31:24324
+0|cvetomar |     at Array.<anonymous> (/var/www/cvetomarket/dist/index.cjs:31:24501)
+0|cvetomar |     at Qr.match (/var/www/cvetomarket/dist/index.cjs:31:28131)
+0|cvetomar |     at p6 (/var/www/cvetomarket/dist/index.cjs:31:34053)
+0|cvetomar |     at g (/var/www/cvetomarket/dist/index.cjs:31:32038)
+0|cvetomar |     at Ke.<anonymous> (/var/www/cvetomarket/dist/index.cjs:41:10086)
+0|cvetomar |     at Ke.emit (node:events:524:28)
+0|cvetomar | URIError: Failed to decode param 'u%EBl%91%AC%9A%A1%D7%A3u%A7e%C9%A9%E8%BE%8A%E8%8D%D7%A7%9E(]z%C8%5E%BE%87h%B2%D6%AF%91'
+0|cvetomar |     at decodeURIComponent (<anonymous>)
+0|cvetomar |     at Hw (/var/www/cvetomarket/dist/index.cjs:31:28336)
+0|cvetomar |     at Array.map (<anonymous>)
+0|cvetomar |     at /var/www/cvetomarket/dist/index.cjs:31:24324
+0|cvetomar |     at Array.<anonymous> (/var/www/cvetomarket/dist/index.cjs:31:24501)
+0|cvetomar |     at Qr.match (/var/www/cvetomarket/dist/index.cjs:31:28131)
+0|cvetomar |     at p6 (/var/www/cvetomarket/dist/index.cjs:31:34053)
+0|cvetomar |     at g (/var/www/cvetomarket/dist/index.cjs:31:32038)
+0|cvetomar |     at Ke.<anonymous> (/var/www/cvetomarket/dist/index.cjs:41:10086)
+0|cvetomar |     at Ke.emit (node:events:524:28)
+0|cvetomar | (node:728) Warning: NodeVersionSupportWarning: The AWS SDK for JavaScript (v3)
+0|cvetomar | versions published after the first week of January 2027
+0|cvetomar | will require node >=22. You are running node v20.20.2.
+0|cvetomar |
+0|cvetomar | To continue receiving updates to AWS services, bug fixes,
+0|cvetomar | and security updates please upgrade to node >=22.
+0|cvetomar |
+0|cvetomar | More information can be found at: https://a.co/c895JFp
+0|cvetomar | (Use `node --trace-warnings ...` to show where the warning was created)
+
+/root/.pm2/logs/cvetomarket-out.log last 50 lines:
+0|cvetomar | bjects/uploads/1774785984159-yekhzncyym.jpg","/objects/uploads/1774785984175-wyzlp57qedg.jpg"],"assemblyTime":60,"inStock":true,"isActive":true,"composition":"Лента - 1 шт.\nУпаковка - 3 шт.\nТишью - 4 шт.\nоксипеталум голубой - 2 шт.\nроза кантри блю - 3 шт.","discountPercent":0,"isRecommended":true,"tags":["кантри блюз","оксипеталум голубой"],"rating":"0.00","reviewCount":0,"isFeatured":true,"createdAt":"2026-03-29T15:06:26.359Z","shopName":"CvetoMarket","categoryName":"Романтика"},{"id":"31504f38-8f2d-4ccf-9ab7-7a59196f6a22","shopId":"4154fd7d-a705-4070-b5a8-0792890da0ee","categoryId":"b05be4be-7d31-4c44-ac2e-558ad2199174","type":"bouquet","name":"Яркий восторг XL","description":"","price":"5900.00","images":["/objects/uploads/1784365267903-dgrlq4sa3yp.jpeg","/objects/uploads/1784365267985-j6oh7bkdgnj.jpeg","/objects/uploads/1784365268028-tsxz5ly5zy.jpeg","/objects/uploads/1784365268076-ib1p48y3r5g.jpeg","/objects/uploads/1784365268137-03p4o36xs3sr.jpeg"],"assemblyTime":60,"inStock":true,"isActive":true,"composition":"","discountPercent":0,"isRecommended":false,"tags":[],"rating":"0.00","reviewCount":0,"isFeatured":false,"createdAt":"2026-07-18T12:01:27.530Z","shopName":"CvetoMarket","categoryName":"День рождения"},{"id":"d7f0b2de-cce6-4a62-bb93-63a8631614e4","shopId":"4154fd7d-a705-4070-b5a8-0792890da0ee","categoryId":"b05be4be-7d31-4c44-ac2e-558ad2199174","type":"bouquet","name":"Букет-комплимент кустовых роз","description":"","price":"1190.00","images":["/objects/uploads/1774786606153-q6syy5puzuc.jpeg"],"assemblyTime":35,"inStock":true,"isActive":true,"composition":"Букет из 3-х кустовых роз ","discountPercent":0,"isRecommended":false,"tags":[],"rating":"0.00","reviewCount":0,"isFeatured":true,"createdAt":"2026-03-29T15:17:12.877Z","shopName":"CvetoMarket","categoryName":"День рождения"},{"id":"0072112e-4632-4ee0-a665-86092cd2f14e","shopId":"4154fd7d-a705-4070-b5a8-0792890da0ee","categoryId":"b05be4be-7d31-4c44-ac2e-558ad2199174","type":"bouquet","name":"Букет с летними нотками","description":"","price":"2500.00","images":["/objects/uploads/1780929594374-c2papoc27i.jpeg"],"assemblyTime":60,"inStock":true,"isActive":true,"composition":"","discountPercent":0,"isRecommended":false,"tags":[],"rating":"0.00","reviewCount":0,"isFeatured":false,"createdAt":"2026-06-08T17:40:16.049Z","shopName":"CvetoMarket","categoryName":"День рождения"},{"id":"26514077-ce48-4acc-9542-0960561ead61","shopId":"4154fd7d-a705-4070-b5a8-0792890da0ee","categoryId":"a13ed825-aeca-4312-9d1f-494d5fdbbf58","type":"bouquet","name":"Букет с пионовидными розами и голубыми акцентами ","description":"Невероятный букет","price":"3200.00","images":["/objects/uploads/1774787235088-yoprqalpfsk.jpg","/objects/uploads/1774787235250-4h44kd9wfis.jpg","/objects/uploads/1774787235261-qyqa0enw3xb.jpg","/objects/uploads/1774787235271-nd5uk0jrt1.jpg"],"assemblyTime":60,"inStock":true,"isActive":true,"composition":"Хризантема кустовая - 2 шт.\nАтласная лента - 2 шт.\nОксипеталум - 2 шт.\nРоза Джульетта - 2 шт.\nДиантус персиковый - 3 шт.\nМатовая пленка - 3 шт.\nроза пионовидная софия - 2 шт.\n\nШирина - 33 см\nВысота - 40 см","discountPercent":0,"isRecommended":true,"tags":["оксипеталум","джульетта","диантус персиковый","софия"],"rating":"0.00","reviewCount":0,"isFeatured":false,"createdAt":"2026-03-29T15:27:18.604Z","shopName":"CvetoMarket","categoryName":"Романтика"},{"id":"2c2d7044-9f42-4204-a7fc-0d3d90c6b594","shopId":"4154fd7d-a705-4070-b5a8-0792890da0ee","categoryId":"85ffd7eb-de29-4e63-a157-7770bb5851bc","type":"bouquet","name":"Нежное облачко","description":"Красивый букет с гортензией","price":"2050.00","images":["/objects/uploads/1774787440689-w96qnz12evn.jpg","/objects/uploads/1774787440700-eivc65r60xa.jpg","/objects/uploads/1774787440744-2efnnqdcikp.jpg","/objects/uploads/1774787448525-jsk3k8zhz3.jpg"],"assemblyTime":60,"inStock":true,"isActive":true,"composition":"Гортензия - 1 шт.\nКустовая роза - 2 шт.\nЭустома - 2 шт.\n\nШирина - 23 см\nВысота - 40 см","discountPercent":0,"isRecommended":true,"tags":["гортензия","кустовая роза","эустома"],"rating":"0.00","reviewCount":0,"isFeatured":false,"createdAt":"2026-03-29T15:30:50.581Z","shopName":"CvetoMarket","categoryName":"Симпатия"},{"id":"b36147c7-78bc-42b0-8eeb-6b75103e186e","shopId":"4154fd7d-a705-4070-b5a8-0792890da0ee","categoryId":"b05be4be-7d31-4c44-ac2e-558ad2199174","type":"bouquet","name":"Необычная композиция ","description":"","price":"4000.00","images":["/objects/uploads/1776337818409-38q3ljtkkd6.jpeg","/objects/uploads/1776337818552-chrd1p9jea.jpeg","/objects/uploads/1776337818690-nni11l57aak.jpeg"],"assemblyTime":60,"inStock":true,"isActive":true,"composition":"","discountPercent":0,"isRecommended":false,"tags":[],"rating":"0.00","reviewCount":0,"isFeatured":false,"createdAt":"2026-04-16T14:10:38.960Z","shopName":"CvetoMarket","categoryName":"День рождения"},{"id":"778af46e-a76b-42dc-af8e-8cacd9baade0","shopId":"4154fd7d-a705-4070-b5a8-0792890da0ee","categoryId":"85ffd7eb-de29-4e63-a157-7770bb5851bc","type":"bouquet","name":"Букет -мини-комплимент с хризантемой и ромашкой","description":"Комплимент-недорого и оперативно","price":"1130.00","images":["/objects/uploads/1774788422556-6apflv24i54.jpg","/objects/uploads/1774788422648-1oza1ux9xnai.jpg","/objects/uploads/1774788422802-ox4kvbzdvk.jpg","/objects/uploads/1774788422986-pobbwmgk3l.jpg","/objects/uploads/1774788423038-o4fhcd0abpk.jpg"],"assemblyTime":60,"inStock":true,"isActive":true,"composition":"Лента - 1 шт.\nРомашка - 2 шт.\nХризантема - 1 шт.\nТишью - 3 шт.\nУпаковка дизайнерская - 3 шт.\n\nРазмер\nШирина - 17 см\nВысота - 45 см","discountPercent":0,"isRecommended":true,"tags":["ромашка","хризантема","упаковка дизайнерская"],"rating":"0.00","reviewCount":0,"isFeatured":false,"createdAt":"2026-03-29T15:47:05.945Z","shopName":"CvetoMarket","categoryName":"Симпатия"},{"id":"0ba57485-7a35-42f1-9915-f1081ec9ed2f","shopId":"4154fd7d-a705-4070-b5a8-0792890da0ee","categoryId":"85ffd7eb-de29-4e63-a157-7770bb5851bc","type":"addon","name":"Открытка ваших воспоминаний ","description":"","price":"250.00","images":["/objects/uploads/1776332775272-ae1s9kxn8e.jpeg"],"assemblyTime":60,"inStock":true,"isActive":true,"composition":"Одно ваше фото в размере 10*15","discountPercent":0,"isRecommended":false,"tags":["фотография","открытка"],"rating":"0.00","reviewCount":0,"isFeatured":false,"createdAt":"2026-04-16T12:46:17.706Z","shopName":"CvetoMarket","categoryName":"Симпатия"},{"id":"1b390e6f-fdad-440f-867f-c0d725b26c31","shopId":"4154fd7d-a705-4070-b5a8-0792890da0ee","categoryId":"afee500a-4bb3-420e-9c37-5aa4a39b2fa5","type":"bouquet","name":"Букет из хризантем и кустовых роз","description":"","price":"2500.00","images":["/objects/uploads/1776333100898-0avx7zvgnqxj.jpeg","/objects/uploads/1776333100972-1dk4gi0vo6q.jpeg","/objects/uploads/1776333101078-jqh8fl4vfg.jpeg"],"assemblyTime":60,"inStock":true,"isActive":true,"composition":"","discountPercent":0,"isRecommended":false,"tags":["кустовые розы","хризантема"],"rating":"0.00","reviewCount":0,"isFeatured":false,"createdAt":"2026-04-16T12:51:45.217Z","shopName":"CvetoMarket","categoryName":"Любовь"},{"id":"141ef709-fc8d-4623-9ec7-74173c1c12b6","shopId":"4154fd7d-a705-4070-b5a8-0792890da0ee","categoryId":"b05be4be-7d31-4c44-ac2e-558ad2199174","type":"bouquet","name":"Яркий восторг","description":"","price":"2990.00","images":["/objects/uploads/1784365232578-82hqslfu6b.webp","/objects/uploads/1784365232608-rb4f1ymo7a.webp"],"assemblyTime":60,"inStock":true,"isActive":true,"composition":"","discountPercent":0,"isRecommended":false,"tags":[],"rating":"0.00","reviewCount":0,"isFeatured":false,"createdAt":"2026-07-18T12:00:54.235Z","shopName":"CvetoMarket","categoryName":"День рождения"}]
+0|cvetomar | 5:53:55 PM [express] GET /api/auth/me 304 in 4ms :: {"user":{"id":"a6a8b6ba-0e26-4fdb-a7cb-b4bed9cd9398","email":"admin@cveto.ru","name":"Администратор","phone":null,"role":"admin","isBlocked":false,"avatarUrl":"/objects/uploads/1774549194203-lomfcc2qx3m.jpg","reviewsSeenAt":null,"buyerCity":null,"telegramChatId":null,"telegramLinkToken":"7YrzShaj170hO1Mh4ovqrIrm","telegramLinkTokenExpiresAt":"2026-05-25T12:51:35.351Z","maxChatId":"75100248","maxLinkToken":null,"maxLinkTokenExpiresAt":null,"maxLastNotifiedAt":"2026-07-06T19:42:01.353Z","telegramLastNotifiedAt":null,"passwordResetToken":null,"passwordResetTokenExpiresAt":null,"bonusBalance":0,"referralCode":"ZBGGVZFU","referredBy":null,"vkId":null,"tags":[],"createdAt":"2026-03-26T02:40:13.518Z"}}
+0|cvetomar | 5:53:55 PM [express] GET /api/cities 304 in 3ms :: [{"id":"a8d71b68-3a1e-4344-80a8-9117e2bbb982","name":"Калининград и область"}]
+0|cvetomar | 5:53:55 PM [express] GET /api/notifications 304 in 4ms :: {"notifications":[],"unreadMessages":0}
+0|cvetomar | 5:53:55 PM [express] GET /api/push/vapid-public-key 304 in 2ms :: {"key":"BA0lzXEFOAqALB9LLmzn7E1ptNNDjOzb2Jz13UWaeJJ2EHmshXS0h5lp0bM7x-Ot7Xf5ZXlFKy8qZWo0BHc9PxI"}
+0|cvetomar | 5:53:55 PM [express] POST /api/push/subscribe 200 in 4ms :: {"ok":true,"id":"b66ab596-1805-4310-b787-145fcada4c78"}
+

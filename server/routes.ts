@@ -6,6 +6,8 @@ import { Pool } from "pg";
 import bcrypt from "bcrypt";
 import multer from "multer";
 import path from "path";
+import rateLimit from "express-rate-limit";
+import helmet from "helmet";
 import { storage } from "./storage";
 import { insertUserSchema, insertShopSchema, insertProductSchema, insertOrderSchema, insertReviewSchema, insertMessageSchema, insertCategorySchema, insertCitySchema } from "@shared/schema";
 import { z } from "zod";
@@ -40,12 +42,16 @@ function isPointInPolygon(point: [number, number], polygon: number[][]): boolean
   return inside;
 }
 
+const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+const ALLOWED_EXTENSIONS = /\.(jpg|jpeg|png|gif|webp)$/i;
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    const allowed = /\.(jpg|jpeg|png|gif|webp)$/i;
-    cb(null, allowed.test(path.extname(file.originalname)));
+    const extOk = ALLOWED_EXTENSIONS.test(path.extname(file.originalname));
+    const mimeOk = ALLOWED_MIME_TYPES.includes(file.mimetype);
+    cb(null, extOk && mimeOk);
   },
 });
 
@@ -87,16 +93,34 @@ async function enrichProducts(productsList: any[]) {
   }));
 }
 
+const authRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Слишком много попыток. Попробуйте через 15 минут." },
+});
+
 export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
   const PgStore = connectPgSimple(session);
   const pgPool = new Pool({ connectionString: process.env.DATABASE_URL });
+
+  app.use(helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+  }));
 
   app.use(session({
     store: new PgStore({ pool: pgPool, createTableIfMissing: true }),
     secret: process.env.SESSION_SECRET || "fallback-secret",
     resave: false,
     saveUninitialized: false,
-    cookie: { secure: false, maxAge: 30 * 24 * 60 * 60 * 1000 },
+    cookie: {
+      secure: process.env.NODE_ENV === "production",
+      httpOnly: true,
+      sameSite: "lax",
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+    },
   }));
 
   registerObjectStorageRoutes(app);
@@ -152,7 +176,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.json({ user: toSafeUser(user as Record<string, unknown>) });
   });
 
-  app.post("/api/auth/register", async (req, res) => {
+  app.post("/api/auth/register", authRateLimit, async (req, res) => {
     try {
       const { email: rawEmail, password, name, phone, role, referralCode: refCode } = req.body;
       const email = rawEmail?.toLowerCase?.() || rawEmail;
@@ -190,7 +214,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  app.post("/api/auth/login", async (req, res) => {
+  app.post("/api/auth/login", authRateLimit, async (req, res) => {
     try {
       const { email, password } = req.body;
       const user = await storage.getUserByEmail(email);
@@ -210,7 +234,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     req.session.destroy(() => res.json({ ok: true }));
   });
 
-  app.post("/api/auth/forgot-password", async (req, res) => {
+  app.post("/api/auth/forgot-password", authRateLimit, async (req, res) => {
     try {
       const { email: rawEmail } = req.body;
       if (!rawEmail) return res.status(400).json({ error: "Email обязателен" });
@@ -2387,6 +2411,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
+  });
+
+  app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
+    if (err instanceof URIError || err?.type === "entity.parse.failed") {
+      return res.status(400).json({ error: "Bad request" });
+    }
+    console.error("[server error]", err?.message ?? err);
+    res.status(500).json({ error: "Internal server error" });
   });
 
   return httpServer;
