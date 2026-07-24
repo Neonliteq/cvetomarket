@@ -1,0 +1,60 @@
+root@cv6271581:/var/www/cvetomarket# git checkout package-lock.json && ./deploy/deploy.sh
+Updated 1 path from the index
+==========================================
+ ЦветоМаркет — Деплой 2026-07-23 14:08:58
+==========================================
+[1/4] Получение последних изменений из Git...
+From https://github.com/Neonliteq/cvetomarket
+ * branch            main       -> FETCH_HEAD
+Updating fb78125..1169207
+Fast-forward
+ ...-Users-Anatolii-ssh-root-194-67-122-119-root-194-67-12_1784644003410.txt |  63 +++++++++++++++++++
+ ...oot-cv6271581-pm2-status-pm2-logs-lines-50--1784646944_1784646944637.txt | 120 ++++++++++++++++++++++++++++++++++++
+ ...272\321\200\320\260\320\275\320\260_2026-07-21_161639_1784643428135.png" | Bin 0 -> 79666 bytes
+ ...272\321\200\320\260\320\275\320\260_2026-07-21_162205_1784643735456.png" | Bin 0 -> 79764 bytes
+ ...272\321\200\320\260\320\275\320\260_2026-07-21_162205_1784643735457.png" | Bin 0 -> 79764 bytes
+ ...272\321\200\320\260\320\275\320\260_2026-07-21_163828_1784644731591.png" | Bin 0 -> 27562 bytes
+ ...272\321\200\320\260\320\275\320\260_2026-07-21_171932_1784647236722.png" | Bin 0 -> 11952 bytes
+ package-lock.json                                                           |  42 +++++++++++++
+ package.json                                                                |   2 +
+ server/routes.ts                                                            |  44 +++++++++++--
+ 10 files changed, 265 insertions(+), 6 deletions(-)
+ create mode 100644 attached_assets/Pasted-C-Users-Anatolii-ssh-root-194-67-122-119-root-194-67-12_1784644003410.txt
+ create mode 100644 attached_assets/Pasted-root-cv6271581-pm2-status-pm2-logs-lines-50--1784646944_1784646944637.txt
+ create mode 100644 "attached_assets/\320\241\320\275\320\270\320\274\320\276\320\272_\321\215\320\272\321\200\320\260\320\275\320\260_2026-07-21_161639_1784643428135.png"
+ create mode 100644 "attached_assets/\320\241\320\275\320\270\320\274\320\276\320\272_\321\215\320\272\321\200\320\260\320\275\320\260_2026-07-21_162205_1784643735456.png"
+ create mode 100644 "attached_assets/\320\241\320\275\320\270\320\274\320\276\320\272_\321\215\320\272\321\200\320\260\320\275\320\260_2026-07-21_162205_1784643735457.png"
+ create mode 100644 "attached_assets/\320\241\320\275\320\270\320\274\320\276\320\272_\321\215\320\272\321\200\320\260\320\275\320\260_2026-07-21_163828_1784644731591.png"
+ create mode 100644 "attached_assets/\320\241\320\275\320\270\320\274\320\276\320\272_\321\215\320\272\321\200\320\260\320\275\320\260_2026-07-21_171932_1784647236722.png"
+[2/4] Установка зависимостей (включая devDependencies для сборки)...
+npm warn deprecated sourcemap-codec@1.4.8: Please use @jridgewell/sourcemap-codec instead
+npm warn deprecated source-map@0.8.0-beta.0: The work that was done in this beta branch won't be included in future versions
+npm warn deprecated node-domexception@1.0.0: Use your platform's native DOMException instead
+npm warn deprecated glob@11.1.0: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+npm error code EAI_AGAIN
+npm error syscall getaddrinfo
+npm error errno EAI_AGAIN
+npm error request to http://package-firewall.replit.local/npm/ip-address/-/ip-address-10.2.0.tgz failed, reason: getaddrinfo EAI_AGAIN package-firewall.replit.local
+npm error A complete log of this run can be found in: /root/.npm/_logs/2026-07-23T11_08_59_296Z-debug-0.log
+root@cv6271581:/var/www/cvetomarket# rm package-lock.json && npm install --registry https://registry.npmjs.org && pm2 reload ecosystem.config.js
+npm warn deprecated node-domexception@1.0.0: Use your platform's native DOMException instead
+npm warn deprecated uuid@9.0.1: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
+npm warn deprecated glob@11.1.0: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+npm warn deprecated recharts@2.15.4: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-migration-guide
+
+added 853 packages, and audited 854 packages in 2m
+
+183 packages are looking for funding
+  run `npm fund` for details
+
+7 vulnerabilities (5 moderate, 2 high)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+[PM2][ERROR] File ecosystem.config.js not found
+root@cv6271581:/var/www/cvetomarket#

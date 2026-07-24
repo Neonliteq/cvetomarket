@@ -1,0 +1,121 @@
+root@cv6271581:/var/www/cvetomarket# npm run build && npx tsx server/db-push.ts ; pm2 reload deploy/ecosystem.config.js
+
+> rest-express@1.0.0 build
+> tsx script/build.ts
+
+building client...
+vite v7.3.6 building client environment for production...
+
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+✓ 2630 modules transformed.
+../dist/public/index.html                                      2.76 kB │ gzip:   0.99 kB
+../dist/public/assets/hero_bg_generated-DdmluZ9g.png         952.09 kB
+../dist/public/assets/footer_eucalyptus-BvfZRLCr.png       1,437.80 kB
+../dist/public/assets/index-CLOohUp3.css                     101.30 kB │ gzip:  16.31 kB
+../dist/public/assets/index-D17hSi50.js                        0.15 kB │ gzip:   0.15 kB
+../dist/public/assets/arrow-left-CvC2YHvv.js                   0.16 kB │ gzip:   0.16 kB
+../dist/public/assets/PaymentFail-DeBst5KK.js                  0.17 kB │ gzip:   0.17 kB
+../dist/public/assets/PaymentSuccess-4T3ldeSA.js               0.17 kB │ gzip:   0.17 kB
+../dist/public/assets/circle-check-big-YY1JBaow.js             0.18 kB │ gzip:   0.18 kB
+../dist/public/assets/trending-up-D8mYIj5b.js                  0.20 kB │ gzip:   0.18 kB
+../dist/public/assets/credit-card-CtdmcibU.js                  0.20 kB │ gzip:   0.19 kB
+../dist/public/assets/lock-Dh6tTrM2.js                         0.20 kB │ gzip:   0.19 kB
+../dist/public/assets/copy-SfnKeyAs.js                         0.23 kB │ gzip:   0.20 kB
+../dist/public/assets/circle-alert-Cf1ME2hQ.js                 0.25 kB │ gzip:   0.19 kB
+../dist/public/assets/eye-DHhwN1I9.js                          0.25 kB │ gzip:   0.20 kB
+../dist/public/assets/user-check-STbECqTh.js                   0.25 kB │ gzip:   0.22 kB
+../dist/public/assets/key-BN2WHVVu.js                          0.26 kB │ gzip:   0.22 kB
+../dist/public/assets/send-Bm8F0yMl.js                         0.29 kB │ gzip:   0.23 kB
+../dist/public/assets/list-BD3hINve.js                         0.30 kB │ gzip:   0.18 kB
+../dist/public/assets/users-BLkYPisB.js                        0.30 kB │ gzip:   0.22 kB
+../dist/public/assets/shield-check-By64alNh.js                 0.32 kB │ gzip:   0.24 kB
+../dist/public/assets/file-text-BNcJJuLK.js                    0.33 kB │ gzip:   0.22 kB
+../dist/public/assets/trash-2-R4axuAK7.js                      0.35 kB │ gzip:   0.24 kB
+../dist/public/assets/scale-XjJChUX9.js                        0.36 kB │ gzip:   0.23 kB
+../dist/public/assets/phone-CkrG2l4D.js                        0.39 kB │ gzip:   0.26 kB
+../dist/public/assets/eye-off-DrHPYJUf.js                      0.43 kB │ gzip:   0.27 kB
+../dist/public/assets/textarea-CyuSqlQd.js                     0.50 kB │ gzip:   0.33 kB
+../dist/public/assets/label-CtiO-OG4.js                        0.59 kB │ gzip:   0.41 kB
+../dist/public/assets/not-found-D-ZsIyeo.js                    0.63 kB │ gzip:   0.37 kB
+../dist/public/assets/store-CiAB5rsu.js                        0.64 kB │ gzip:   0.30 kB
+../dist/public/assets/separator-CGHGFqOs.js                    0.75 kB │ gzip:   0.46 kB
+../dist/public/assets/square-pen-BzxnPQn1.js                   0.99 kB │ gzip:   0.45 kB
+../dist/public/assets/sheet-Bqdo-r80.js                        2.18 kB │ gzip:   0.86 kB
+../dist/public/assets/tabs-D3bdOGjL.js                         3.32 kB │ gzip:   1.41 kB
+../dist/public/assets/switch-tG04l3lc.js                       4.36 kB │ gzip:   1.91 kB
+../dist/public/assets/Cart-CaEz1XGE.js                         4.64 kB │ gzip:   1.64 kB
+../dist/public/assets/workbox-window.prod.es5-BBnX5xw4.js      5.75 kB │ gzip:   2.36 kB
+../dist/public/assets/Shops-Bb_Ixful.js                        6.00 kB │ gzip:   2.71 kB
+../dist/public/assets/ShopDetail-Cn5m9xE8.js                   6.13 kB │ gzip:   2.17 kB
+../dist/public/assets/ProductDetail-CWtT7V8j.js                6.37 kB │ gzip:   2.46 kB
+../dist/public/assets/LegalInfo-CUzAyazK.js                    6.74 kB │ gzip:   2.42 kB
+../dist/public/assets/DeliveryAndPayment-BAnG_189.js          12.06 kB │ gzip:   3.21 kB
+../dist/public/assets/ru-Dasyk5-q.js                          12.63 kB │ gzip:   3.16 kB
+../dist/public/assets/TermsOfUse-CvTOr03c.js                  14.97 kB │ gzip:   4.29 kB
+../dist/public/assets/SellerAuth-BjggLWYo.js                  15.87 kB │ gzip:   4.10 kB
+../dist/public/assets/PrivacyPolicy-BNlJNln3.js               15.87 kB │ gzip:   4.14 kB
+../dist/public/assets/Catalog-DObYgCe-.js                     18.96 kB │ gzip:   6.90 kB
+../dist/public/assets/format-DQmkrdo9.js                      19.71 kB │ gzip:   5.60 kB
+../dist/public/assets/Checkout-DiORbRp9.js                    20.14 kB │ gzip:   6.78 kB
+../dist/public/assets/Chat-BNn_4t-g.js                        21.94 kB │ gzip:   7.28 kB
+../dist/public/assets/select-Bp4yCWCi.js                      22.06 kB │ gzip:   7.61 kB
+../dist/public/assets/Auth-CsRo8nlj.js                        29.66 kB │ gzip:   8.72 kB
+../dist/public/assets/Account-CtM8gqve.js                     46.43 kB │ gzip:  12.65 kB
+../dist/public/assets/form-B66aDLIe.js                        88.87 kB │ gzip:  24.88 kB
+../dist/public/assets/ShopDashboard-Cut-8QUg.js              101.32 kB │ gzip:  26.60 kB
+../dist/public/assets/Admin-uzpDeQcl.js                      124.48 kB │ gzip:  24.89 kB
+../dist/public/assets/index-CSJKtHkd.js                      416.59 kB │ gzip: 131.67 kB
+✓ built in 8.80s
+
+PWA v1.3.0
+Building src/sw.ts service worker ("es" format)...
+vite v7.3.6 building client environment for production...
+✓ 92 modules transformed.
+../dist/public/sw.mjs  26.35 kB │ gzip: 8.64 kB
+✓ built in 305ms
+
+PWA v1.3.0
+mode      injectManifest
+format:   es
+precache  89 entries (20854.79 KiB)
+files generated
+  ../dist/public/sw.js
+building server...
+
+  dist/index.cjs  1.4mb ⚠️
+
+⚡ Done in 258ms
+
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/www/cvetomarket/server/db-push.ts' imported from /var/www/cvetomarket/
+    at finalizeResolution (node:internal/modules/esm/resolve:283:11)
+    at moduleResolve (node:internal/modules/esm/resolve:952:10)
+    at defaultResolve (node:internal/modules/esm/resolve:1188:11)
+    at nextResolve (node:internal/modules/esm/hooks:864:28)
+    at resolveBase (file:///var/www/cvetomarket/node_modules/@esbuild-kit/esm-loader/dist/register-zZ7SWseA.mjs:2:8498)
+    at resolveDirectory (file:///var/www/cvetomarket/node_modules/@esbuild-kit/esm-loader/dist/register-zZ7SWseA.mjs:2:9584)
+    at resolveTsPaths (file:///var/www/cvetomarket/node_modules/@esbuild-kit/esm-loader/dist/register-zZ7SWseA.mjs:2:11114)
+    at resolve (file:///var/www/cvetomarket/node_modules/@esbuild-kit/esm-loader/dist/register-zZ7SWseA.mjs:2:12294)
+    at nextResolve (node:internal/modules/esm/hooks:864:28)
+    at Hooks.resolve (node:internal/modules/esm/hooks:306:30) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///var/www/cvetomarket/server/db-push.ts'
+}
+
+Node.js v20.20.2
+[PM2][ERROR] File deploy/ecosystem.config.js malformated
+ReferenceError: module is not defined in ES module scope
+This file is being treated as an ES module because it has a '.js' file extension and '/var/www/cvetomarket/package.json' contains "type": "module". To treat it as a CommonJS script, rename it to use the '.cjs' file extension.
+    at file:///var/www/cvetomarket/deploy/ecosystem.config.js:1:1
+    at ModuleJobSync.runSync (node:internal/modules/esm/module_job:437:37)
+    at ModuleLoader.importSyncForRequire (node:internal/modules/esm/loader:389:47)
+    at loadESMFromCJS (node:internal/modules/cjs/loader:1363:24)
+    at Module._compile (node:internal/modules/cjs/loader:1503:5)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
+    at Module.load (node:internal/modules/cjs/loader:1266:32)
+    at Module._load (node:internal/modules/cjs/loader:1091:12)
+    at Module.require (node:internal/modules/cjs/loader:1289:19)
+    at require (node:internal/modules/helpers:182:18)
+root@cv6271581:/var/www/cvetomarket#
