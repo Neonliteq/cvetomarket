@@ -584,9 +584,8 @@ export class DbStorage implements IStorage {
   }
 
   async addBonusTransaction(userId: string, amount: number, reason: string, description: string, expiresAt?: Date): Promise<BonusTransaction> {
-    const exp = expiresAt || (amount > 0 ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : undefined);
     const [t] = await db.insert(bonusTransactions).values({
-      userId, amount, reason, description, expiresAt: exp || null,
+      userId, amount, reason, description, expiresAt: expiresAt || null,
     }).returning();
     const newBalance = await this.getBonusBalance(userId);
     await db.update(users).set({ bonusBalance: newBalance }).where(eq(users.id, userId));

@@ -193,8 +193,20 @@ export default function Checkout() {
       trackEvent("order_placed", { orderId: data.order?.id, total: total + DELIVERY, shopId: shopId || undefined });
       clearCart();
       if (data.paymentUrl) {
+        if (bonusToUse > 0 && (data.bonusUsed ?? 0) < bonusToUse) {
+          toast({
+            title: "Бонусы применены частично",
+            description: `Списано ${data.bonusUsed ?? 0} из ${bonusToUse} бонусов`,
+          });
+        }
         window.location.href = data.paymentUrl;
         return;
+      }
+      if (bonusToUse > 0 && (data.bonusUsed ?? 0) < bonusToUse) {
+        toast({
+          title: "Бонусы применены частично",
+          description: `Списано ${data.bonusUsed ?? 0} из ${bonusToUse} бонусов`,
+        });
       }
       setOrderId(data.order?.id);
       setSuccess(true);

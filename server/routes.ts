@@ -779,7 +779,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       let bonusUsed = 0;
       if (userId && rawBonusUsed && Number(rawBonusUsed) > 0) {
         const balance = await storage.getBonusBalance(userId);
-        bonusUsed = Math.min(Number(rawBonusUsed), balance, Math.floor(totalAmount));
+        const maxAllowed = Math.floor(totalAmount * 0.20);
+        bonusUsed = Math.min(Number(rawBonusUsed), balance, maxAllowed);
       }
 
       let promoDiscount = 0;
@@ -850,7 +851,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       if (!isCardPayment) {
         await notifyShopNewOrder(shopId, Number(totalAmount));
-        return res.json({ order });
+        return res.json({ order, bonusUsed });
       }
 
       // Card payment — generate Robokassa URL
@@ -868,7 +869,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         desc: `Заказ #${order.orderNumber} — ЦветоМаркет`,
         email: paymentEmail,
       });
-      res.json({ order, paymentUrl });
+      res.json({ order, paymentUrl, bonusUsed });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
