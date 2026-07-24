@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Plus, Edit, Trash2, Package, ShoppingBag, BarChart2, MessageCircle,
   Eye, EyeOff, Star, MapPin, Phone, Calendar, Clock, User, FileText, Send, Settings, Truck,
-  Upload, Image, X, Users, UserPlus, UserMinus, Crown, Tag, CheckCircle, ExternalLink, Search
+  Upload, Image, X, Users, UserPlus, UserMinus, Crown, Tag, CheckCircle, ExternalLink, Search, ArrowUpDown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -524,6 +524,7 @@ export default function ShopDashboard() {
   const [inviteName, setInviteName] = useState("");
   const [productDialogOpen, setProductDialogOpen] = useState(false);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
+  const [productSort, setProductSort] = useState("default");
   const [orderStatusFilter, setOrderStatusFilter] = useState("all");
   const [orderSort, setOrderSort] = useState<"date-desc" | "date-asc" | "time-asc" | "time-desc">("date-desc");
   const [orderSearch, setOrderSearch] = useState("");
@@ -537,6 +538,20 @@ export default function ShopDashboard() {
     queryKey: [`/api/shops/${myShop?.id}/products`],
     enabled: !!myShop?.id,
   });
+
+  const sortedProducts = useMemo(() => {
+    if (!products) return [];
+    const arr = [...products];
+    switch (productSort) {
+      case "name-asc":  return arr.sort((a, b) => a.name.localeCompare(b.name, "ru"));
+      case "name-desc": return arr.sort((a, b) => b.name.localeCompare(a.name, "ru"));
+      case "price-asc": return arr.sort((a, b) => Number(a.price) - Number(b.price));
+      case "price-desc":return arr.sort((a, b) => Number(b.price) - Number(a.price));
+      case "stock":     return arr.sort((a, b) => (b.inStock ? 1 : 0) - (a.inStock ? 1 : 0));
+      case "active":    return arr.sort((a, b) => (b.isActive ? 1 : 0) - (a.isActive ? 1 : 0));
+      default:          return arr;
+    }
+  }, [products, productSort]);
 
   const { data: orders, isLoading: loadingOrders } = useQuery<OrderWithItems[]>({
     queryKey: ["/api/orders/shop"],
@@ -762,9 +777,26 @@ export default function ShopDashboard() {
         <TabsContent value="products">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold">Товары ({products?.length || 0})</h3>
-            <Button size="sm" className="gap-1.5" data-testid="button-add-product" onClick={() => setProductDialogOpen(true)}>
-              <Plus className="w-4 h-4" /> Добавить товар
-            </Button>
+            <div className="flex items-center gap-2">
+              <Select value={productSort} onValueChange={setProductSort}>
+                <SelectTrigger className="h-8 w-48 text-xs gap-1" data-testid="select-product-sort">
+                  <ArrowUpDown className="w-3 h-3 shrink-0" />
+                  <SelectValue placeholder="Сортировка" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default">По умолчанию</SelectItem>
+                  <SelectItem value="name-asc">Название А→Я</SelectItem>
+                  <SelectItem value="name-desc">Название Я→А</SelectItem>
+                  <SelectItem value="price-asc">Цена: дешевле</SelectItem>
+                  <SelectItem value="price-desc">Цена: дороже</SelectItem>
+                  <SelectItem value="stock">В наличии первыми</SelectItem>
+                  <SelectItem value="active">Активные первыми</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button size="sm" className="gap-1.5" data-testid="button-add-product" onClick={() => setProductDialogOpen(true)}>
+                <Plus className="w-4 h-4" /> Добавить товар
+              </Button>
+            </div>
             <ProductFormModal
               open={productDialogOpen}
               onOpenChange={(o) => { setProductDialogOpen(o); if (!o) setEditProduct(null); }}
@@ -787,9 +819,9 @@ export default function ShopDashboard() {
             <div className="space-y-3">
               {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-lg" />)}
             </div>
-          ) : products?.length ? (
+          ) : sortedProducts.length ? (
             <div className="space-y-3">
-              {products.map((p) => (
+              {sortedProducts.map((p) => (
                 <Card key={p.id} className={!p.isActive ? "opacity-60" : ""} data-testid={`card-product-${p.id}`}>
                   <CardContent className="p-4 flex items-center gap-3">
                     <div className="w-14 h-14 rounded-md overflow-hidden bg-muted shrink-0">
