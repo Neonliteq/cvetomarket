@@ -778,10 +778,52 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         }
       }
 
+      // Step 1: Server-side recalculation of items total from DB prices
+      if (!items?.length) {
+        return res.status(400).json({ error: "Корзина пуста" });
+      }
+      let serverItemsTotal = 0;
+      const serverPricedItems: Array<{ item: any; dbPrice: number }> = [];
+      for (const item of items) {
+        const product = await storage.getProduct(item.productId);
+        if (!product) {
+          return res.status(400).json({ error: `Товар не найден: ${item.productId}` });
+        }
+        if (!product.isActive) {
+          return res.status(400).json({ error: `Товар недоступен: ${product.name}` });
+        }
+        const dbPrice = Number(product.price);
+        serverItemsTotal += dbPrice * Number(item.quantity);
+        serverPricedItems.push({ item, dbPrice });
+      }
+
+      // Step 2: Server-side delivery cost — zone-based if coordinates provided, else shop default
+      let serverDelivery = shop.deliveryPrice != null ? Number(shop.deliveryPrice) : 0;
+      if (typeof deliveryLat === "number" && typeof deliveryLng === "number") {
+        const deliveryZones: any[] = (shop as any).deliveryZones || [];
+        for (const zone of deliveryZones) {
+          if (zone.coordinates && isPointInPolygon([deliveryLat, deliveryLng], zone.coordinates)) {
+            serverDelivery = Number(zone.price);
+            break;
+          }
+        }
+      }
+
+      // Step 3: Validate client-sent total against server-computed total
+      const serverBaseTotal = serverItemsTotal + serverDelivery;
+      const clientTotal = Number(totalAmount);
+      const allowedDelta = Math.max(serverBaseTotal * 0.01, 10);
+      if (Math.abs(clientTotal - serverBaseTotal) > allowedDelta) {
+        return res.status(400).json({
+          error: `Сумма заказа не совпадает с актуальными ценами. Ожидалось: ${serverBaseTotal.toFixed(2)} ₽, получено: ${clientTotal.toFixed(2)} ₽. Пожалуйста, обновите страницу и повторите заказ.`,
+        });
+      }
+
+      // Step 4: Use server-computed total for all downstream calculations
       let bonusUsed = 0;
       if (userId && rawBonusUsed && Number(rawBonusUsed) > 0) {
         const balance = await storage.getBonusBalance(userId);
-        const maxAllowed = Math.floor(totalAmount * 0.20);
+        const maxAllowed = Math.floor(serverBaseTotal * 0.20);
         bonusUsed = Math.min(Number(rawBonusUsed), balance, maxAllowed);
       }
 
@@ -790,7 +832,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       let promoCodeId: string | null = null;
       if (rawPromoCode) {
         const promo = await storage.getPromoCodeByCode(rawPromoCode);
-        const orderBase = Number(totalAmount);
+        const orderBase = serverBaseTotal;
         if (
           promo &&
           promo.isActive &&
@@ -808,9 +850,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         }
       }
 
-      const finalAmount = Math.max(0, totalAmount - bonusUsed - promoDiscount);
+      const finalAmount = Math.max(0, serverBaseTotal - bonusUsed - promoDiscount);
       const settings = await storage.getSettings();
-      const shopForCommission = await storage.getShop(shopId);
+      const shopForCommission = shop;
       const effectiveRate = shopForCommission?.commissionRate != null
         ? Number(shopForCommission.commissionRate)
         : (settings ? Number(settings.commissionRate) : 10);
@@ -826,7 +868,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         buyerId: userId,
         guestEmail: userId ? null : (guestEmail || null),
         totalAmount: finalAmount.toString(),
-        deliveryCost: deliveryCost.toString(),
+        deliveryCost: serverDelivery.toString(),
         platformCommission: commission.toString(),
         bonusUsed,
         promoCode: appliedPromoCode,
@@ -840,26 +882,26 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (promoCodeId) {
         await storage.incrementPromoCodeUsage(promoCodeId);
       }
-      if (items?.length) {
-        await storage.createOrderItems(items.map((item: any) => ({
+      if (serverPricedItems.length) {
+        await storage.createOrderItems(serverPricedItems.map(({ item, dbPrice }) => ({
           orderId: order.id,
           productId: item.productId,
           productName: item.productName,
           productImage: item.productImage || null,
           quantity: item.quantity,
-          price: item.price.toString(),
+          price: dbPrice.toString(),
         })));
       }
 
       if (!isCardPayment) {
-        await notifyShopNewOrder(shopId, Number(totalAmount));
+        await notifyShopNewOrder(shopId, serverBaseTotal);
         return res.json({ order, bonusUsed });
       }
 
       // Card payment — generate Robokassa URL
       if (!isRobokassaConfigured()) {
         await storage.updatePaymentStatus(order.id, "paid");
-        await notifyShopNewOrder(shopId, Number(totalAmount));
+        await notifyShopNewOrder(shopId, serverBaseTotal);
         return res.json({ order });
       }
 
