@@ -558,6 +558,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   app.patch("/api/shops/:id", requireRole("admin", "shop"), async (req, res) => {
+    const patchShopUser = await storage.getUser((req.session as any).userId);
+    if (patchShopUser?.role !== "admin") {
+      const userShop = await storage.getShopForUser(patchShopUser!.id);
+      if (!userShop || userShop.id !== req.params.id) {
+        return res.status(403).json({ error: "Нет доступа к этому магазину" });
+      }
+    }
     if (req.body.address && !req.body.latitude && !req.body.longitude) {
       const apiKey = process.env.VITE_YANDEX_MAPS_API_KEY;
       if (apiKey) {
@@ -976,6 +983,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const existing = await storage.getOrder(req.params.id);
     if (!existing) return res.status(404).json({ error: "Заказ не найден" });
     const user = await storage.getUser((req.session as any).userId);
+    if (user?.role === "shop" || user?.role === "worker") {
+      const userShop = await storage.getShopForUser(user.id);
+      if (!userShop || userShop.id !== existing.shopId) {
+        return res.status(403).json({ error: "Нет доступа к этому заказу" });
+      }
+    }
     if (existing.status === "delivered" && user?.role !== "admin") {
       return res.status(400).json({ error: "Нельзя изменить статус доставленного заказа" });
     }
