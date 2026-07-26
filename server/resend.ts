@@ -62,7 +62,7 @@ export async function sendPasswordResetEmail(toEmail: string, resetLink: string)
       ? `ЦветоМаркет <${fromEmail}>`
       : "ЦветоМаркет <onboarding@resend.dev>";
 
-    console.log(`[Resend] Sending password reset to ${toEmail} from ${from}`);
+    console.log(`[Resend] Sending password reset email from ${from}`);
 
     const result = await client.emails.send({
       from,
