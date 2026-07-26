@@ -8,7 +8,7 @@ import {
   Wallet, Receipt, Percent, ArrowDownRight, Filter, ChevronsUpDown, Gift,
   Star, Award, MessageSquare, AlertCircle, ChevronRight, Search, StickyNote, Bell,
   Globe, Target, Timer, TrendingDown, ShoppingCart, ArrowRight, Smartphone, Monitor, Tablet,
-  Truck, Shield, Clock, Heart, Zap, Leaf, GripVertical, Megaphone
+  Truck, Shield, Clock, Heart, Zap, Leaf, GripVertical, Megaphone, Send
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -403,6 +403,29 @@ export default function Admin() {
   const [bonusViewUser, setBonusViewUser] = useState<{ id: string; name: string } | null>(null);
   const [bonusAmount, setBonusAmount] = useState("");
   const [bonusDesc, setBonusDesc] = useState("");
+  const [msgTarget, setMsgTarget] = useState<{ id: string; name: string } | null>(null);
+  const [msgContent, setMsgContent] = useState("");
+
+  const sendMsgMutation = useMutation({
+    mutationFn: ({ receiverId, content }: { receiverId: string; content: string }) =>
+      apiRequest("POST", "/api/messages", { receiverId, content }),
+    onSuccess: (_data, vars) => {
+      toast({
+        title: "Сообщение отправлено",
+        description: (
+          <button
+            className="underline text-primary text-xs"
+            onClick={() => window.open(`/chat?userId=${vars.receiverId}`, "_blank")}
+          >
+            Открыть чат →
+          </button>
+        ) as any,
+      });
+      setMsgContent("");
+      setMsgTarget(null);
+    },
+    onError: () => toast({ title: "Ошибка отправки", variant: "destructive" }),
+  });
 
   const grantBonusMutation = useMutation({
     mutationFn: ({ userId, amount, description }: { userId: string; amount: number; description: string }) =>
@@ -966,6 +989,17 @@ export default function Admin() {
                             <Award className="w-3.5 h-3.5" />
                             {(shop as any).isFeatured ? "Снять с топа" : "В топ"}
                           </Button>
+                          {shop.ownerId && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1.5"
+                              onClick={() => setMsgTarget({ id: shop.ownerId!, name: shop.ownerName || shop.name })}
+                              data-testid={`button-msg-shop-${shop.id}`}
+                            >
+                              <MessageSquare className="w-3.5 h-3.5" /> Написать
+                            </Button>
+                          )}
                         </div>
                         <div className="flex gap-2">
                           <Dialog open={editShopId === shop.id} onOpenChange={(o) => {
@@ -1114,6 +1148,15 @@ export default function Admin() {
                             data-testid={`button-view-bonus-${u.id}`}
                           >
                             <Gift className="w-3.5 h-3.5" /> Бонусы
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setMsgTarget({ id: u.id, name: u.name })}
+                            className="gap-1.5 text-xs"
+                            data-testid={`button-msg-user-${u.id}`}
+                          >
+                            <MessageSquare className="w-3.5 h-3.5" /> Написать
                           </Button>
                           <Button
                             size="sm"
@@ -2183,7 +2226,18 @@ export default function Admin() {
                                 {c.lastOrderAt ? format(new Date(c.lastOrderAt), "d MMM yyyy", { locale: ru }) : "—"}
                               </td>
                               <td className="px-4 py-3 text-right">
-                                <ChevronRight className="w-4 h-4 text-muted-foreground ml-auto" />
+                                <div className="flex items-center justify-end gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 px-2 text-xs gap-1"
+                                    onClick={(e) => { e.stopPropagation(); setMsgTarget({ id: c.id, name: c.name }); }}
+                                    data-testid={`button-msg-crm-${c.id}`}
+                                  >
+                                    <MessageSquare className="w-3.5 h-3.5" /> Написать
+                                  </Button>
+                                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                                </div>
                               </td>
                             </tr>
                           ))}
@@ -2515,9 +2569,20 @@ export default function Admin() {
 
                   {/* Chats */}
                   <div className="mb-4">
-                    <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
-                      <MessageSquare className="w-4 h-4" /> Чаты
-                    </h4>
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-sm font-semibold flex items-center gap-1.5">
+                        <MessageSquare className="w-4 h-4" /> Чаты
+                      </h4>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2 text-xs gap-1"
+                        onClick={() => setMsgTarget({ id: crmSelectedCustomer!.id, name: crmSelectedCustomer!.name })}
+                        data-testid="button-crm-profile-write"
+                      >
+                        <Send className="w-3 h-3" /> Написать
+                      </Button>
+                    </div>
                     {loadingCrmProfile ? (
                       <Skeleton className="h-10 rounded" />
                     ) : !crmProfile?.chats?.length ? (
@@ -3561,6 +3626,50 @@ export default function Admin() {
         </div>{/* flex-1 min-w-0 */}
         </div>{/* flex gap-6 */}
       </Tabs>
+
+      {/* ===== SEND MESSAGE DIALOG ===== */}
+      <Dialog open={!!msgTarget} onOpenChange={(open) => { if (!open) { setMsgTarget(null); setMsgContent(""); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageSquare className="w-4 h-4" /> Написать сообщение
+            </DialogTitle>
+          </DialogHeader>
+          {msgTarget && (
+            <div className="space-y-4">
+              <div className="text-sm">
+                Кому: <span className="font-medium">{msgTarget.name}</span>
+              </div>
+              <div>
+                <Label htmlFor="msg-content">Сообщение</Label>
+                <Textarea
+                  id="msg-content"
+                  rows={5}
+                  placeholder="Введите текст сообщения..."
+                  value={msgContent}
+                  onChange={(e) => setMsgContent(e.target.value)}
+                  className="mt-1.5 resize-none"
+                  data-testid="textarea-admin-msg"
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={() => { setMsgTarget(null); setMsgContent(""); }}>
+                  Отмена
+                </Button>
+                <Button
+                  className="gap-1.5"
+                  disabled={!msgContent.trim() || sendMsgMutation.isPending}
+                  onClick={() => sendMsgMutation.mutate({ receiverId: msgTarget.id, content: msgContent.trim() })}
+                  data-testid="button-send-admin-msg"
+                >
+                  <Send className="w-4 h-4" />
+                  {sendMsgMutation.isPending ? "Отправка..." : "Отправить"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!bonusViewUser} onOpenChange={(open) => { if (!open) { setBonusViewUser(null); setBonusGrantUser(null); setBonusAmount(""); setBonusDesc(""); } }}>
         <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
