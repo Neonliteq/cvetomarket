@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Plus, Edit, Trash2, Package, ShoppingBag, BarChart2, MessageCircle,
   Eye, EyeOff, Star, MapPin, Phone, Calendar, Clock, User, FileText, Send, Settings, Truck,
-  Upload, Image, X, Users, UserPlus, UserMinus, Crown, Tag, CheckCircle, ExternalLink, Search, ArrowUpDown
+  Upload, Image, X, Users, UserPlus, UserMinus, Crown, Tag, CheckCircle, ExternalLink, Search, ArrowUpDown, Bell
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -517,6 +517,49 @@ export default function ShopDashboard() {
   const tabParam = new URLSearchParams(searchStr).get("tab");
   const validTabs = ["products", "orders", "reviews", "customers", "settings", "workers"];
   const [activeTab, setActiveTab] = useState(validTabs.includes(tabParam || "") ? tabParam! : "products");
+  const [pushPermission, setPushPermission] = useState<NotificationPermission | null>(null);
+  const [pushLoading, setPushLoading] = useState(false);
+
+  useEffect(() => {
+    if ("Notification" in window) setPushPermission(Notification.permission);
+  }, []);
+
+  const handleEnablePush = async () => {
+    setPushLoading(true);
+    try {
+      const permission = await Notification.requestPermission();
+      setPushPermission(permission);
+      if (permission === "granted") {
+        const keyRes = await fetch("/api/push/vapid-public-key");
+        const { key } = await keyRes.json();
+        if (!key) return;
+        const reg = await navigator.serviceWorker.ready;
+        const existing = await reg.pushManager.getSubscription();
+        const sub = existing || await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: (() => {
+            const padding = "=".repeat((4 - (key.length % 4)) % 4);
+            const base64 = (key + padding).replace(/-/g, "+").replace(/_/g, "/");
+            const raw = atob(base64);
+            return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
+          })(),
+        });
+        if (sub) {
+          const json = sub.toJSON();
+          await fetch("/api/push/subscribe", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ endpoint: json.endpoint, keys: { p256dh: json.keys?.p256dh, auth: json.keys?.auth } }),
+          });
+        }
+      }
+    } catch (e) {
+      console.error("Push subscription error:", e);
+    } finally {
+      setPushLoading(false);
+    }
+  };
   useEffect(() => {
     if (tabParam && validTabs.includes(tabParam)) setActiveTab(tabParam);
   }, [tabParam]);
@@ -730,6 +773,36 @@ export default function ShopDashboard() {
           </div>
         </div>
       </div>
+
+      {pushPermission !== null && pushPermission !== "granted" && (
+        <div className="mb-6 flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 px-4 py-3">
+          <div className="flex-shrink-0 w-9 h-9 rounded-full bg-amber-100 dark:bg-amber-900 flex items-center justify-center">
+            <Bell className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
+              {pushPermission === "denied"
+                ? "Push-уведомления заблокированы в браузере"
+                : "Включите push-уведомления о новых заказах"}
+            </p>
+            <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
+              {pushPermission === "denied"
+                ? "Разрешите уведомления вручную в настройках браузера, затем перезагрузите страницу"
+                : "Браузер будет присылать мгновенное уведомление при каждом новом заказе — даже если эта вкладка не активна"}
+            </p>
+          </div>
+          {pushPermission !== "denied" && (
+            <Button
+              size="sm"
+              className="shrink-0 bg-amber-600 hover:bg-amber-700 text-white"
+              onClick={handleEnablePush}
+              disabled={pushLoading}
+            >
+              {pushLoading ? "..." : "Включить"}
+            </Button>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         {[
