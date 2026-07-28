@@ -2,6 +2,7 @@ import { Link, useLocation } from "wouter";
 import { ShoppingCart, User, Flower2, Menu, X, ChevronDown, Bell, MessageCircle, Package, Star, ChevronRight, LogOut, LayoutDashboard, ShoppingBag, Shield, Clock, CheckCircle2, XCircle, Camera, ShoppingBag as OrderNewIcon, MapPin, Check, RefreshCw, Truck, Heart, Tag, Gift, Zap, Leaf, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -83,6 +84,7 @@ export function Header() {
   const { itemCount } = useCart();
   const { selectedCityId, setSelectedCityId, selectedCity, cities } = useCity();
   const [location] = useLocation();
+  const { toast } = useToast();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -121,7 +123,8 @@ export function Header() {
 
   const { data: shopOrders } = useQuery<any[]>({
     queryKey: ["/api/orders/shop"],
-    enabled: !!user && user.role === "shop",
+    enabled: !!user && (user.role === "shop" || user.role === "worker"),
+    refetchInterval: 30000,
   });
 
   const notifications = notifData?.notifications || [];
@@ -141,6 +144,7 @@ export function Header() {
 
   const prevUnreadMessages = useRef<number | null>(null);
   const prevPendingOrders = useRef<number | null>(null);
+  const seenNotifIds = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (prevUnreadMessages.current !== null && unreadMessages > prevUnreadMessages.current) {
@@ -155,6 +159,34 @@ export function Header() {
     }
     prevPendingOrders.current = pendingShopOrdersCount;
   }, [pendingShopOrdersCount]);
+
+  // Toast-уведомление при новом заказе
+  useEffect(() => {
+    if (!notifications.length) return;
+    const newOrderNotifs = notifications.filter(
+      (n) => n.type === "order_new" && !seenNotifIds.current.has(n.id)
+    );
+    // Первый рендер — просто запомнить ID, не показывать toast
+    if (seenNotifIds.current.size === 0 && notifications.length > 0) {
+      notifications.forEach((n) => seenNotifIds.current.add(n.id));
+      return;
+    }
+    newOrderNotifs.forEach((n) => {
+      seenNotifIds.current.add(n.id);
+      toast({
+        title: n.title,
+        description: n.text,
+        duration: 8000,
+        action: (
+          <a href="/shop-dashboard" className="text-xs underline font-medium whitespace-nowrap">
+            Открыть панель →
+          </a>
+        ) as any,
+      });
+    });
+    // Запомнить все остальные тоже
+    notifications.forEach((n) => seenNotifIds.current.add(n.id));
+  }, [notifications]);
 
   const navLinks = [
     { href: "/", label: "Главная" },

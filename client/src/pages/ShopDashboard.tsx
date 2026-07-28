@@ -555,7 +555,8 @@ export default function ShopDashboard() {
 
   const { data: orders, isLoading: loadingOrders } = useQuery<OrderWithItems[]>({
     queryKey: ["/api/orders/shop"],
-    enabled: !!user && user.role === "shop",
+    enabled: !!user && (user.role === "shop" || user.role === "worker"),
+    refetchInterval: 30000,
   });
 
   const { data: reviews } = useQuery<(Review & { buyerName?: string })[]>({
