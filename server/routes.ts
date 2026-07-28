@@ -2337,6 +2337,21 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.json({ key: VAPID_PUBLIC_KEY });
   });
 
+  // Returns whether the given endpoint is still registered server-side for the current user.
+  // Client uses this to detect when Apple has invalidated a subscription and re-subscribe.
+  app.get("/api/push/status", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const endpoint = req.query.endpoint as string | undefined;
+      if (!endpoint) return res.status(400).json({ error: "endpoint required" });
+      const subs = await storage.getPushSubscriptionsByUser(userId);
+      const subscribed = subs.some((s) => s.endpoint === endpoint);
+      res.json({ subscribed });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   app.post("/api/push/subscribe", requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;

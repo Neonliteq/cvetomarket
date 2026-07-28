@@ -741,6 +741,45 @@ function PushNotificationsSection() {
     }
   };
 
+  const handleReconnect = async () => {
+    setLoading(true);
+    try {
+      // Unsubscribe existing browser subscription and delete from server
+      const reg = await navigator.serviceWorker.ready;
+      const existing = await reg.pushManager.getSubscription();
+      if (existing) {
+        await fetch("/api/push/unsubscribe", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ endpoint: existing.endpoint }),
+          credentials: "include",
+        }).catch(() => {});
+        await existing.unsubscribe();
+      }
+      // Create a fresh subscription
+      const vapidKey = await getVapidPublicKey();
+      if (!vapidKey) throw new Error("Не удалось получить ключ сервера");
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidKey),
+      });
+      const json = sub.toJSON();
+      const res = await fetch("/api/push/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ endpoint: json.endpoint, keys: { p256dh: json.keys?.p256dh, auth: json.keys?.auth } }),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Не удалось сохранить подписку");
+      setSubscription(sub);
+      toast({ title: "Готово", description: "Подписка на уведомления обновлена" });
+    } catch (e: any) {
+      toast({ title: "Ошибка", description: e.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div>
       <p className="text-sm font-medium mb-1.5 flex items-center gap-1.5">
@@ -770,6 +809,16 @@ function PushNotificationsSection() {
             <span className="text-sm text-muted-foreground">
               {loading ? "Применяется..." : isSubscribed ? "Включены" : "Выключены"}
             </span>
+            {isSubscribed && (
+              <button
+                onClick={handleReconnect}
+                disabled={loading}
+                className="ml-auto text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 disabled:opacity-50"
+                title="Пересоздать подписку, если уведомления перестали приходить"
+              >
+                Переподключить
+              </button>
+            )}
           </div>
           {isSubscribed && (
             <div className="pl-1 space-y-2 border-l-2 border-muted ml-1">
