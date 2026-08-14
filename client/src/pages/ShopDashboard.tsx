@@ -1035,35 +1035,58 @@ export default function ShopDashboard() {
                 return sorted.map((order) => (
                 <Card key={order.id} data-testid={`card-order-${order.id}`}>
                   <CardContent className="p-5">
-                    <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <p className="font-bold text-base">Заказ #{(order as any).orderNumber || order.id.slice(0, 8).toUpperCase()}</p>
-                          <Badge className={`text-xs ${STATUS_COLORS[order.status] || ""}`}>
-                            {STATUS_LABELS[order.status] || order.status}
-                          </Badge>
-                        </div>
+
+                    {/* Header: order number + status + total */}
+                    <div className="flex flex-wrap items-start justify-between gap-2 mb-3">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-bold text-base">#{(order as any).orderNumber || order.id.slice(0, 8).toUpperCase()}</p>
+                        <Badge className={`text-xs ${STATUS_COLORS[order.status] || ""}`}>
+                          {STATUS_LABELS[order.status] || order.status}
+                        </Badge>
                         {order.createdAt && (
-                          <p className="text-xs text-muted-foreground">
-                            {format(new Date(order.createdAt), "d MMMM yyyy, HH:mm", { locale: ru })}
-                          </p>
+                          <span className="text-xs text-muted-foreground">
+                            {format(new Date(order.createdAt), "d MMM, HH:mm", { locale: ru })}
+                          </span>
                         )}
                       </div>
-                      <div className="text-right">
-                        <p className="text-xl font-bold text-primary">{Number(order.totalAmount).toLocaleString("ru-RU")} ₽</p>
+                      <div className="text-right shrink-0">
+                        <p className="text-lg font-bold text-primary leading-tight">{Number(order.totalAmount).toLocaleString("ru-RU")} ₽</p>
                         {Number(order.deliveryCost) > 0 && (
-                          <p className="text-xs text-muted-foreground">вкл. доставка {Number(order.deliveryCost).toLocaleString("ru-RU")} ₽</p>
+                          <p className="text-[11px] text-muted-foreground">доставка {Number(order.deliveryCost).toLocaleString("ru-RU")} ₽</p>
                         )}
                       </div>
                     </div>
 
+                    {/* Delivery date highlight */}
+                    {(order.deliveryDate || order.deliveryTime) && (
+                      <div className="flex items-center gap-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 px-3 py-2 mb-4">
+                        <Calendar className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                        <div className="flex items-baseline gap-2 flex-wrap min-w-0">
+                          {order.deliveryDate && (
+                            <span className="text-sm font-semibold text-amber-900 dark:text-amber-100">{order.deliveryDate}</span>
+                          )}
+                          {order.deliveryTime && (
+                            <span className="text-sm text-amber-700 dark:text-amber-300 flex items-center gap-1">
+                              <Clock className="w-3.5 h-3.5 shrink-0" />
+                              {order.deliveryTime}
+                            </span>
+                          )}
+                          {order.deliveryAddress && (
+                            <span className="text-xs text-amber-600/80 dark:text-amber-400/80 truncate min-w-0">
+                              · {order.deliveryAddress}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Items */}
                     {order.items && order.items.length > 0 && (
                       <div className="mb-4">
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Товары</p>
-                        <div className="space-y-2">
+                        <div className="space-y-1.5">
                           {order.items.map((item, idx) => (
-                            <div key={idx} className="flex items-center gap-3 p-2 rounded-md bg-muted/50" data-testid={`order-item-${order.id}-${idx}`}>
-                              <div className="w-10 h-10 rounded-md overflow-hidden bg-muted shrink-0">
+                            <div key={idx} className="flex items-center gap-3 p-2 rounded-md bg-muted/40" data-testid={`order-item-${order.id}-${idx}`}>
+                              <div className="w-9 h-9 rounded-md overflow-hidden bg-muted shrink-0">
                                 <img
                                   src={item.productImage || "/images/placeholder-bouquet.png"}
                                   alt={item.productName}
@@ -1072,9 +1095,9 @@ export default function ShopDashboard() {
                               </div>
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-medium truncate">{item.productName}</p>
-                                <p className="text-xs text-muted-foreground">{item.quantity} шт. x {Number(item.price).toLocaleString("ru-RU")} ₽</p>
+                                <p className="text-xs text-muted-foreground">{item.quantity} шт. × {Number(item.price).toLocaleString("ru-RU")} ₽</p>
                               </div>
-                              <p className="text-sm font-semibold shrink-0">
+                              <p className="text-sm font-semibold shrink-0 tabular-nums">
                                 {(item.quantity * Number(item.price)).toLocaleString("ru-RU")} ₽
                               </p>
                             </div>
@@ -1083,46 +1106,24 @@ export default function ShopDashboard() {
                       </div>
                     )}
 
-                    <Separator className="my-4" />
+                    <Separator className="my-3" />
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                      <div className="space-y-2">
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Получатель</p>
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2 text-sm">
-                            <User className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                            <span>{order.recipientName}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm">
-                            <Phone className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                            <a href={`tel:${order.recipientPhone}`} className="text-primary hover:underline">{order.recipientPhone}</a>
-                          </div>
-                        </div>
-                        {order.buyerName && (
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <ShoppingBag className="w-3.5 h-3.5 shrink-0" />
-                            <span>Заказчик: {order.buyerName}</span>
-                          </div>
-                        )}
+                    {/* Recipient info */}
+                    <div className="flex flex-wrap gap-x-6 gap-y-1 mb-4">
+                      <div className="flex items-center gap-1.5 text-sm">
+                        <User className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                        <span className="font-medium">{order.recipientName}</span>
                       </div>
-
-                      <div className="space-y-2">
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Доставка</p>
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2 text-sm">
-                            <MapPin className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                            <span>{order.deliveryAddress}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm">
-                            <Calendar className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                            <span>{order.deliveryDate}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm">
-                            <Clock className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                            <span>{order.deliveryTime}</span>
-                          </div>
-                        </div>
+                      <div className="flex items-center gap-1.5 text-sm">
+                        <Phone className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                        <a href={`tel:${order.recipientPhone}`} className="text-primary hover:underline font-medium">{order.recipientPhone}</a>
                       </div>
+                      {order.buyerName && (
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <ShoppingBag className="w-3.5 h-3.5 shrink-0" />
+                          <span>Заказчик: {order.buyerName}</span>
+                        </div>
+                      )}
                     </div>
 
                     {order.comment && (
