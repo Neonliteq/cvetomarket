@@ -171,6 +171,26 @@ function formatDeliveryDate(value?: string | null): string {
   return match ? `${match[3]}.${match[2]}.${match[1]}` : value;
 }
 
+function getDeliveryDateLabel(value?: string | null): string | null {
+  if (!value) return null;
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+
+  const deliveryDate = new Date(
+    Number(match[1]),
+    Number(match[2]) - 1,
+    Number(match[3]),
+  );
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  if (deliveryDate.getTime() === today.getTime()) return "Сегодня";
+  if (deliveryDate.getTime() === tomorrow.getTime()) return "Завтра";
+  return null;
+}
+
 const PRODUCT_TYPES = { bouquet: "Букет", gift: "Подарок", tasty_gift: "Вкусный подарок" } as const;
 
 const productSchema = z.object({
@@ -1069,7 +1089,14 @@ export default function ShopDashboard() {
                         <Calendar className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
                         <div className="flex items-baseline gap-2 flex-wrap min-w-0">
                           {order.deliveryDate && (
-                            <span className="text-sm font-semibold text-amber-900 dark:text-amber-100">{formatDeliveryDate(order.deliveryDate)}</span>
+                            <>
+                              {getDeliveryDateLabel(order.deliveryDate) && (
+                                <span className="rounded-md bg-amber-600 px-2 py-0.5 text-xs font-bold text-white">
+                                  {getDeliveryDateLabel(order.deliveryDate)}
+                                </span>
+                              )}
+                              <span className="text-sm font-semibold text-amber-900 dark:text-amber-100">{formatDeliveryDate(order.deliveryDate)}</span>
+                            </>
                           )}
                           {order.deliveryTime && (
                             <span className="text-sm text-amber-700 dark:text-amber-300 flex items-center gap-1">
