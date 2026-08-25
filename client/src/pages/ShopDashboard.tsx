@@ -165,6 +165,12 @@ const STATUS_COLORS: Record<string, string> = {
 type OrderItem = { productName: string; productImage?: string | null; quantity: number; price: string };
 type OrderWithItems = Order & { buyerName?: string; items?: OrderItem[] };
 
+function formatDeliveryDate(value?: string | null): string {
+  if (!value) return "";
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return match ? `${match[3]}.${match[2]}.${match[1]}` : value;
+}
+
 const PRODUCT_TYPES = { bouquet: "Букет", gift: "Подарок", tasty_gift: "Вкусный подарок" } as const;
 
 const productSchema = z.object({
@@ -1063,7 +1069,7 @@ export default function ShopDashboard() {
                         <Calendar className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
                         <div className="flex items-baseline gap-2 flex-wrap min-w-0">
                           {order.deliveryDate && (
-                            <span className="text-sm font-semibold text-amber-900 dark:text-amber-100">{order.deliveryDate}</span>
+                            <span className="text-sm font-semibold text-amber-900 dark:text-amber-100">{formatDeliveryDate(order.deliveryDate)}</span>
                           )}
                           {order.deliveryTime && (
                             <span className="text-sm text-amber-700 dark:text-amber-300 flex items-center gap-1">
