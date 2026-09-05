@@ -1,0 +1,78 @@
+⚡ Done in 260ms
+root@cv6271581:/var/www/cvetomarket# set -a
+source .env
+set +a
+
+pm2 restart cvetomarket --update-env
+pm2 save
+
+pm2 status cvetomarket
+pm2 logs cvetomarket --lines 100 --nostream
+-bash: wdsj_rIKATZvRmrPnUea4fQ51BTRz-V5MC6xpWOuplkNODE_ENV=production: command not found
+[PM2] Applying action restartProcessId on app [cvetomarket](ids: [ 0 ])
+[PM2] [cvetomarket](0) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ cvetomarket        │ fork     │ 13   │ online    │ 0%       │ 18.5mb   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+[PM2] Saving current process list...
+[PM2] Successfully saved in /root/.pm2/dump.pm2
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ cvetomarket        │ fork     │ 13   │ online    │ 0%       │ 58.7mb   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+[TAILING] Tailing last 100 lines for [cvetomarket] process (change the value with --lines option)
+/root/.pm2/logs/cvetomarket-error.log last 100 lines:
+0|cvetomar |     at u1 (/var/www/cvetomarket/dist/index.cjs:31:26213)
+0|cvetomar |     at Array.map (<anonymous>)
+0|cvetomar |     at /var/www/cvetomarket/dist/index.cjs:31:22587
+0|cvetomar |     at Array.<anonymous> (/var/www/cvetomarket/dist/index.cjs:31:22764)
+0|cvetomar |     at ia.match (/var/www/cvetomarket/dist/index.cjs:31:26008)
+0|cvetomar |     at Qj (/var/www/cvetomarket/dist/index.cjs:31:31930)
+0|cvetomar |     at h (/var/www/cvetomarket/dist/index.cjs:31:29915)
+0|cvetomar |     at Ye.<anonymous> (/var/www/cvetomarket/dist/index.cjs:41:10086)
+0|cvetomar |     at Ye.emit (node:events:524:28)
+0|cvetomar | URIError: Failed to decode param '.user.ini%85'
+0|cvetomar |     at decodeURIComponent (<anonymous>)
+0|cvetomar |     at u1 (/var/www/cvetomarket/dist/index.cjs:31:26213)
+0|cvetomar |     at Array.map (<anonymous>)
+0|cvetomar |     at /var/www/cvetomarket/dist/index.cjs:31:22587
+0|cvetomar |     at Array.<anonymous> (/var/www/cvetomarket/dist/index.cjs:31:22764)
+0|cvetomar |     at ia.match (/var/www/cvetomarket/dist/index.cjs:31:26008)
+0|cvetomar |     at Qj (/var/www/cvetomarket/dist/index.cjs:31:31930)
+0|cvetomar |     at h (/var/www/cvetomarket/dist/index.cjs:31:29915)
+0|cvetomar |     at Ye.<anonymous> (/var/www/cvetomarket/dist/index.cjs:41:10086)
+0|cvetomar |     at Ye.emit (node:events:524:28)
+0|cvetomar | URIError: Failed to decode param '.yarnrc.yml%85'
+0|cvetomar |     at decodeURIComponent (<anonymous>)
+0|cvetomar |     at u1 (/var/www/cvetomarket/dist/index.cjs:31:26213)
+0|cvetomar |     at Array.map (<anonymous>)
+0|cvetomar |     at /var/www/cvetomarket/dist/index.cjs:31:22587
+0|cvetomar |     at Array.<anonymous> (/var/www/cvetomarket/dist/index.cjs:31:22764)
+0|cvetomar |     at ia.match (/var/www/cvetomarket/dist/index.cjs:31:26008)
+0|cvetomar |     at Qj (/var/www/cvetomarket/dist/index.cjs:31:31930)
+0|cvetomar |     at h (/var/www/cvetomarket/dist/index.cjs:31:29915)
+0|cvetomar |     at Ye.<anonymous> (/var/www/cvetomarket/dist/index.cjs:41:10086)
+0|cvetomar |     at Ye.emit (node:events:524:28)
+0|cvetomar | [server error] insert or update on table "products" violates foreign key constraint "products_category_id_categories_id_fk"
+0|cvetomar | URIError: Failed to decode param '%c0'
+0|cvetomar |     at decodeURIComponent (<anonymous>)
+0|cvetomar |     at u1 (/var/www/cvetomarket/dist/index.cjs:31:26213)
+0|cvetomar |     at Array.map (<anonymous>)
+0|cvetomar |     at /var/www/cvetomarket/dist/index.cjs:31:22587
+0|cvetomar |     at Array.<anonymous> (/var/www/cvetomarket/dist/index.cjs:31:22764)
+0|cvetomar |     at ia.match (/var/www/cvetomarket/dist/index.cjs:31:26008)
+0|cvetomar |     at Qj (/var/www/cvetomarket/dist/index.cjs:31:31930)
+0|cvetomar |     at h (/var/www/cvetomarket/dist/index.cjs:31:29915)
+0|cvetomar |     at Ye.<anonymous> (/var/www/cvetomarket/dist/index.cjs:41:10086)
+0|cvetomar |     at Ye.emit (node:events:524:28)
+0|cvetomar | Error: ENOENT: no such file or directory, stat '/var/www/cvetomarket/dist/public/index.html'
+0|cvetomar | Error serving object: t [ObjectNotFoundError]: Object not found
+0|cvetomar |     at Li.getObjectEntityFile (/var/www/cvetomarket/dist/index.cjs:221:3937)
+0|cvetomar |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|cvetomar |     at async /var/www/cvetomarket/dist/index.cjs:221:5168
+0|cvetomar | Error serving object: t [ObjectNotFoundError]: Object not found
+0|cvetomar |     at Li.getObjectEntityFile (/var/www/cvetomarket/dist/index.cjs:221:3937)
+0|cvetomar |     at process.processTicksAndRejections (node:inter...

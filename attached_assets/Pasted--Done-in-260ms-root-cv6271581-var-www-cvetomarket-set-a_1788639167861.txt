@@ -1,0 +1,151 @@
+⚡ Done in 260ms
+root@cv6271581:/var/www/cvetomarket# set -a
+source .env
+set +a
+
+pm2 restart cvetomarket --update-env
+pm2 save
+
+pm2 status cvetomarket
+pm2 logs cvetomarket --lines 100 --nostream
+-bash: wdsj_rIKATZvRmrPnUea4fQ51BTRz-V5MC6xpWOuplkNODE_ENV=production: command not found
+[PM2] Applying action restartProcessId on app [cvetomarket](ids: [ 0 ])
+[PM2] [cvetomarket](0) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ cvetomarket        │ fork     │ 13   │ online    │ 0%       │ 18.5mb   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+[PM2] Saving current process list...
+[PM2] Successfully saved in /root/.pm2/dump.pm2
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ cvetomarket        │ fork     │ 13   │ online    │ 0%       │ 58.7mb   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+[TAILING] Tailing last 100 lines for [cvetomarket] process (change the value with --lines option)
+/root/.pm2/logs/cvetomarket-error.log last 100 lines:
+0|cvetomar |     at u1 (/var/www/cvetomarket/dist/index.cjs:31:26213)
+0|cvetomar |     at Array.map (<anonymous>)
+0|cvetomar |     at /var/www/cvetomarket/dist/index.cjs:31:22587
+0|cvetomar |     at Array.<anonymous> (/var/www/cvetomarket/dist/index.cjs:31:22764)
+0|cvetomar |     at ia.match (/var/www/cvetomarket/dist/index.cjs:31:26008)
+0|cvetomar |     at Qj (/var/www/cvetomarket/dist/index.cjs:31:31930)
+0|cvetomar |     at h (/var/www/cvetomarket/dist/index.cjs:31:29915)
+0|cvetomar |     at Ye.<anonymous> (/var/www/cvetomarket/dist/index.cjs:41:10086)
+0|cvetomar |     at Ye.emit (node:events:524:28)
+0|cvetomar | URIError: Failed to decode param '.user.ini%85'
+0|cvetomar |     at decodeURIComponent (<anonymous>)
+0|cvetomar |     at u1 (/var/www/cvetomarket/dist/index.cjs:31:26213)
+0|cvetomar |     at Array.map (<anonymous>)
+0|cvetomar |     at /var/www/cvetomarket/dist/index.cjs:31:22587
+0|cvetomar |     at Array.<anonymous> (/var/www/cvetomarket/dist/index.cjs:31:22764)
+0|cvetomar |     at ia.match (/var/www/cvetomarket/dist/index.cjs:31:26008)
+0|cvetomar |     at Qj (/var/www/cvetomarket/dist/index.cjs:31:31930)
+0|cvetomar |     at h (/var/www/cvetomarket/dist/index.cjs:31:29915)
+0|cvetomar |     at Ye.<anonymous> (/var/www/cvetomarket/dist/index.cjs:41:10086)
+0|cvetomar |     at Ye.emit (node:events:524:28)
+0|cvetomar | URIError: Failed to decode param '.yarnrc.yml%85'
+0|cvetomar |     at decodeURIComponent (<anonymous>)
+0|cvetomar |     at u1 (/var/www/cvetomarket/dist/index.cjs:31:26213)
+0|cvetomar |     at Array.map (<anonymous>)
+0|cvetomar |     at /var/www/cvetomarket/dist/index.cjs:31:22587
+0|cvetomar |     at Array.<anonymous> (/var/www/cvetomarket/dist/index.cjs:31:22764)
+0|cvetomar |     at ia.match (/var/www/cvetomarket/dist/index.cjs:31:26008)
+0|cvetomar |     at Qj (/var/www/cvetomarket/dist/index.cjs:31:31930)
+0|cvetomar |     at h (/var/www/cvetomarket/dist/index.cjs:31:29915)
+0|cvetomar |     at Ye.<anonymous> (/var/www/cvetomarket/dist/index.cjs:41:10086)
+0|cvetomar |     at Ye.emit (node:events:524:28)
+0|cvetomar | [server error] insert or update on table "products" violates foreign key constraint "products_category_id_categories_id_fk"
+0|cvetomar | URIError: Failed to decode param '%c0'
+0|cvetomar |     at decodeURIComponent (<anonymous>)
+0|cvetomar |     at u1 (/var/www/cvetomarket/dist/index.cjs:31:26213)
+0|cvetomar |     at Array.map (<anonymous>)
+0|cvetomar |     at /var/www/cvetomarket/dist/index.cjs:31:22587
+0|cvetomar |     at Array.<anonymous> (/var/www/cvetomarket/dist/index.cjs:31:22764)
+0|cvetomar |     at ia.match (/var/www/cvetomarket/dist/index.cjs:31:26008)
+0|cvetomar |     at Qj (/var/www/cvetomarket/dist/index.cjs:31:31930)
+0|cvetomar |     at h (/var/www/cvetomarket/dist/index.cjs:31:29915)
+0|cvetomar |     at Ye.<anonymous> (/var/www/cvetomarket/dist/index.cjs:41:10086)
+0|cvetomar |     at Ye.emit (node:events:524:28)
+0|cvetomar | Error: ENOENT: no such file or directory, stat '/var/www/cvetomarket/dist/public/index.html'
+0|cvetomar | Error serving object: t [ObjectNotFoundError]: Object not found
+0|cvetomar |     at Li.getObjectEntityFile (/var/www/cvetomarket/dist/index.cjs:221:3937)
+0|cvetomar |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|cvetomar |     at async /var/www/cvetomarket/dist/index.cjs:221:5168
+0|cvetomar | Error serving object: t [ObjectNotFoundError]: Object not found
+0|cvetomar |     at Li.getObjectEntityFile (/var/www/cvetomarket/dist/index.cjs:221:3937)
+0|cvetomar |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|cvetomar |     at async /var/www/cvetomarket/dist/index.cjs:221:5168
+0|cvetomar | Error serving object: t [ObjectNotFoundError]: Object not found
+0|cvetomar |     at Li.getObjectEntityFile (/var/www/cvetomarket/dist/index.cjs:221:3937)
+0|cvetomar |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|cvetomar |     at async /var/www/cvetomarket/dist/index.cjs:221:5168
+0|cvetomar | Error serving object: t [ObjectNotFoundError]: Object not found
+0|cvetomar |     at Li.getObjectEntityFile (/var/www/cvetomarket/dist/index.cjs:221:3937)
+0|cvetomar |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|cvetomar |     at async /var/www/cvetomarket/dist/index.cjs:221:5168
+0|cvetomar | Error serving object: t [ObjectNotFoundError]: Object not found
+0|cvetomar |     at Li.getObjectEntityFile (/var/www/cvetomarket/dist/index.cjs:221:3937)
+0|cvetomar |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|cvetomar |     at async /var/www/cvetomarket/dist/index.cjs:221:5168
+0|cvetomar | Error serving object: t [ObjectNotFoundError]: Object not found
+0|cvetomar |     at Li.getObjectEntityFile (/var/www/cvetomarket/dist/index.cjs:221:3937)
+0|cvetomar |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|cvetomar |     at async /var/www/cvetomarket/dist/index.cjs:221:5168
+0|cvetomar | Error serving object: t [ObjectNotFoundError]: Object not found
+0|cvetomar |     at Li.getObjectEntityFile (/var/www/cvetomarket/dist/index.cjs:221:3937)
+0|cvetomar |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|cvetomar |     at async /var/www/cvetomarket/dist/index.cjs:221:5168
+0|cvetomar | Error serving object: t [ObjectNotFoundError]: Object not found
+0|cvetomar |     at Li.getObjectEntityFile (/var/www/cvetomarket/dist/index.cjs:221:3937)
+0|cvetomar |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|cvetomar |     at async /var/www/cvetomarket/dist/index.cjs:221:5168
+0|cvetomar | Error serving object: t [ObjectNotFoundError]: Object not found
+0|cvetomar |     at Li.getObjectEntityFile (/var/www/cvetomarket/dist/index.cjs:221:3937)
+0|cvetomar |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|cvetomar |     at async /var/www/cvetomarket/dist/index.cjs:221:5168
+0|cvetomar | Error serving object: t [ObjectNotFoundError]: Object not found
+0|cvetomar |     at Li.getObjectEntityFile (/var/www/cvetomarket/dist/index.cjs:221:3937)
+0|cvetomar |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|cvetomar |     at async /var/www/cvetomarket/dist/index.cjs:221:5168
+0|cvetomar | Error serving object: t [ObjectNotFoundError]: Object not found
+0|cvetomar |     at Li.getObjectEntityFile (/var/www/cvetomarket/dist/index.cjs:221:3937)
+0|cvetomar |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|cvetomar |     at async /var/www/cvetomarket/dist/index.cjs:221:5168
+0|cvetomar | Error serving object: t [ObjectNotFoundError]: Object not found
+0|cvetomar |     at Li.getObjectEntityFile (/var/www/cvetomarket/dist/index.cjs:221:3937)
+0|cvetomar |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|cvetomar |     at async /var/www/cvetomarket/dist/index.cjs:221:5168
+0|cvetomar | Error serving object: t [ObjectNotFoundError]: Object not found
+0|cvetomar |     at Li.getObjectEntityFile (/var/www/cvetomarket/dist/index.cjs:221:3937)
+0|cvetomar |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|cvetomar |     at async /var/www/cvetomarket/dist/index.cjs:221:5168
+0|cvetomar | Error serving object: t [ObjectNotFoundError]: Object not found
+0|cvetomar |     at Li.getObjectEntityFile (/var/www/cvetomarket/dist/index.cjs:221:3937)
+0|cvetomar |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|cvetomar |     at async /var/www/cvetomarket/dist/index.cjs:221:5168
+
+/root/.pm2/logs/cvetomarket-out.log last 100 lines:
+0|cvetomar | inStock":true,"isActive":true,"composition":"Гортензия - 1 шт.\nКустовая роза - 2 шт.\nЭустома - 2 шт.\n\nШирина - 23 см\nВысота - 40 см","discountPercent":0,"isRecommended":true,"tags":["гортензия","кустовая роза","эустома"],"rating":"0.00","reviewCount":0,"isFeatured":false,"createdAt":"2026-03-29T15:30:50.581Z","shopName":"CvetoMarket","categoryName":"Симпатия"},{"id":"afe17d49-1da4-4e13-a6cc-929e0834c6fc","shopId":"4154fd7d-a705-4070-b5a8-0792890da0ee","categoryId":"b05be4be-7d31-4c44-ac2e-558ad2199174","type":"bouquet","name":"Букет с необычными розами ","description":"Стойкий букет с необычными цветами ","price":"3000.00","images":["/objects/uploads/1774786706692-1g79s4n8isd.jpeg","/objects/uploads/1774786706860-wt69tpyh6b.jpeg","/objects/uploads/1774786707044-8hsqkgxef78.jpeg","/objects/uploads/1774786707136-7tdgvb0hhom.jpeg"],"assemblyTime":35,"inStock":true,"isActive":false,"composition":"Букет из невероятных эквадорских роз, диантусов , ромашки и эвкалипта ","discountPercent":0,"isRecommended":false,"tags":["ромашки"],"rating":"0.00","reviewCount":0,"isFeatured":true,"createdAt":"2026-03-29T15:20:31.069Z","shopName":"CvetoMarket","categoryName":"День рождения"},{"id":"d7f0b2de-cce6-4a62-bb93-63a8631614e4","shopId":"4154fd7d-a705-4070-b5a8-0792890da0ee","categoryId":"b05be4be-7d31-4c44-ac2e-558ad2199174","type":"bouquet","name":"Букет-комплимент кустовых роз","description":"","price":"1190.00","images":["/objects/uploads/1774786606153-q6syy5puzuc.jpeg"],"assemblyTime":35,"inStock":true,"isActive":true,"composition":"Букет из 3-х кустовых роз ","discountPercent":0,"isRecommended":false,"tags":[],"rating":"0.00","reviewCount":0,"isFeatured":true,"createdAt":"2026-03-29T15:17:12.877Z","shopName":"CvetoMarket","categoryName":"День рождения"},{"id":"3a2fd588-2b4a-4b92-b9b9-c8c1e9392918","shopId":"4154fd7d-a705-4070-b5a8-0792890da0ee","categoryId":"a13ed825-aeca-4312-9d1f-494d5fdbbf58","type":"bouquet","name":"Розовые розы","description":"","price":"2490.00","images":["/objects/uploads/1774786457058-eeh2cucvzvt.jpg","/objects/uploads/1774786458953-xygihhz1iuf.jpg","/objects/uploads/1774786460637-4ribn4nn1ll.jpg"],"assemblyTime":60,"inStock":true,"isActive":true,"composition":"Роза аква - 11 шт.\nАтласная лента - 2 шт.\nУпаковка крафт дизайнерский - 2 шт.\nкрафт пакет с ручками - 1 шт.\nрекомендации по уходу - 1 шт.","discountPercent":0,"isRecommended":false,"tags":["крафт","крафт пакет с ручками","роза аква"],"rating":"0.00","reviewCount":0,"isFeatured":true,"createdAt":"2026-03-29T15:14:21.947Z","shopName":"CvetoMarket","categoryName":"Романтика"},{"id":"318439a0-14fc-4711-9e34-be2e62ac0458","shopId":"4154fd7d-a705-4070-b5a8-0792890da0ee","categoryId":"a13ed825-aeca-4312-9d1f-494d5fdbbf58","type":"bouquet","name":"Букет-комплимент с пионовидными розами и оксипеталумом","description":"Нежный буекет.","price":"1790.00","images":["/objects/uploads/1774785984134-5vu362ql3a.jpg","/objects/uploads/1774785984159-yekhzncyym.jpg","/objects/uploads/1774785984175-wyzlp57qedg.jpg"],"assemblyTime":60,"inStock":true,"isActive":true,"composition":"Лента - 1 шт.\nУпаковка - 3 шт.\nТишью - 4 шт.\nоксипеталум голубой - 2 шт.\nроза кантри блю - 3 шт.","discountPercent":0,"isRecommended":true,"tags":["кантри блюз","оксипеталум голубой"],"rating":"0.00","reviewCount":0,"isFeatured":true,"createdAt":"2026-03-29T15:06:26.359Z","shopName":"CvetoMarket","categoryName":"Романтика"},{"id":"913bd615-cf3a-4ae4-8048-c680d9be72ea","shopId":"4154fd7d-a705-4070-b5a8-0792890da0ee","categoryId":"a13ed825-aeca-4312-9d1f-494d5fdbbf58","type":"bouquet","name":"Букет с хризантемой и пионовидными розами","description":"Легкий весенний букет","price":"2550.00","images":["/objects/uploads/1774785769677-o7z8ct5d1m.jpg","/objects/uploads/1774785770186-1ncqmy0pd2.jpg","/objects/uploads/1774785770259-j3kua1g1z0m.jpg","/objects/uploads/1774785770277-uhfietzj74.jpg","/objects/uploads/1774785770294-ffb8r6xh2xt.jpg"],"assemblyTime":60,"inStock":true,"isActive":true,"composition":"Лента атласная - 1 шт.\nТишью - 4 шт.\nРоза пионовидная кустовая - 3 шт.\nУпаковка дизайнерская - 4 шт.\nхризантема алтай - 2 шт.","discountPercent":0,"isRecommended":true,"tags":["роза пионовидная кустовая","хризантема алтай"],"rating":"0.00","reviewCount":0,"isFeatured":true,"createdAt":"2026-03-29T15:02:57.099Z","shopName":"CvetoMarket","categoryName":"Романтика"},{"id":"14587550-1d07-4d38-94bb-c94957e83dfa","shopId":"4154fd7d-a705-4070-b5a8-0792890da0ee","categoryId":"a13ed825-aeca-4312-9d1f-494d5fdbbf58","type":"bouquet","name":"Букет с нарциссами и генистой","description":"Красивый букет","price":"2300.00","images":["/objects/uploads/1774785652276-nyin1ox0bpn.jpg","/objects/uploads/1774785657658-5s9mz0w81q.jpg","/objects/uploads/1774785657858-6f925w60oss.jpg","/objects/uploads/1774785657996-n6igr8g5kna.jpg"],"assemblyTime":60,"inStock":true,"isActive":false,"composition":"Лента - 2 шт.\nНарцисс - 5 шт.\nДиантус - 5 шт.\nОксипеталум - 2 шт.\nУпаковка дизайнерская - 4 шт.\nГениста - 1 шт.","discountPercent":0,"isRecommended":true,"tags":["нарцисс","диантус","оксипеталгенистаум"],"rating":"0.00","reviewCount":0,"isFeatured":true,"createdAt":"2026-03-29T15:01:02.471Z","shopName":"CvetoMarket","categoryName":"Романтика"},{"id":"5bed5cb3-b1f5-4404-80d7-c87f3bcb0741","shopId":"4154fd7d-a705-4070-b5a8-0792890da0ee","categoryId":"a5f00f69-f492-48e9-86cc-5edaf8aee3c8","type":"bouquet","name":"test","description":"test","price":"100.00","images":["/objects/uploads/1774625879526-v1d1e828dn.jpg"],"assemblyTime":60,"inStock":false,"isActive":false,"composition":"test","discountPercent":0,"isRecommended":false,"tags":[],"rating":"0.00","reviewCount":0,"isFeatured":false,"createdAt":"2026-03-27T18:38:02.976Z","shopName":"CvetoMarket","categoryName":"8 марта"}]
+0|cvetomar | 9:42:54 PM [express] GET /api/notifications 304 in 3ms :: {"notifications":[],"unreadMessages":0}
+0|cvetomar | 9:42:59 PM [express] POST /api/analytics/pageview 500 in 6ms :: {"error":"column \"utm_source\" of relation \"page_views\" does not exist"}
+0|cvetomar | 9:42:59 PM [express] PATCH /api/analytics/pageview 500 in 6ms :: {"error":"column \"duration_seconds\" of relation \"page_views\" does not exist"}
+0|cvetomar | 9:42:59 PM [express] GET /api/shops/4154fd7d-a705-4070-b5a8-0792890da0ee 304 in 10ms :: {"id":"4154fd7d-a705-4070-b5a8-0792890da0ee","ownerId":"dd48113f-4d92-4bd9-9d7b-eaf29bce8cca","name":"CvetoMarket","description":"Первый и главный магазин","cityId":"a8d71b68-3a1e-4344-80a8-9117e2bbb982","address":"Васильково, Шатурская 2В","inn":"672705982625","ogrn":"325390000000813","legalName":"ИП Аршинский Анатолий Александрович","legalAddress":"Калининград СНТ Радуга переулок Вильямса 4","legalType":"ip","deliveryPrice":"10.00","deliveryZone":"","deliveryZones":[{"id":"oq7l26u6","name":"центральный","color":"#2196F3","price":300,"coordinates":[[54.70515392926935,20.47632244801709],[54.70356128479196,20.505078481734955],[54.70914198398711,20.507582577298972],[54.76817498484239,20.49321630891961],[54.7596386050081,20.44970057404736],[54.75613933239631,20.4421113062018],[54.74933802204098,20.434729866992818],[54.74039786706319,20.424657185405927],[54.72069636612628,20.438735051128116],[54.713464414439535,20.462329141867315],[54.70755051889354,20.45760845400111],[54.70789841907427,20.466620676291157],[54.70515392926935,20.47632244801709]]},{"id":"pfbxynwl","name":"балтрайон","color":"#FF9800","price":450,"coordinates":[[54.70334548560782,20.505272295214816],[54.70499119442105,20.476273736124668],[54.70743205019873,20.457918182405635],[54.66745316193954,20.43113900760094],[54.66227887377585,20.453111663850958],[54.65770106695434,20.497056976350937],[54.64565565955684,20.531744046897224],[54.646252971987515,20.55989651271754],[54.643664554444534,20.58358578273707],[54.64923940189229,20.601781888694113],[54.6579983248003,20.607618375510494],[54.672128042661484,20.60590176174098],[54.67988733630807,20.60075192043238],[54.702559809340215,20.597318692893325],[54.70525234232319,20.59871494384265],[54.7089951857075,20.508061792590347],[54.70334548560782,20.505272295214816]]},{"id":"piexfty2","name":"дальняя","color":"#9C27B0","price":500,"coordinates":[[54.668310715549495,20.425813198374946],[54.658299464801644,20.480589079483217],[54.65360659272068,20.503209441361847],[54.644931188581225,20.528576385271748],[54.64191426850598,20.5765636910603],[54.64749618951846,20.602680600616864],[54.6594470501771,20.61163137247807],[54.679359582544876,20.604813677919342],[54.70245729871423,20.598044743879903],[54.70489772291371,20.61059940509793],[54.725857403388694,20.621195649068117],[54.75039143650516,20.63464404062747],[54.77638929825513,20.61474336365703],[54.76956401453616,20.54163603753579],[54.773379714320555,20.512151121621464],[54.757984513460826,20.443568252683377],[54.738918959568096,20.421681427121886],[54.720241866956236,20.43618681347445],[54.71388173479466,20.46099188244416],[54.70752060036445,20.456957840085813],[54.702351440566154,20.449404739499837],[54.69598848928576,20.43120863354275],[54.72439350579774,20.357170258984617],[54.7692787912087,20.34824386738307],[54.79306334237642,20.434009860842085],[54.79709274277328,20.474336623108975],[54.80429505422244,20.555175470336863],[54.80582789126763,20.579360699543926],[54.80662115055736,20.61506626595017],[54.80299245883799,20.74998844318387],[54.6921716202839,20.73488224201199],[54.60844760575668,20.62806210414623],[54.638705350371296,20.327327125520867],[54.668310715549495,20.425813198374946]]},{"id":"qoqxhb80","name":"зеленоградск","color":"#F44336","price":1200,"coordinates":[[55.002159912155356,20.493971084153177],[54.926306441971185,20.331922744309413],[54.84872422785713,20.476118300950056],[54.89386683493495,20.649152968918802],[55.002159912155356,20.493971084153177]]},{"id":"17zbb952","name":"Светлогорск","color":"#00BCD4","price":1600,"coordinates":[[54.96472341472703,20.085616074188362],[54.861874432005244,20.08149620114147],[54.88484054550072,20.40833946286022],[54.93784993977549,20.30534263668836],[54.96867387421901,20.36988731442273],[54.96472341472703,20.085616074188362]]},{"id":"trxnd2ad","name":"разные","color":"#795548","price":800,"coordinates":[[54.617182731359016,20.22663596640018],[54.66258527963119,20.20191672811895],[54.730196269609,20.18543723593145],[54.72542744107578,20.35297873983773],[54.67412692616056,20.430569682220543],[54.63949210171605,20.315899882415867],[54.608023394628255,20.626017190200265],[54.527418214220795,20.596440699805015],[54.617182731359016,20.22663596640018]]},{"id":"v0hiwhtk","name":"балтийск","color":"#607D8B","price":2500,"coordinates":[[54.60693921330047,19.928975119076583],[54.6993071190035,19.731221212826576],[54.7755901211789,20.011372580014076],[54.7470009030297,20.129475607357836],[54.60693921330047,19.928975119076583]]},{"id":"byt08vbd","name":"светлый","color":"#E91E63","price":1200,"coordinates":[[54.72793015385525,20.177540792904658],[54.73428807224013,20.132222189389083],[54.6579268952808,20.016865744076593],[54.63244108081335,20.21187306829533],[54.72793015385525,20.177540792904658]]},{"id":"hsenb9fy","name":"гвардейск","color":"#3F51B5","price":2100,"coordinates":[[54.743606503267785,20.9935549459508],[54.62266254508388,20.809533949857048],[54.570034645121815,21.356103774075795],[54.722944378703744,21.386316176419548],[54.743606503267785,20.9935549459508]]},{"id":"kc4zsv23","name":"ближняя","color":"#3F51B5","price":250,"coordinates":[[54.71037302441554,20.509178334564584],[54.76837712889497,20.49407213339271],[54.77234696037032,20.513298207611452],[54.76877412964809,20.541450673431772],[54.775919474202496,20.614921742767716],[54.74971367994227,20.634834462494272],[54.70599947204875,20.60874193319739],[54.71037302441554,20.509178334564584]]}],"workingHours":"9:00-20:00","commissionRate":null,"status":"approved","rating":"5.00","reviewCount":1,"isFeatured":false,"logoUrl":"/objects/uploads/1774622806919-9rltntn3nwo.webp","coverUrl":"/objects/uploads/1774622814913-pdqk85aaazq.webp","latitude":"54.7401370","longitude":"20.5799360","createdAt":"2026-03-27T17:44:57.699Z","cityName":"Калининград и область","ownerName":"CvetoMarket"}
+0|cvetomar | 9:43:00 PM [express] POST /api/analytics/pageview 500 in 7ms :: {"error":"column \"utm_source\" of relation \"page_views\" does not exist"}
+0|cvetomar | 9:43:00 PM [express] PATCH /api/analytics/pageview 500 in 14ms :: {"error":"column \"duration_seconds\" of relation \"page_views\" does not exist"}
+0|cvetomar | 9:43:00 PM [express] GET /api/bonuses 304 in 11ms :: {"balance":1000,"transactions":[{"id":"c143b4ca-1977-43a3-964c-80cf6171b092","userId":"be4db999-138b-4704-843b-982afaf3ab46","amount":1000,"reason":"welcome","description":"Приветственный бонус за регистрацию","expiresAt":null,"createdAt":"2026-09-05T19:29:02.861Z"}]}
+0|cvetomar | 9:43:00 PM [express] POST /api/analytics/event 200 in 12ms :: {"ok":true}
+0|cvetomar | 9:43:09 PM [express] GET /api/notifications 304 in 5ms :: {"notifications":[],"unreadMessages":0}
+0|cvetomar | 9:43:09 PM [express] GET /api/shops/4154fd7d-a705-4070-b5a8-0792890da0ee/delivery-zones 200 in 4ms :: {"zones":[{"id":"oq7l26u6","name":"центральный","color":"#2196F3","price":300,"coordinates":[[54.70515392926935,20.47632244801709],[54.70356128479196,20.505078481734955],[54.70914198398711,20.507582577298972],[54.76817498484239,20.49321630891961],[54.7596386050081,20.44970057404736],[54.75613933239631,20.4421113062018],[54.74933802204098,20.434729866992818],[54.74039786706319,20.424657185405927],[54.72069636612628,20.438735051128116],[54.713464414439535,20.462329141867315],[54.70755051889354,20.45760845400111],[54.70789841907427,20.466620676291157],[54.70515392926935,20.47632244801709]]},{"id":"pfbxynwl","name":"балтрайон","color":"#FF9800","price":450,"coordinates":[[54.70334548560782,20.505272295214816],[54.70499119442105,20.476273736124668],[54.70743205019873,20.457918182405635],[54.66745316193954,20.43113900760094],[54.66227887377585,20.453111663850958],[54.65770106695434,20.497056976350937],[54.64565565955684,20.531744046897224],[54.646252971987515,20.55989651271754],[54.643664554444534,20.58358578273707],[54.64923940189229,20.601781888694113],[54.6579983248003,20.607618375510494],[54.672128042661484,20.60590176174098],[54.67988733630807,20.60075192043238],[54.702559809340215,20.597318692893325],[54.70525234232319,20.59871494384265],[54.7089951857075,20.508061792590347],[54.70334548560782,20.505272295214816]]},{"id":"piexfty2","name":"дальняя","color":"#9C27B0","price":500,"coordinates":[[54.668310715549495,20.425813198374946],[54.658299464801644,20.480589079483217],[54.65360659272068,20.503209441361847],[54.644931188581225,20.528576385271748],[54.64191426850598,20.5765636910603],[54.64749618951846,20.602680600616864],[54.6594470501771,20.61163137247807],[54.679359582544876,20.604813677919342],[54.70245729871423,20.598044743879903],[54.70489772291371,20.61059940509793],[54.725857403388694,20.621195649068117],[54.75039143650516,20.63464404062747],[54.77638929825513,20.61474336365703],[54.76956401453616,20.54163603753579],[54.773379714320555,20.512151121621464],[54.757984513460826,20.443568252683377],[54.738918959568096,20.421681427121886],[54.720241866956236,20.43618681347445],[54.71388173479466,20.46099188244416],[54.70752060036445,20.456957840085813],[54.702351440566154,20.449404739499837],[54.69598848928576,20.43120863354275],[54.72439350579774,20.357170258984617],[54.7692787912087,20.34824386738307],[54.79306334237642,20.434009860842085],[54.79709274277328,20.474336623108975],[54.80429505422244,20.555175470336863],[54.80582789126763,20.579360699543926],[54.80662115055736,20.61506626595017],[54.80299245883799,20.74998844318387],[54.6921716202839,20.73488224201199],[54.60844760575668,20.62806210414623],[54.638705350371296,20.327327125520867],[54.668310715549495,20.425813198374946]]},{"id":"qoqxhb80","name":"зеленоградск","color":"#F44336","price":1200,"coordinates":[[55.002159912155356,20.493971084153177],[54.926306441971185,20.331922744309413],[54.84872422785713,20.476118300950056],[54.89386683493495,20.649152968918802],[55.002159912155356,20.493971084153177]]},{"id":"17zbb952","name":"Светлогорск","color":"#00BCD4","price":1600,"coordinates":[[54.96472341472703,20.085616074188362],[54.861874432005244,20.08149620114147],[54.88484054550072,20.40833946286022],[54.93784993977549,20.30534263668836],[54.96867387421901,20.36988731442273],[54.96472341472703,20.085616074188362]]},{"id":"trxnd2ad","name":"разные","color":"#795548","price":800,"coordinates":[[54.617182731359016,20.22663596640018],[54.66258527963119,20.20191672811895],[54.730196269609,20.18543723593145],[54.72542744107578,20.35297873983773],[54.67412692616056,20.430569682220543],[54.63949210171605,20.315899882415867],[54.608023394628255,20.626017190200265],[54.527418214220795,20.596440699805015],[54.617182731359016,20.22663596640018]]},{"id":"v0hiwhtk","name":"балтийск","color":"#607D8B","price":2500,"coordinates":[[54.60693921330047,19.928975119076583],[54.6993071190035,19.731221212826576],[54.7755901211789,20.011372580014076],[54.7470009030297,20.129475607357836],[54.60693921330047,19.928975119076583]]},{"id":"byt08vbd","name":"светлый","color":"#E91E63","price":1200,"coordinates":[[54.72793015385525,20.177540792904658],[54.73428807224013,20.132222189389083],[54.6579268952808,20.016865744076593],[54.63244108081335,20.21187306829533],[54.72793015385525,20.177540792904658]]},{"id":"hsenb9fy","name":"гвардейск","color":"#3F51B5","price":2100,"coordinates":[[54.743606503267785,20.9935549459508],[54.62266254508388,20.809533949857048],[54.570034645121815,21.356103774075795],[54.722944378703744,21.386316176419548],[54.743606503267785,20.9935549459508]]},{"id":"kc4zsv23","name":"ближняя","color":"#3F51B5","price":250,"coordinates":[[54.71037302441554,20.509178334564584],[54.76837712889497,20.49407213339271],[54.77234696037032,20.513298207611452],[54.76877412964809,20.541450673431772],[54.775919474202496,20.614921742767716],[54.74971367994227,20.634834462494272],[54.70599947204875,20.60874193319739],[54.71037302441554,20.509178334564584]]}],"defaultPrice":"10.00"}
+0|cvetomar | 9:43:14 PM [express] PATCH /api/analytics/pageview 500 in 7ms :: {"error":"column \"duration_seconds\" of relation \"page_views\" does not exist"}
+0|cvetomar | 9:43:14 PM [express] POST /api/analytics/pageview 500 in 22ms :: {"error":"column \"utm_source\" of relation \"page_views\" does not exist"}
+0|cvetomar | 9:43:17 PM [express] PATCH /api/analytics/pageview 500 in 16ms :: {"error":"column \"duration_seconds\" of relation \"page_views\" does not exist"}
+0|cvetomar | 9:43:17 PM [express] POST /api/analytics/pageview 500 in 15ms :: {"error":"column \"utm_source\" of relation \"page_views\" does not exist"}
+0|cvetomar | 9:43:24 PM [express] GET /api/notifications 304 in 11ms :: {"notifications":[],"unreadMessages":0}
+0|cvetomar |
+0|cvetomar | > rest-express@1.0.0 start
+0|cvetomar | > NODE_ENV=production node dist/index.cjs
+0|cvetomar |
+
+root@cv6271581:/var/www/cvetomarket#
