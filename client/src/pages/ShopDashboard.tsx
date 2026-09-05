@@ -605,17 +605,27 @@ function SyncedProductForm(props: Omit<React.ComponentProps<typeof ProductForm>,
   const { productKey, userId, draftKey, ...formProps } = props;
   const initialSyncRef = useRef<Promise<unknown>>(Promise.resolve());
   const localDraft = useMemo(() => readProductDraft(localStorage, draftKey), [draftKey]);
-  const { data: serverDraft, isFetching } = useQuery<ProductDraft | null>({
+  const { data: serverDraft, isPending } = useQuery<ProductDraft | null>({
     queryKey: ["/api/product-drafts", userId, productKey],
     queryFn: async () => {
-      const response = await fetch(`/api/product-drafts/${productKey}`, { credentials: "include" });
-      if (!response.ok) throw new Error("Не удалось загрузить черновик");
-      const record = await response.json() as { payload: ProductDraft; updatedAt: string } | null;
-      return record ? { ...record.payload, updatedAt: record.updatedAt } : null;
+      const controller = new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), 4000);
+      try {
+        const response = await fetch(`/api/product-drafts/${productKey}`, {
+          credentials: "include",
+          signal: controller.signal,
+        });
+        if (!response.ok) throw new Error("Не удалось загрузить черновик");
+        const record = await response.json() as { payload: ProductDraft; updatedAt: string } | null;
+        return record ? { ...record.payload, updatedAt: record.updatedAt } : null;
+      } finally {
+        window.clearTimeout(timeout);
+      }
     },
     staleTime: 0,
     refetchOnMount: "always",
     refetchOnWindowFocus: false,
+    retry: false,
   });
 
   const initialDraft = useMemo(() => {
@@ -631,8 +641,14 @@ function SyncedProductForm(props: Omit<React.ComponentProps<typeof ProductForm>,
     }
   }, [productKey, localDraft, serverDraft, initialDraft]);
 
-  if (isFetching) {
-    return <div className="space-y-4"><Skeleton className="h-24 w-full" /><Skeleton className="h-96 w-full" /></div>;
+  if (isPending) {
+    return (
+      <div className="space-y-4" aria-live="polite">
+        <p className="text-sm text-muted-foreground">Загружаем сохранённый черновик…</p>
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-96 w-full" />
+      </div>
+    );
   }
 
   return (
