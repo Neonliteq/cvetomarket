@@ -1,9 +1,9 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Plus, Edit, Trash2, Package, ShoppingBag, BarChart2, MessageCircle,
   Eye, EyeOff, Star, MapPin, Phone, Calendar, Clock, User, FileText, Send, Settings, Truck,
-  Upload, Image, X, Users, UserPlus, UserMinus, Crown, Tag, CheckCircle, ExternalLink, Search, ArrowUpDown, Bell
+  Upload, Image, X, Users, UserPlus, UserMinus, Crown, Tag, CheckCircle, ExternalLink, Search, ArrowUpDown, Bell, ArrowLeft
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -213,34 +213,127 @@ function ProductForm({
   categories,
   product,
   onSuccess,
+  draftKey,
+  stickySubmit = false,
+  onDirtyChange,
+  onRegisterDraftFlush,
 }: {
   shopId: string;
   categories: Category[];
   product?: Product;
   onSuccess: () => void;
+  draftKey?: string;
+  stickySubmit?: boolean;
+  onDirtyChange?: (dirty: boolean) => void;
+  onRegisterDraftFlush?: (flush: (() => void) | null) => void;
 }) {
   const { toast } = useToast();
-  const [uploadedImages, setUploadedImages] = useState<string[]>(product?.images || []);
+  const savedDraft = useMemo(() => {
+    if (!draftKey) return null;
+    try {
+      const raw = localStorage.getItem(draftKey);
+      return raw ? JSON.parse(raw) as {
+        values?: Partial<z.infer<typeof productSchema>>;
+        images?: string[];
+        tags?: string[];
+      } : null;
+    } catch {
+      return null;
+    }
+  }, [draftKey]);
+  const [uploadedImages, setUploadedImages] = useState<string[]>(savedDraft?.images || product?.images || []);
   const [uploading, setUploading] = useState(false);
-  const [tags, setTags] = useState<string[]>((product as any)?.tags || []);
+  const [tags, setTags] = useState<string[]>(savedDraft?.tags || (product as any)?.tags || []);
+  const uploadedImagesRef = useRef(uploadedImages);
+  const tagsRef = useRef(tags);
   const [tagInput, setTagInput] = useState("");
+  const [draftRestored, setDraftRestored] = useState(!!savedDraft);
+  const hasUserChanges = useRef(false);
+  const suppressDraft = useRef(false);
+  const draftTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const defaultValues = {
+    type: (product as any)?.type || "bouquet",
+    name: product?.name || "",
+    description: product?.description || "",
+    composition: (product as any)?.composition || "",
+    price: product?.price?.toString() || "",
+    categoryId: product?.categoryId || "",
+    assemblyTime: product?.assemblyTime || 60,
+    inStock: product?.inStock ?? true,
+    isActive: product?.isActive ?? true,
+    discountPercent: (product as any)?.discountPercent ?? 0,
+    isRecommended: (product as any)?.isRecommended ?? false,
+    images: "",
+  };
   const form = useForm<z.infer<typeof productSchema>>({
     resolver: zodResolver(productSchema),
-    defaultValues: {
-      type: (product as any)?.type || "bouquet",
-      name: product?.name || "",
-      description: product?.description || "",
-      composition: (product as any)?.composition || "",
-      price: product?.price?.toString() || "",
-      categoryId: product?.categoryId || "",
-      assemblyTime: product?.assemblyTime || 60,
-      inStock: product?.inStock ?? true,
-      isActive: product?.isActive ?? true,
-      discountPercent: (product as any)?.discountPercent ?? 0,
-      isRecommended: (product as any)?.isRecommended ?? false,
-      images: "",
-    },
+    defaultValues: { ...defaultValues, ...(savedDraft?.values || {}) },
   });
+
+  const writeDraftNow = () => {
+    if (!draftKey) return;
+    if (draftTimer.current) clearTimeout(draftTimer.current);
+    draftTimer.current = null;
+    localStorage.setItem(draftKey, JSON.stringify({
+      values: form.getValues(),
+      images: uploadedImagesRef.current,
+      tags: tagsRef.current,
+    }));
+  };
+
+  const persistDraft = () => {
+    if (!draftKey) return;
+    if (draftTimer.current) clearTimeout(draftTimer.current);
+    draftTimer.current = setTimeout(() => {
+      writeDraftNow();
+    }, 300);
+  };
+
+  const markChanged = () => {
+    if (!hasUserChanges.current) {
+      hasUserChanges.current = true;
+      onDirtyChange?.(true);
+    }
+  };
+
+  useEffect(() => {
+    const subscription = form.watch(() => {
+      if (suppressDraft.current) return;
+      markChanged();
+      persistDraft();
+    });
+    const flushDraft = () => {
+      if (hasUserChanges.current) writeDraftNow();
+    };
+    onRegisterDraftFlush?.(writeDraftNow);
+    window.addEventListener("pagehide", flushDraft);
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener("pagehide", flushDraft);
+      if (hasUserChanges.current) writeDraftNow();
+      else if (draftTimer.current) clearTimeout(draftTimer.current);
+      onRegisterDraftFlush?.(null);
+    };
+  }, [draftKey]);
+
+  const clearDraft = () => {
+    suppressDraft.current = true;
+    if (draftTimer.current) clearTimeout(draftTimer.current);
+    if (draftKey) localStorage.removeItem(draftKey);
+    setDraftRestored(false);
+    form.reset(defaultValues);
+    const initialImages = product?.images || [];
+    const initialTags = (product as any)?.tags || [];
+    uploadedImagesRef.current = initialImages;
+    tagsRef.current = initialTags;
+    setUploadedImages(initialImages);
+    setTags(initialTags);
+    hasUserChanges.current = false;
+    onDirtyChange?.(false);
+    queueMicrotask(() => {
+      suppressDraft.current = false;
+    });
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -252,7 +345,13 @@ function ProductForm({
       const res = await fetch("/api/upload", { method: "POST", body: formData, credentials: "include" });
       const data = await res.json();
       if (data.urls) {
-        setUploadedImages((prev) => [...prev, ...data.urls]);
+        setUploadedImages((prev) => {
+          const next = [...prev, ...data.urls];
+          uploadedImagesRef.current = next;
+          markChanged();
+          persistDraft();
+          return next;
+        });
         toast({ title: `Загружено ${data.urls.length} фото` });
       }
     } catch {
@@ -264,7 +363,13 @@ function ProductForm({
   };
 
   const removeImage = (idx: number) => {
-    setUploadedImages((prev) => prev.filter((_, i) => i !== idx));
+    setUploadedImages((prev) => {
+      const next = prev.filter((_, i) => i !== idx);
+      uploadedImagesRef.current = next;
+      markChanged();
+      persistDraft();
+      return next;
+    });
   };
 
   const mutation = useMutation({
@@ -277,6 +382,10 @@ function ProductForm({
         : apiRequest("POST", "/api/products", payload);
     },
     onSuccess: () => {
+      if (draftTimer.current) clearTimeout(draftTimer.current);
+      if (draftKey) localStorage.removeItem(draftKey);
+      hasUserChanges.current = false;
+      onDirtyChange?.(false);
       toast({ title: product ? "Товар обновлён" : "Товар добавлен" });
       onSuccess();
     },
@@ -285,7 +394,18 @@ function ProductForm({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit((d) => mutation.mutate(d))} className="space-y-4">
+      <form onSubmit={form.handleSubmit((d) => mutation.mutate(d))} className={stickySubmit ? "space-y-4 pb-24" : "space-y-4"}>
+        {draftRestored && (
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
+            <div>
+              <p className="text-sm font-medium">Черновик восстановлен</p>
+              <p className="text-xs text-muted-foreground">Можно продолжить заполнение с места остановки</p>
+            </div>
+            <Button type="button" size="sm" variant="ghost" onClick={clearDraft}>
+              Начать заново
+            </Button>
+          </div>
+        )}
         <FormField control={form.control} name="type" render={({ field }) => (
           <FormItem><FormLabel>Тип товара</FormLabel>
             <Select value={field.value || "bouquet"} onValueChange={field.onChange}>
@@ -326,7 +446,13 @@ function ProductForm({
             {tags.map((tag) => (
               <Badge key={tag} variant="secondary" className="gap-1 text-xs">
                 {tag}
-                <button type="button" onClick={() => setTags((prev) => prev.filter((t) => t !== tag))}>
+                <button type="button" onClick={() => setTags((prev) => {
+                  const next = prev.filter((t) => t !== tag);
+                  tagsRef.current = next;
+                  markChanged();
+                  persistDraft();
+                  return next;
+                })}>
                   <X className="w-3 h-3" />
                 </button>
               </Badge>
@@ -340,7 +466,13 @@ function ProductForm({
                 if (e.key === "Enter" || e.key === ",") {
                   e.preventDefault();
                   const val = tagInput.trim().replace(/,/g, "").toLowerCase();
-                  if (val && !tags.includes(val)) setTags((prev) => [...prev, val]);
+                  if (val && !tags.includes(val)) setTags((prev) => {
+                    const next = [...prev, val];
+                    tagsRef.current = next;
+                    markChanged();
+                    persistDraft();
+                    return next;
+                  });
                   setTagInput("");
                 }
               }}
@@ -353,7 +485,13 @@ function ProductForm({
               size="sm"
               onClick={() => {
                 const val = tagInput.trim().replace(/,/g, "").toLowerCase();
-                if (val && !tags.includes(val)) setTags((prev) => [...prev, val]);
+                if (val && !tags.includes(val)) setTags((prev) => {
+                  const next = [...prev, val];
+                  tagsRef.current = next;
+                  markChanged();
+                  persistDraft();
+                  return next;
+                });
                 setTagInput("");
               }}
             >
@@ -451,9 +589,11 @@ function ProductForm({
             </FormItem>
           )} />
         </div>
-        <Button type="submit" className="w-full" disabled={mutation.isPending || uploading}>
-          {mutation.isPending ? "Сохраняем..." : product ? "Сохранить изменения" : "Добавить товар"}
-        </Button>
+        <div className={stickySubmit ? "fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur" : ""}>
+          <Button type="submit" className="w-full" disabled={mutation.isPending || uploading}>
+            {mutation.isPending ? "Сохраняем..." : product ? "Сохранить изменения" : "Добавить товар"}
+          </Button>
+        </div>
       </form>
     </Form>
   );
@@ -502,7 +642,8 @@ function ProductFormModal({
 export default function ShopDashboard() {
   const { user, isLoading } = useAuth();
   const { toast } = useToast();
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
+  const isMobile = useIsMobile();
   const searchStr = useSearch();
   const qc = useQueryClient();
 
@@ -567,7 +708,7 @@ export default function ShopDashboard() {
             const padding = "=".repeat((4 - (key.length % 4)) % 4);
             const base64 = (key + padding).replace(/-/g, "+").replace(/_/g, "/");
             const raw = atob(base64);
-            return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
+            return Uint8Array.from(raw, (c) => c.charCodeAt(0));
           })(),
         });
         if (sub) {
@@ -593,6 +734,8 @@ export default function ShopDashboard() {
   const [inviteName, setInviteName] = useState("");
   const [productDialogOpen, setProductDialogOpen] = useState(false);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
+  const [productEditorDirty, setProductEditorDirty] = useState(false);
+  const productDraftFlushRef = useRef<(() => void) | null>(null);
   const [productSort, setProductSort] = useState("default");
   const [orderStatusFilter, setOrderStatusFilter] = useState("all");
   const [orderSort, setOrderSort] = useState<"date-desc" | "date-asc" | "time-asc" | "time-desc">("date-desc");
@@ -634,6 +777,30 @@ export default function ShopDashboard() {
   });
 
   const { data: categories } = useQuery<Category[]>({ queryKey: ["/api/categories"] });
+
+  const editProductRouteMatch = location.match(/^\/shop-dashboard\/products\/([^/]+)\/edit$/);
+  const editorProductId = editProductRouteMatch?.[1];
+  const isProductEditorRoute = location === "/shop-dashboard/products/new" || !!editorProductId;
+  const editorProduct = editorProductId ? products?.find((item) => item.id === editorProductId) : undefined;
+
+  useEffect(() => {
+    if (!isProductEditorRoute || !productEditorDirty) return;
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isProductEditorRoute, productEditorDirty]);
+
+  const closeProductEditor = () => {
+    if (productEditorDirty && !window.confirm("Выйти из редактора? Черновик сохранён, и вы сможете продолжить позже.")) {
+      return;
+    }
+    if (productEditorDirty) productDraftFlushRef.current?.();
+    setProductEditorDirty(false);
+    navigate("/shop-dashboard?tab=products");
+  };
 
   type ShopCRMCustomer = {
     id: string; name: string; email: string; phone: string | null;
@@ -780,6 +947,56 @@ export default function ShopDashboard() {
     </div>
   );
 
+  if (isProductEditorRoute) {
+    if (editorProductId && loadingProducts) {
+      return <div className="mx-auto max-w-2xl space-y-4 px-4 py-6"><Skeleton className="h-10 w-56" /><Skeleton className="h-96 w-full" /></div>;
+    }
+    if (editorProductId && !editorProduct) {
+      return (
+        <div className="mx-auto max-w-2xl px-4 py-16 text-center">
+          <p className="font-medium">Товар не найден</p>
+          <Button variant="outline" className="mt-4" onClick={() => navigate("/shop-dashboard?tab=products")}>Вернуться к товарам</Button>
+        </div>
+      );
+    }
+
+    const draftKey = `cvetomarket:product-draft:${user.id}:${editorProduct?.id || "new"}`;
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur">
+          <div className="mx-auto flex max-w-2xl items-center gap-3 px-4 py-3">
+            <Button type="button" size="icon" variant="ghost" onClick={closeProductEditor} aria-label="Назад к товарам">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="font-semibold">{editorProduct ? "Редактировать товар" : "Новый товар"}</h1>
+              <p className="text-xs text-muted-foreground">Изменения автоматически сохраняются в черновик</p>
+            </div>
+          </div>
+        </div>
+        <div className="mx-auto max-w-2xl px-4 py-5">
+          <ProductForm
+            key={draftKey}
+            shopId={myShop.id}
+            categories={categories || []}
+            product={editorProduct}
+            draftKey={draftKey}
+            stickySubmit
+            onDirtyChange={setProductEditorDirty}
+            onRegisterDraftFlush={(flush) => {
+              productDraftFlushRef.current = flush;
+            }}
+            onSuccess={() => {
+              setProductEditorDirty(false);
+              qc.invalidateQueries({ queryKey: [`/api/shops/${myShop.id}/products`] });
+              navigate("/shop-dashboard?tab=products");
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
   const totalRevenue = (orders || [])
     .filter((o) => o.status !== "cancelled")
     .reduce((sum, o) => sum + Number(o.totalAmount), 0);
@@ -893,7 +1110,15 @@ export default function ShopDashboard() {
                   <SelectItem value="active">Активные первыми</SelectItem>
                 </SelectContent>
               </Select>
-              <Button size="sm" className="gap-1.5" data-testid="button-add-product" onClick={() => setProductDialogOpen(true)}>
+              <Button
+                size="sm"
+                className="gap-1.5"
+                data-testid="button-add-product"
+                onClick={() => {
+                  if (isMobile) navigate("/shop-dashboard/products/new");
+                  else setProductDialogOpen(true);
+                }}
+              >
                 <Plus className="w-4 h-4" /> Добавить товар
               </Button>
             </div>
@@ -955,7 +1180,13 @@ export default function ShopDashboard() {
                       <Button
                         size="icon"
                         variant="ghost"
-                        onClick={() => { setEditProduct(p); setProductDialogOpen(true); }}
+                        onClick={() => {
+                          if (isMobile) navigate(`/shop-dashboard/products/${p.id}/edit`);
+                          else {
+                            setEditProduct(p);
+                            setProductDialogOpen(true);
+                          }
+                        }}
                         data-testid={`button-edit-${p.id}`}
                       >
                         <Edit className="w-4 h-4" />

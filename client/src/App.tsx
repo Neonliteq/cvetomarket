@@ -71,9 +71,12 @@ function AnalyticsTracker() {
 }
 
 function Router() {
+  const [location] = useLocation();
+  const isProductEditor = /^\/shop-dashboard\/products\/(?:new|[^/]+\/edit)$/.test(location);
+
   return (
     <div className="min-h-screen flex flex-col">
-      <Header />
+      {!isProductEditor && <Header />}
       <main className="flex-1">
         <Suspense fallback={<PageLoader />}>
           <Switch>
@@ -87,6 +90,8 @@ function Router() {
             <Route path="/auth" component={Auth} />
             <Route path="/seller-auth" component={SellerAuth} />
             <Route path="/account" component={Account} />
+            <Route path="/shop-dashboard/products/new" component={ShopDashboard} />
+            <Route path="/shop-dashboard/products/:id/edit" component={ShopDashboard} />
             <Route path="/shop-dashboard" component={ShopDashboard} />
             <Route path="/admin" component={Admin} />
             <Route path="/chat" component={Chat} />
@@ -100,8 +105,8 @@ function Router() {
           </Switch>
         </Suspense>
       </main>
-      <Footer />
-      <FloatingCart />
+      {!isProductEditor && <Footer />}
+      {!isProductEditor && <FloatingCart />}
     </div>
   );
 }
