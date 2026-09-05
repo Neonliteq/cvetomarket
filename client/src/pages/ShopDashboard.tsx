@@ -31,6 +31,7 @@ import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { DeliveryZonesMap, type DeliveryZone } from "@/components/DeliveryZonesMap";
 import { ShopLocationMap } from "@/components/ShopLocationMap";
+import { createProductDraftController, readProductDraft } from "@/lib/productDraft";
 
 const STATUS_LABELS: Record<string, string> = {
   new: "Новый", confirmed: "Подтверждён", assembling: "Сборка",
@@ -229,17 +230,11 @@ function ProductForm({
 }) {
   const { toast } = useToast();
   const savedDraft = useMemo(() => {
-    if (!draftKey) return null;
-    try {
-      const raw = localStorage.getItem(draftKey);
-      return raw ? JSON.parse(raw) as {
-        values?: Partial<z.infer<typeof productSchema>>;
-        images?: string[];
-        tags?: string[];
-      } : null;
-    } catch {
-      return null;
-    }
+    return readProductDraft(localStorage, draftKey) as {
+      values?: Partial<z.infer<typeof productSchema>>;
+      images?: string[];
+      tags?: string[];
+    } | null;
   }, [draftKey]);
   const [uploadedImages, setUploadedImages] = useState<string[]>(savedDraft?.images || product?.images || []);
   const [uploading, setUploading] = useState(false);
@@ -250,7 +245,6 @@ function ProductForm({
   const [draftRestored, setDraftRestored] = useState(!!savedDraft);
   const hasUserChanges = useRef(false);
   const suppressDraft = useRef(false);
-  const draftTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const defaultValues = {
     type: (product as any)?.type || "bouquet",
     name: product?.name || "",
@@ -270,24 +264,18 @@ function ProductForm({
     defaultValues: { ...defaultValues, ...(savedDraft?.values || {}) },
   });
 
-  const writeDraftNow = () => {
-    if (!draftKey) return;
-    if (draftTimer.current) clearTimeout(draftTimer.current);
-    draftTimer.current = null;
-    localStorage.setItem(draftKey, JSON.stringify({
+  const draftController = useMemo(() => createProductDraftController({
+    key: draftKey,
+    storage: localStorage,
+    getSnapshot: () => ({
       values: form.getValues(),
       images: uploadedImagesRef.current,
       tags: tagsRef.current,
-    }));
-  };
+    }),
+  }), [draftKey]);
 
-  const persistDraft = () => {
-    if (!draftKey) return;
-    if (draftTimer.current) clearTimeout(draftTimer.current);
-    draftTimer.current = setTimeout(() => {
-      writeDraftNow();
-    }, 300);
-  };
+  const writeDraftNow = draftController.flush;
+  const persistDraft = draftController.schedule;
 
   const markChanged = () => {
     if (!hasUserChanges.current) {
@@ -310,16 +298,14 @@ function ProductForm({
     return () => {
       subscription.unsubscribe();
       window.removeEventListener("pagehide", flushDraft);
-      if (hasUserChanges.current) writeDraftNow();
-      else if (draftTimer.current) clearTimeout(draftTimer.current);
+      draftController.dispose(hasUserChanges.current);
       onRegisterDraftFlush?.(null);
     };
   }, [draftKey]);
 
   const clearDraft = () => {
     suppressDraft.current = true;
-    if (draftTimer.current) clearTimeout(draftTimer.current);
-    if (draftKey) localStorage.removeItem(draftKey);
+    draftController.clear();
     setDraftRestored(false);
     form.reset(defaultValues);
     const initialImages = product?.images || [];
@@ -382,8 +368,7 @@ function ProductForm({
         : apiRequest("POST", "/api/products", payload);
     },
     onSuccess: () => {
-      if (draftTimer.current) clearTimeout(draftTimer.current);
-      if (draftKey) localStorage.removeItem(draftKey);
+      draftController.clear();
       hasUserChanges.current = false;
       onDirtyChange?.(false);
       toast({ title: product ? "Товар обновлён" : "Товар добавлен" });

@@ -5,6 +5,7 @@ export default defineConfig({
   test: {
     environment: "node",
     globals: true,
+    exclude: ["**/node_modules/**", "**/.cache/**", "**/dist/**"],
     alias: {
       "@shared": path.resolve(__dirname, "shared"),
     },
