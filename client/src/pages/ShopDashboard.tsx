@@ -31,7 +31,7 @@ import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { DeliveryZonesMap, type DeliveryZone } from "@/components/DeliveryZonesMap";
 import { ShopLocationMap } from "@/components/ShopLocationMap";
-import { createProductDraftController, readProductDraft } from "@/lib/productDraft";
+import { createProductDraftController, readProductDraft, selectNewerProductDraft, type ProductDraft } from "@/lib/productDraft";
 
 const STATUS_LABELS: Record<string, string> = {
   new: "Новый", confirmed: "Подтверждён", assembling: "Сборка",
@@ -218,6 +218,8 @@ function ProductForm({
   stickySubmit = false,
   onDirtyChange,
   onRegisterDraftFlush,
+  initialDraft,
+  waitForInitialSync,
 }: {
   shopId: string;
   categories: Category[];
@@ -227,15 +229,17 @@ function ProductForm({
   stickySubmit?: boolean;
   onDirtyChange?: (dirty: boolean) => void;
   onRegisterDraftFlush?: (flush: (() => void) | null) => void;
+  initialDraft?: ProductDraft | null;
+  waitForInitialSync?: () => Promise<unknown>;
 }) {
   const { toast } = useToast();
   const savedDraft = useMemo(() => {
-    return readProductDraft(localStorage, draftKey) as {
+    return (initialDraft ?? readProductDraft(localStorage, draftKey)) as {
       values?: Partial<z.infer<typeof productSchema>>;
       images?: string[];
       tags?: string[];
     } | null;
-  }, [draftKey]);
+  }, [draftKey, initialDraft]);
   const [uploadedImages, setUploadedImages] = useState<string[]>(savedDraft?.images || product?.images || []);
   const [uploading, setUploading] = useState(false);
   const [tags, setTags] = useState<string[]>(savedDraft?.tags || (product as any)?.tags || []);
@@ -272,6 +276,13 @@ function ProductForm({
       images: uploadedImagesRef.current,
       tags: tagsRef.current,
     }),
+    onWrite: async (draft) => {
+      const productKey = product?.id || "new";
+      await apiRequest("PUT", `/api/product-drafts/${productKey}`, {
+        payload: { values: draft.values, images: draft.images, tags: draft.tags },
+        updatedAt: draft.updatedAt,
+      });
+    },
   }), [draftKey]);
 
   const writeDraftNow = draftController.flush;
@@ -306,6 +317,7 @@ function ProductForm({
   const clearDraft = () => {
     suppressDraft.current = true;
     draftController.clear();
+    void apiRequest("DELETE", `/api/product-drafts/${product?.id || "new"}`);
     setDraftRestored(false);
     form.reset(defaultValues);
     const initialImages = product?.images || [];
@@ -359,7 +371,9 @@ function ProductForm({
   };
 
   const mutation = useMutation({
-    mutationFn: (data: z.infer<typeof productSchema>) => {
+    mutationFn: async (data: z.infer<typeof productSchema>) => {
+      await draftController.settle();
+      await waitForInitialSync?.();
       const urlImages = data.images ? data.images.split(",").map((s) => s.trim()).filter(Boolean) : [];
       const allImages = [...uploadedImages, ...urlImages];
       const payload = { ...data, shopId, price: data.price, images: allImages, tags };
@@ -581,6 +595,53 @@ function ProductForm({
         </div>
       </form>
     </Form>
+  );
+}
+
+function SyncedProductForm(props: Omit<React.ComponentProps<typeof ProductForm>, "initialDraft"> & {
+  productKey: string;
+  userId: string;
+}) {
+  const { productKey, userId, draftKey, ...formProps } = props;
+  const initialSyncRef = useRef<Promise<unknown>>(Promise.resolve());
+  const localDraft = useMemo(() => readProductDraft(localStorage, draftKey), [draftKey]);
+  const { data: serverDraft, isFetching } = useQuery<ProductDraft | null>({
+    queryKey: ["/api/product-drafts", userId, productKey],
+    queryFn: async () => {
+      const response = await fetch(`/api/product-drafts/${productKey}`, { credentials: "include" });
+      if (!response.ok) throw new Error("Не удалось загрузить черновик");
+      const record = await response.json() as { payload: ProductDraft; updatedAt: string } | null;
+      return record ? { ...record.payload, updatedAt: record.updatedAt } : null;
+    },
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: false,
+  });
+
+  const initialDraft = useMemo(() => {
+    return selectNewerProductDraft(localDraft, serverDraft ?? null);
+  }, [localDraft, serverDraft]);
+
+  useEffect(() => {
+    if (localDraft?.updatedAt && initialDraft === localDraft && initialDraft !== serverDraft) {
+      initialSyncRef.current = apiRequest("PUT", `/api/product-drafts/${productKey}`, {
+        payload: { values: localDraft.values, images: localDraft.images, tags: localDraft.tags },
+        updatedAt: localDraft.updatedAt,
+      }).catch(() => undefined);
+    }
+  }, [productKey, localDraft, serverDraft, initialDraft]);
+
+  if (isFetching) {
+    return <div className="space-y-4"><Skeleton className="h-24 w-full" /><Skeleton className="h-96 w-full" /></div>;
+  }
+
+  return (
+    <ProductForm
+      {...formProps}
+      draftKey={draftKey}
+      initialDraft={initialDraft}
+      waitForInitialSync={() => initialSyncRef.current}
+    />
   );
 }
 
@@ -960,8 +1021,10 @@ export default function ShopDashboard() {
           </div>
         </div>
         <div className="mx-auto max-w-2xl px-4 py-5">
-          <ProductForm
+          <SyncedProductForm
             key={draftKey}
+            userId={user.id}
+            productKey={editorProduct?.id || "new"}
             shopId={myShop.id}
             categories={categories || []}
             product={editorProduct}
@@ -1112,7 +1175,11 @@ export default function ShopDashboard() {
               onOpenChange={(o) => { setProductDialogOpen(o); if (!o) setEditProduct(null); }}
               title={editProduct ? "Редактировать товар" : "Новый товар"}
             >
-              <ProductForm
+              <SyncedProductForm
+                key={`desktop:${user.id}:${editProduct?.id || "new"}`}
+                userId={user.id}
+                productKey={editProduct?.id || "new"}
+                draftKey={`cvetomarket:product-draft:${user.id}:${editProduct?.id || "new"}`}
                 shopId={myShop.id}
                 categories={categories || []}
                 product={editProduct || undefined}

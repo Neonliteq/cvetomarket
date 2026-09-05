@@ -2,6 +2,7 @@ export type ProductDraft = {
   values?: Record<string, unknown>;
   images?: string[];
   tags?: string[];
+  updatedAt?: string;
 };
 
 type DraftStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
@@ -16,18 +17,32 @@ export function readProductDraft(storage: DraftStorage, key?: string): ProductDr
   }
 }
 
+export function selectNewerProductDraft(
+  localDraft: ProductDraft | null,
+  serverDraft: ProductDraft | null,
+): ProductDraft | null {
+  if (!localDraft) return serverDraft;
+  if (!serverDraft) return localDraft;
+  const localTime = Date.parse(localDraft.updatedAt || "");
+  const serverTime = Date.parse(serverDraft.updatedAt || "");
+  return Number.isFinite(localTime) && localTime > serverTime ? localDraft : serverDraft;
+}
+
 export function createProductDraftController({
   key,
   storage,
   getSnapshot,
+  onWrite,
   delay = 300,
 }: {
   key?: string;
   storage: DraftStorage;
   getSnapshot: () => ProductDraft;
+  onWrite?: (draft: ProductDraft) => void | Promise<void>;
   delay?: number;
 }) {
   let timer: ReturnType<typeof setTimeout> | null = null;
+  let pendingWrite = Promise.resolve();
 
   const cancelScheduledWrite = () => {
     if (timer) clearTimeout(timer);
@@ -37,7 +52,11 @@ export function createProductDraftController({
   const flush = () => {
     if (!key) return;
     cancelScheduledWrite();
-    storage.setItem(key, JSON.stringify(getSnapshot()));
+    const draft = { ...getSnapshot(), updatedAt: new Date().toISOString() };
+    storage.setItem(key, JSON.stringify(draft));
+    if (onWrite) {
+      pendingWrite = pendingWrite.then(() => onWrite(draft)).catch(() => undefined);
+    }
   };
 
   return {
@@ -50,6 +69,10 @@ export function createProductDraftController({
     clear() {
       cancelScheduledWrite();
       if (key) storage.removeItem(key);
+    },
+    settle() {
+      cancelScheduledWrite();
+      return pendingWrite;
     },
     dispose(shouldFlush: boolean) {
       if (shouldFlush) flush();

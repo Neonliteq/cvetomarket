@@ -163,6 +163,18 @@ export async function runMigrations() {
       ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS marquee_items jsonb;
     `);
 
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS product_drafts (
+        id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id varchar NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        product_key varchar NOT NULL,
+        payload jsonb NOT NULL,
+        updated_at timestamptz NOT NULL
+      );
+      CREATE UNIQUE INDEX IF NOT EXISTS product_drafts_user_product_key_idx
+        ON product_drafts(user_id, product_key);
+    `);
+
     console.log("[migrate] Schema up to date");
   } catch (err) {
     console.error("[migrate] Migration error:", err);

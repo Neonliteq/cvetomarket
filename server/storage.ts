@@ -1,7 +1,7 @@
 import {
   type User, type InsertUser,
   type Shop, type InsertShop,
-  type Product, type InsertProduct,
+  type Product, type InsertProduct, type ProductDraftRecord,
   type Order, type InsertOrder,
   type OrderItem, type InsertOrderItem,
   type Review, type InsertReview,
@@ -18,7 +18,7 @@ import {
   type NotificationPreferences,
   type PushDeliveryFailure,
   type PageView, type AnalyticsEvent,
-  users, shops, products, orders, orderItems, reviews, messages, categories, cities, platformSettings, shopWorkers, notifications, bonusTransactions, orderSupplements, promoCodes, pushSubscriptions, notificationPreferences, pushDeliveryFailures, pageViews, analyticsEvents,
+  users, shops, products, productDrafts, orders, orderItems, reviews, messages, categories, cities, platformSettings, shopWorkers, notifications, bonusTransactions, orderSupplements, promoCodes, pushSubscriptions, notificationPreferences, pushDeliveryFailures, pageViews, analyticsEvents,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, inArray, sql } from "drizzle-orm";
@@ -76,6 +76,9 @@ export interface IStorage {
   updateProduct(id: string, data: Partial<Product>): Promise<Product | undefined>;
   deleteProduct(id: string): Promise<void>;
   getFeaturedProducts(): Promise<Product[]>;
+  getProductDraft(userId: string, productKey: string): Promise<ProductDraftRecord | undefined>;
+  upsertProductDraft(userId: string, productKey: string, payload: ProductDraftRecord["payload"], updatedAt: Date): Promise<ProductDraftRecord>;
+  deleteProductDraft(userId: string, productKey: string): Promise<void>;
 
   // Orders
   getOrder(id: string): Promise<Order | undefined>;
@@ -352,6 +355,33 @@ export class DbStorage implements IStorage {
       .where(and(eq(products.isActive, true), eq(products.inStock, true)))
       .orderBy(desc(products.reviewCount))
       .limit(12);
+  }
+  async getProductDraft(userId: string, productKey: string) {
+    const [draft] = await db.select().from(productDrafts).where(and(
+      eq(productDrafts.userId, userId),
+      eq(productDrafts.productKey, productKey),
+    ));
+    return draft;
+  }
+  async upsertProductDraft(userId: string, productKey: string, payload: ProductDraftRecord["payload"], updatedAt: Date) {
+    const [saved] = await db.insert(productDrafts)
+      .values({ userId, productKey, payload, updatedAt })
+      .onConflictDoUpdate({
+        target: [productDrafts.userId, productDrafts.productKey],
+        set: { payload, updatedAt },
+        setWhere: sql`${productDrafts.updatedAt} < ${updatedAt}`,
+      })
+      .returning();
+    if (saved) return saved;
+    const current = await this.getProductDraft(userId, productKey);
+    if (!current) throw new Error("Product draft conflict could not be resolved");
+    return current;
+  }
+  async deleteProductDraft(userId: string, productKey: string) {
+    await db.delete(productDrafts).where(and(
+      eq(productDrafts.userId, userId),
+      eq(productDrafts.productKey, productKey),
+    ));
   }
 
   async getOrder(id: string) {

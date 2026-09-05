@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, decimal, boolean, timestamp, jsonb, serial } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, decimal, boolean, timestamp, jsonb, serial, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -95,6 +95,20 @@ export const products = pgTable("products", {
   isFeatured: boolean("is_featured").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+export const productDrafts = pgTable("product_drafts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  productKey: varchar("product_key").notNull(),
+  payload: jsonb("payload").$type<{
+    values?: Record<string, unknown>;
+    images?: string[];
+    tags?: string[];
+  }>().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
+}, (table) => [
+  uniqueIndex("product_drafts_user_product_key_idx").on(table.userId, table.productKey),
+]);
 
 export const orders = pgTable("orders", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -304,6 +318,7 @@ export type Shop = typeof shops.$inferSelect;
 export type InsertShop = z.infer<typeof insertShopSchema>;
 export type Product = typeof products.$inferSelect;
 export type InsertProduct = z.infer<typeof insertProductSchema>;
+export type ProductDraftRecord = typeof productDrafts.$inferSelect;
 export type Order = typeof orders.$inferSelect;
 export type InsertOrder = z.infer<typeof insertOrderSchema>;
 export type OrderItem = typeof orderItems.$inferSelect;

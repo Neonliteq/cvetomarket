@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createProductDraftController,
   readProductDraft,
+  selectNewerProductDraft,
   type ProductDraft,
 } from "./productDraft";
 
@@ -98,5 +99,60 @@ describe("product draft persistence", () => {
     vi.runAllTimers();
 
     expect(readProductDraft(storage, "product:new")).toBeNull();
+  });
+
+  it("timestamps the same snapshot sent to local and server storage", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-05T12:00:00.000Z"));
+    const storage = createStorage();
+    const onWrite = vi.fn();
+    const draft = createProductDraftController({
+      key: "product:new",
+      storage,
+      getSnapshot: () => ({ values: { name: "Между устройствами" } }),
+      onWrite,
+    });
+
+    draft.flush();
+    await draft.settle();
+
+    expect(readProductDraft(storage, "product:new")?.updatedAt).toBe("2026-09-05T12:00:00.000Z");
+    expect(onWrite).toHaveBeenCalledWith(expect.objectContaining({
+      values: { name: "Между устройствами" },
+      updatedAt: "2026-09-05T12:00:00.000Z",
+    }));
+  });
+
+  it("selects the freshest draft when devices disagree", () => {
+    const older = { values: { name: "Телефон" }, updatedAt: "2026-09-05T10:00:00.000Z" };
+    const newer = { values: { name: "Компьютер" }, updatedAt: "2026-09-05T11:00:00.000Z" };
+
+    expect(selectNewerProductDraft(older, newer)).toBe(newer);
+    expect(selectNewerProductDraft(newer, older)).toBe(newer);
+  });
+
+  it("waits for an in-flight server write before product saving continues", async () => {
+    let releaseWrite!: () => void;
+    const serverWrite = new Promise<void>((resolve) => {
+      releaseWrite = resolve;
+    });
+    const draft = createProductDraftController({
+      key: "product:new",
+      storage: createStorage(),
+      getSnapshot: () => ({ values: { name: "Готовый товар" } }),
+      onWrite: () => serverWrite,
+    });
+
+    draft.flush();
+    let settled = false;
+    const settling = draft.settle().then(() => {
+      settled = true;
+    });
+    await Promise.resolve();
+    expect(settled).toBe(false);
+
+    releaseWrite();
+    await settling;
+    expect(settled).toBe(true);
   });
 });

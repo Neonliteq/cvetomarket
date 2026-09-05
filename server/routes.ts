@@ -640,6 +640,28 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   // ---- PRODUCTS ----
+  app.get("/api/product-drafts/:productKey", requireRole("shop"), async (req, res) => {
+    const user = (req as any).user;
+    const draft = await storage.getProductDraft(user.id, String(req.params.productKey));
+    res.json(draft ? { payload: draft.payload, updatedAt: draft.updatedAt.toISOString() } : null);
+  });
+
+  app.put("/api/product-drafts/:productKey", requireRole("shop"), async (req, res) => {
+    const user = (req as any).user;
+    const updatedAt = new Date(req.body?.updatedAt);
+    if (!Number.isFinite(updatedAt.getTime()) || !req.body?.payload || typeof req.body.payload !== "object") {
+      return res.status(400).json({ error: "Invalid product draft" });
+    }
+    const draft = await storage.upsertProductDraft(user.id, String(req.params.productKey), req.body.payload, updatedAt);
+    res.json({ payload: draft.payload, updatedAt: draft.updatedAt.toISOString() });
+  });
+
+  app.delete("/api/product-drafts/:productKey", requireRole("shop"), async (req, res) => {
+    const user = (req as any).user;
+    await storage.deleteProductDraft(user.id, String(req.params.productKey));
+    res.json({ ok: true });
+  });
+
   app.get("/api/products", async (_req, res) => {
     const list = await storage.getProducts();
     res.json(await enrichProducts(list));
@@ -667,11 +689,23 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const shop = await storage.getShopForUser(user.id);
     if (!shop) return res.status(403).json({ error: "No shop" });
     const p = await storage.createProduct({ ...req.body, shopId: shop.id });
+    await storage.deleteProductDraft(user.id, "new");
     res.json(p);
   });
 
   app.patch("/api/products/:id", requireRole("shop", "admin"), async (req, res) => {
-    const p = await storage.updateProduct(req.params.id, req.body);
+    const user = (req as any).user;
+    const productId = String(req.params.id);
+    if (user.role === "shop") {
+      const [product, shop] = await Promise.all([
+        storage.getProduct(productId),
+        storage.getShopForUser(user.id),
+      ]);
+      if (!product) return res.status(404).json({ error: "Product not found" });
+      if (!shop || product.shopId !== shop.id) return res.status(403).json({ error: "Forbidden" });
+    }
+    const p = await storage.updateProduct(productId, req.body);
+    if (user.role === "shop") await storage.deleteProductDraft(user.id, productId);
     res.json(p);
   });
 
