@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { useCart } from "@/lib/cart";
+import { responsiveImage } from "@/lib/utils";
 import type { Product } from "@shared/schema";
 
 interface AddonSuggestionDialogProps {
@@ -115,8 +116,10 @@ export function AddonSuggestionDialog({ shopId, onClose }: AddonSuggestionDialog
                 />
                 {image ? (
                   <img
-                    src={image}
+                    src={responsiveImage(image, 200)}
                     alt={addon.name}
+                    loading="lazy"
+                    decoding="async"
                     className="w-14 h-14 rounded object-cover shrink-0"
                   />
                 ) : (

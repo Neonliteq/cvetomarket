@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { ProductCard } from "@/components/ProductCard";
 import { ShopCard } from "@/components/ShopCard";
+import { responsiveImage } from "@/lib/utils";
 import type { Product, Shop, Category } from "@shared/schema";
 
 type CategoryWithCount = Category & { productCount: number };
@@ -228,7 +229,7 @@ export default function Home() {
                   <div className="relative z-10 w-64 h-64 rounded-full overflow-hidden shadow-2xl border-4 border-white cursor-pointer group">
                     {bannerProduct.images?.[0] ? (
                       <img
-                        src={bannerProduct.images[0]}
+                        src={responsiveImage(bannerProduct.images[0], 600)}
                         alt={bannerProduct.name}
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                       />

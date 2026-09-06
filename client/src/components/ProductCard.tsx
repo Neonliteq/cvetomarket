@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { StarRating } from "./StarRating";
 import { useCart } from "@/lib/cart";
 import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
+import { cn, responsiveImage } from "@/lib/utils";
 import type { Product } from "@shared/schema";
 
 interface ProductCardProps {
@@ -52,8 +52,10 @@ export function ProductCard({ product, shopId, className }: ProductCardProps) {
       <Card className={cn("group cursor-pointer hover-elevate transition-all duration-200 overflow-hidden", className)}>
         <div className="relative aspect-[4/3] overflow-hidden bg-muted">
           <img
-            src={image}
+            src={responsiveImage(image, 800)}
             alt={product.name}
+            loading="lazy"
+            decoding="async"
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
           {!product.inStock && (

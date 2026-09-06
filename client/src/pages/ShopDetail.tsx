@@ -12,6 +12,7 @@ import { StarRating } from "@/components/StarRating";
 import { useAuth } from "@/lib/auth";
 import { apiRequest } from "@/lib/queryClient";
 import { trackEvent } from "@/lib/analytics";
+import { responsiveImage } from "@/lib/utils";
 import type { Shop, Product } from "@shared/schema";
 
 type ProductWithMeta = Product & { shopName?: string; categoryName?: string };
@@ -100,7 +101,7 @@ export default function ShopDetail() {
 
       {(shop as any).coverUrl && (
         <div className="w-full h-48 md:h-64 rounded-lg overflow-hidden mb-6">
-          <img src={(shop as any).coverUrl} alt={`${shop.name} обложка`} className="w-full h-full object-cover" />
+          <img src={responsiveImage((shop as any).coverUrl, 1400)} alt={`${shop.name} обложка`} className="w-full h-full object-cover" />
         </div>
       )}
 

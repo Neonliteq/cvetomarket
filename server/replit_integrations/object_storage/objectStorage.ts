@@ -88,6 +88,17 @@ export class S3File {
     return pass;
   }
 
+  /** Download the full object into memory (needed for on-the-fly resizing). */
+  async getBuffer(): Promise<Buffer> {
+    const chunks: Buffer[] = [];
+    const stream = this.createReadStream();
+    return new Promise((resolve, reject) => {
+      stream.on("data", (chunk: Buffer) => chunks.push(chunk));
+      stream.on("end", () => resolve(Buffer.concat(chunks)));
+      stream.on("error", reject);
+    });
+  }
+
   async save(
     buffer: Buffer,
     opts: { contentType?: string; resumable?: boolean },

@@ -13,6 +13,7 @@ import { StarRating, InteractiveStarRating } from "@/components/StarRating";
 import { useCart } from "@/lib/cart";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
+import { responsiveImage } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import { trackEvent } from "@/lib/analytics";
 import type { Product, Shop, Review } from "@shared/schema";
@@ -88,7 +89,7 @@ export default function ProductDetail() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
         <div className="space-y-3">
           <div className="aspect-square rounded-lg overflow-hidden bg-muted">
-            <img src={images[selectedImg]} alt={product.name} className="w-full h-full object-cover" />
+            <img src={responsiveImage(images[selectedImg], 1000)} alt={product.name} className="w-full h-full object-cover" />
           </div>
           {images.length > 1 && (
             <div className="flex gap-2 overflow-x-auto pb-1">
@@ -99,7 +100,7 @@ export default function ProductDetail() {
                   className={`w-16 h-16 rounded-md overflow-hidden shrink-0 ring-2 transition-all ${i === selectedImg ? "ring-primary" : "ring-transparent"}`}
                   data-testid={`button-img-${i}`}
                 >
-                  <img src={img} alt="" className="w-full h-full object-cover" />
+                  <img src={responsiveImage(img, 160)} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                 </button>
               ))}
             </div>

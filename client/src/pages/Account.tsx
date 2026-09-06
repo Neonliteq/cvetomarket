@@ -19,6 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isSoundEnabled, setSoundEnabled } from "@/lib/sounds";
 import { Switch } from "@/components/ui/switch";
+import { responsiveImage } from "@/lib/utils";
 import type { Order, OrderItem, Review, OrderSupplement } from "@shared/schema";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
@@ -221,7 +222,7 @@ function ProductReviewDialog({ order, item, alreadyReviewed }: {
         <div className="space-y-4 mt-2">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded bg-muted overflow-hidden shrink-0">
-              <img src={item.productImage || "/images/placeholder-bouquet.png"} alt={item.productName} className="w-full h-full object-cover" />
+              <img src={responsiveImage(item.productImage || "/images/placeholder-bouquet.png", 200)} alt={item.productName} className="w-full h-full object-cover" />
             </div>
             <p className="font-medium text-sm">{item.productName}</p>
           </div>
