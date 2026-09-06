@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Концепт 3 · Тёмный премиум — ЦветоМаркет</title>
+<style>
+  :root{
+    --bg:#101B15; --bg2:#16241C; --surface:#1B2B21; --surface2:#22332A;
+    --ink:#EDE7DC; --muted:#9DA99F;
+    --gold:#C9A26B; --blush:#E3B7C5; --line:rgba(255,255,255,.09);
+    --radius:18px;
+  }
+  *{box-sizing:border-box;margin:0}
+  body{font-family:"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);line-height:1.55;-webkit-font-smoothing:antialiased}
+  img{display:block;width:100%;height:100%;object-fit:cover}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:1200px;margin:0 auto;padding:0 22px}
+  .concept-bar{background:#0A120D;border-bottom:1px solid var(--line);color:#8f9d93;text-align:center;font-size:12px;letter-spacing:.12em;text-transform:uppercase;padding:8px}
+  .concept-bar b{color:var(--gold)}
+  header{position:sticky;top:0;background:rgba(16,27,21,.9);backdrop-filter:blur(12px);z-index:5;border-bottom:1px solid var(--line)}
+  .nav{display:flex;align-items:center;gap:34px;padding:18px 0}
+  .logo{font-family:Georgia,"Times New Roman",serif;font-size:26px;font-weight:700;letter-spacing:.04em}
+  .logo span{color:var(--gold)}
+  .logo small{display:block;font:600 10px/1.3 "Segoe UI";letter-spacing:.44em;text-transform:uppercase;color:var(--muted);margin-top:5px}
+  .nav-links{display:flex;gap:26px;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:#C6CFC8;font-weight:600}
+  .nav-links a:hover{color:var(--gold)}
+  .spacer{flex:1}
+  .cart{background:transparent;border:1px solid var(--gold);color:var(--gold);border-radius:999px;padding:11px 22px;font-size:13px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;cursor:pointer}
+  .cart:hover{background:var(--gold);color:#101B15}
+  /* hero */
+  .hero{position:relative;display:grid;grid-template-columns:1fr .92fr;gap:50px;align-items:center;padding:72px 0 46px}
+  .eyebrow{color:var(--gold);font-size:12px;letter-spacing:.34em;text-transform:uppercase;font-weight:700}
+  h1{font-family:Georgia,serif;font-size:clamp(38px,5.4vw,66px);line-height:1.04;letter-spacing:-.01em;margin:22px 0}
+  h1 em{color:var(--blush);font-style:italic}
+  .lead{color:var(--muted);font-size:17px;max-width:44ch}
+  .cta-row{display:flex;gap:14px;margin-top:32px;flex-wrap:wrap}
+  .btn{padding:15px 32px;border-radius:999px;font-weight:700;font-size:14px;letter-spacing:.04em;cursor:pointer;border:none}
+  .btn-gold{background:linear-gradient(120deg,var(--gold),#B68A50);color:#101B15}
+  .btn-ghost{border:1px solid var(--line);color:var(--ink);background:transparent}
+  .btn-ghost:hover{border-color:var(--gold);color:var(--gold)}
+  .trust{display:flex;gap:34px;margin-top:40px}
+  .trust .t b{font-family:Georgia,serif;font-size:24px;color:var(--gold);display:block}
+  .trust .t span{color:var(--muted);font-size:12px;letter-spacing:.1em;text-transform:uppercase}
+  .hero-media{position:relative}
+  .hero-media img{border-radius:22px;height:520px;box-shadow:0 40px 90px -40px rgba(0,0,0,.8)}
+  .hero-frame{position:absolute;inset:0;border:1px solid var(--gold);border-radius:22px;transform:translate(16px,16px);pointer-events:none;opacity:.5}
+  .hero-note{position:absolute;bottom:18px;left:-30px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 16px;font-size:13px}
+  .hero-note b{color:var(--gold)}
+  /* marquee-ish strip */
+  .strip{margin:10px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:14px 0;color:var(--muted);font-size:12px;letter-spacing:.22em;text-transform:uppercase;display:flex;gap:44px;white-space:nowrap;overflow:hidden}
+  .strip b{color:var(--gold);font-weight:700}
+  /* advantages */
+  .adv{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;padding:36px 0 0}
+  .adv div{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:22px}
+  .adv .n{font-family:Georgia,serif;font-size:26px;color:var(--gold)}
+  .adv b{display:block;margin-top:10px;font-size:15px}
+  .adv span{color:var(--muted);font-size:13px}
+  /* sections */
+  .sec{padding:58px 0 6px}
+  .sec-head{display:flex;align-items:end;justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:24px}
+  .sec-head h2{font-family:Georgia,serif;font-size:clamp(24px,3vw,34px);letter-spacing:.01em}
+  .sec-head .sub{color:var(--muted);font-size:13px;letter-spacing:.12em;text-transform:uppercase;margin-top:6px}
+  .more{color:var(--gold);font-size:13px;letter-spacing:.08em;text-transform:uppercase;font-weight:700}
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;transition:transform .3s,border-color .3s}
+  .card:hover{transform:translateY(-5px);border-color:var(--gold)}
+  .thumb{height:250px;position:relative;background:#0d1610}
+  .thumb::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 60%,rgba(0,0,0,.55))}
+  .price-badge{position:absolute;left:12px;bottom:12px;z-index:2;background:rgba(16,27,21,.7);backdrop-filter:blur(6px);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-family:Georgia,serif;font-size:18px;color:var(--gold)}
+  .body{padding:16px 18px 18px;display:flex;justify-content:space-between;gap:10px;align-items:center}
+  .body h3{font-size:15px;font-weight:600}
+  .body .shop{color:var(--muted);font-size:12px;margin-top:3px}
+  .add{background:transparent;border:1px solid var(--gold);color:var(--gold);width:40px;height:40px;border-radius:50%;font-size:18px;cursor:pointer;flex-shrink:0}
+  .add:hover{background:var(--gold);color:#101B15}
+  /* big feature */
+  .feature{margin-top:64px;display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:22px;overflow:hidden;background:var(--surface)}
+  .feature img{height:420px}
+  .feature .txt{padding:52px}
+  .feature .txt h2{font-family:Georgia,serif;font-size:30px;line-height:1.15}
+  .feature .txt p{color:var(--muted);margin-top:14px}
+  .feature .txt .btn{margin-top:26px}
+  /* footer */
+  footer{margin-top:70px;border-top:1px solid var(--line);background:var(--bg2)}
+  .foot{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:30px;padding:52px 0}
+  .foot h4{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin-bottom:16px}
+  .foot a,.foot p{display:block;color:#C6CFC8;font-size:14px;margin-bottom:9px}
+  .foot-logo{font-family:Georgia,serif;font-size:24px;font-weight:700}.foot-logo span{color:var(--gold)}
+  .copy{border-top:1px solid var(--line);padding:18px 0;color:var(--muted);font-size:12px;text-align:center;letter-spacing:.06em}
+  @media(max-width:940px){
+    .hero{grid-template-columns:1fr;padding:44px 0}.hero-media img{height:360px}
+    .hero-note{left:6px}.adv,.grid{grid-template-columns:repeat(2,1fr)}.foot{grid-template-columns:1fr 1fr}
+    .feature{grid-template-columns:1fr}.feature img{height:280px}
+    .nav-links{display:none}.trust{gap:20px}
+  }
+</style>
+</head>
+<body>
+  <div class="concept-bar">Концепт 3 · <b>«Тёмный премиум»</b> — превью, не продакшн</div>
+
+  <header>
+    <div class="wrap nav">
+      <div class="logo">ЦВЕТО<span>МАРКЕТ</span><small>благородные цветы</small></div>
+      <nav class="nav-links"><a>Каталог</a><a>Коллекции</a><a>Свадьба</a><a>О нас</a></nav>
+      <div class="spacer"></div>
+      <button class="cart">Корзина · 2</button>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <section class="hero">
+      <div>
+        <span class="eyebrow">цветы для особых моментов</span>
+        <h1>Тихая роскошь<br>в каждом <em>букете</em></h1>
+        <p class="lead">Авторские композиции от флористов-мастеров: редкие сорта, ручная работа и доставка, достойная подарка. Для тех, кто ценит детали.</p>
+        <div class="cta-row">
+          <a class="btn btn-gold" href="#">Выбрать композицию</a>
+          <a class="btn btn-ghost" href="#">Свадебная флористика</a>
+        </div>
+        <div class="trust">
+          <div class="t"><b>4,9</b><span>оценка покупателей</span></div>
+          <div class="t"><b>150+</b><span>авторских букетов</span></div>
+          <div class="t"><b>24/7</b><span>приём заказов</span></div>
+        </div>
+      </div>
+      <div class="hero-media">
+        <img src="/images/product-wedding.png" alt="Свадебный букет">
+        <div class="hero-frame"></div>
+        <div class="hero-note">Хит сезона — <b>свадебные коллекции</b> от 12 000 ₽</div>
+      </div>
+    </section>
+
+    <div class="strip"><span>Свежий срез ежедневно</span><b>·</b><span>Собственная курьерская служба</span><b>·</b><span>Упаковка премиум</span><b>·</b><span>Бонусы за покупки</span><b>·</b><span>Редкие сорта</span></div>
+
+    <section class="adv">
+      <div><span class="n">01</span><b>Ручная работа</b><span>каждый букет собирает флорист-мастер</span></div>
+      <div><span class="n">02</span><b>Редкие сорта</b><span>пионовидные розы, гортензии, эустомы</span></div>
+      <div><span class="n">03</span><b>Деликатная доставка</b><span>с учётом времени и пожеланий</span></div>
+      <div><span class="n">04</span><b>Гарантия свежести</b><span>или вернём деньги</span></div>
+    </section>
+
+    <section class="sec">
+      <div class="sec-head">
+        <div><h2>Избранные композиции</h2><div class="sub">авторская коллекция</div></div>
+        <a class="more" href="#">Весь каталог →</a>
+      </div>
+      <div class="grid">
+        <div class="card"><div class="thumb"><span class="price-badge">7 500 ₽</span><img src="/images/product-roses-red.png" alt=""></div>
+          <div class="body"><div><h3>51 красная роза</h3><div class="shop">Розарий · 70 см</div></div><button class="add">+</button></div></div>
+        <div class="card"><div class="thumb"><span class="price-badge">4 500 ₽</span><img src="/images/product-pions.png" alt=""></div>
+          <div class="body"><div><h3>Пионовый рай</h3><div class="shop">Розарий · пионы</div></div><button class="add">+</button></div></div>
+        <div class="card"><div class="thumb"><span class="price-badge">12 000 ₽</span><img src="/images/product-wedding.png" alt=""></div>
+          <div class="body"><div><h3>Белое облако</h3><div class="shop">Bloomy Studio · свадьба</div></div><button class="add">+</button></div></div>
+        <div class="card"><div class="thumb"><span class="price-badge">5 800 ₽</span><img src="/images/product-romantic.png" alt=""></div>
+          <div class="body"><div><h3>Романтичный сюрприз</h3><div class="shop">Bloomy Studio · крафт</div></div><button class="add">+</button></div></div>
+      </div>
+    </section>
+
+    <section class="feature">
+      <img src="/images/product-corporate.png" alt="Корпоративная композиция">
+      <div class="txt">
+        <span class="eyebrow">корпоративным клиентам</span>
+        <h2>Цветы для офиса и мероприятий</h2>
+        <p>Оформление ресепшенов, событий и витрин. Индивидуальный расчёт, регулярные поставки по подписке и персональный флорист.</p>
+        <a class="btn btn-gold" href="#">Оставить заявку</a>
+      </div>
+    </section>
+  </div>
+
+  <footer>
+    <div class="wrap foot">
+      <div><div class="foot-logo">ЦВЕТО<span>МАРКЕТ</span></div><p style="margin-top:14px">Цветочный дом в Калининграде. Авторские букеты и безупречный сервис с 2019 года.</p></div>
+      <div><h4>Коллекции</h4><a>Свадебные</a><a>Корпоративные</a><a>Комплименты</a><a>Сезонные</a></div>
+      <div><h4>Покупателям</h4><a>Каталог</a><a>Доставка</a><a>Бонусная программа</a></div>
+      <div><h4>Контакты</h4><a>+7 (900) 000-00-00</a><a>premium@cveto.market</a></div>
+    </div>
+    <div class="copy">© 2026 ЦветоМаркет · Концепт «Тёмный премиум»</div>
+  </footer>
+</body>
+</html>
