@@ -111,7 +111,9 @@ app.use((req, res, next) => {
     {
       port,
       host: "0.0.0.0",
-      reusePort: process.env.NODE_ENV !== "production",
+      // reusePort is unsupported on Windows (ENOTSUP), it only helps
+      // rapid dev restarts on Linux/Replit
+      reusePort: process.env.NODE_ENV !== "production" && process.platform !== "win32",
     },
     () => {
       log(`serving on port ${port}`);
