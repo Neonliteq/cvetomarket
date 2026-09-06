@@ -432,8 +432,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     if (newPassword.length < 6) {
       return res.status(400).json({ error: "Новый пароль должен быть не менее 6 символов" });
     }
-    const user = await storage.getUserById(userId);
+    const user = await storage.getUser(userId);
     if (!user) return res.status(404).json({ error: "Пользователь не найден" });
+    if (!user.password) return res.status(400).json({ error: "Для этого аккаунта не установлен пароль" });
     const match = await bcrypt.compare(currentPassword, user.password);
     if (!match) return res.status(400).json({ error: "Текущий пароль введён неверно" });
     const hash = await bcrypt.hash(newPassword, SALT_ROUNDS);
@@ -451,7 +452,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
   app.delete("/api/cities/:id", requireRole("admin"), async (req, res) => {
     try {
-      await storage.deleteCity(req.params.id);
+      await storage.deleteCity(req.params.id as string);
       res.json({ ok: true });
     } catch (e: any) {
       if (e.code === "23503") return res.status(400).json({ error: "Невозможно удалить город, он используется магазинами" });
@@ -472,7 +473,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
   app.delete("/api/categories/:id", requireRole("admin"), async (req, res) => {
     try {
-      await storage.deleteCategory(req.params.id);
+      await storage.deleteCategory(req.params.id as string);
       res.json({ ok: true });
     } catch (e: any) {
       if (e.code === "23503") return res.status(400).json({ error: "Невозможно удалить категорию, она используется товарами" });
@@ -525,14 +526,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   app.get("/api/shops/:id", async (req, res) => {
-    const shop = await storage.getShop(req.params.id);
+    const shop = await storage.getShop(req.params.id as string);
     if (!shop) return res.status(404).json({ error: "Not found" });
     const [enriched] = await enrichShops([shop]);
     res.json(stripShopContacts(enriched));
   });
 
   app.get("/api/shops/:id/delivery-zones", async (req, res) => {
-    const shop = await storage.getShop(req.params.id);
+    const shop = await storage.getShop(req.params.id as string);
     if (!shop) return res.status(404).json({ error: "Not found" });
     res.json({
       zones: (shop as any).deliveryZones || [],
@@ -541,7 +542,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   app.post("/api/shops/:id/delivery-cost", async (req, res) => {
-    const shop = await storage.getShop(req.params.id);
+    const shop = await storage.getShop(req.params.id as string);
     if (!shop) return res.status(404).json({ error: "Not found" });
     const { lat, lng } = req.body;
     const zones: any[] = (shop as any).deliveryZones || [];
@@ -561,7 +562,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const patchShopUser = await storage.getUser((req.session as any).userId);
     if (patchShopUser?.role !== "admin") {
       const userShop = await storage.getShopForUser(patchShopUser!.id);
-      if (!userShop || userShop.id !== req.params.id) {
+      if (!userShop || userShop.id !== req.params.id as string) {
         return res.status(403).json({ error: "Нет доступа к этому магазину" });
       }
     }
@@ -581,7 +582,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         } catch {}
       }
     }
-    const shop = await storage.updateShop(req.params.id, req.body);
+    const shop = await storage.updateShop(req.params.id as string, req.body);
     res.json(shop);
   });
 
@@ -635,7 +636,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const shop = await storage.getShopForUser(user.id);
     if (!shop) return res.status(404).json({ error: "Shop not found" });
     if (shop.ownerId !== user.id) return res.status(403).json({ error: "Только владелец может удалять сотрудников" });
-    await storage.removeShopWorker(shop.id, req.params.userId);
+    await storage.removeShopWorker(shop.id, req.params.userId as string);
     res.json({ ok: true });
   });
 
@@ -673,14 +674,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   app.get("/api/products/:id", async (req, res) => {
-    const p = await storage.getProduct(req.params.id);
+    const p = await storage.getProduct(req.params.id as string);
     if (!p) return res.status(404).json({ error: "Not found" });
     const [enriched] = await enrichProducts([p]);
     res.json(enriched);
   });
 
   app.get("/api/shops/:id/products", async (req, res) => {
-    const list = await storage.getProductsByShop(req.params.id);
+    const list = await storage.getProductsByShop(req.params.id as string);
     res.json(await enrichProducts(list));
   });
 
@@ -695,7 +696,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.patch("/api/products/:id", requireRole("shop", "admin"), async (req, res) => {
     const user = (req as any).user;
-    const productId = String(req.params.id);
+    const productId = String(req.params.id as string);
     if (user.role === "shop") {
       const [product, shop] = await Promise.all([
         storage.getProduct(productId),
@@ -711,10 +712,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.delete("/api/products/:id", requireRole("shop", "admin"), async (req, res) => {
     try {
-      await storage.deleteProduct(req.params.id);
+      await storage.deleteProduct(req.params.id as string);
     } catch (e: any) {
       if (e.code === "23503") {
-        await storage.updateProduct(req.params.id, { isActive: false, inStock: false });
+        await storage.updateProduct(req.params.id as string, { isActive: false, inStock: false });
       } else {
         throw e;
       }
@@ -724,7 +725,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   // ---- PRODUCT REVIEWS ----
   app.get("/api/products/:id/reviews", async (req, res) => {
-    const revs = await storage.getReviewsByProduct(req.params.id);
+    const revs = await storage.getReviewsByProduct(req.params.id as string);
     const allUsers = await storage.getAllUsers();
     const userMap = Object.fromEntries(allUsers.map((u) => [u.id, u.name]));
     res.json(revs.map((r) => ({ ...r, buyerName: userMap[r.buyerId] })));
@@ -752,7 +753,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const userMap = Object.fromEntries(allUsers.map((u) => [u.id, u.name]));
     const result = await Promise.all(ordersList.map(async (o) => {
       const items = await storage.getOrderItems(o.id);
-      return { ...o, buyerName: userMap[o.buyerId], items };
+      return { ...o, buyerName: (o.buyerId ? userMap[o.buyerId] : undefined), items };
     }));
     res.json(result);
   });
@@ -1014,7 +1015,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   app.patch("/api/orders/:id/status", requireRole("shop", "admin"), async (req, res) => {
-    const existing = await storage.getOrder(req.params.id);
+    const existing = await storage.getOrder(req.params.id as string);
     if (!existing) return res.status(404).json({ error: "Заказ не найден" });
     const user = await storage.getUser((req.session as any).userId);
     if (user?.role === "shop" || user?.role === "worker") {
@@ -1029,7 +1030,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     if (req.body.status === "assembling" && !req.body.assemblyPhotoUrl && !existing.assemblyPhotoUrl) {
       return res.status(400).json({ error: "Загрузите фото готового букета перед тем как пометить заказ собранным" });
     }
-    let order = await storage.updateOrderStatus(req.params.id, req.body.status, req.body.assemblyPhotoUrl);
+    let order = await storage.updateOrderStatus(req.params.id as string, req.body.status, req.body.assemblyPhotoUrl);
     // Auto-approve photo for all orders — buyer confirmation is optional/informational only
     if (req.body.status === "assembling" && order) {
       order = await storage.updateOrderPhotoApproval(order.id, "approved") ?? order;
@@ -1085,32 +1086,33 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
     // Accrue bonuses on delivery (idempotent — check existing transactions)
     if (req.body.status === "delivered" && order && order.buyerId) {
+      const buyerId = order.buyerId;
       try {
-        const existingTxns = await storage.getBonusTransactions(order.buyerId);
-        const buyerOrders = await storage.getOrdersByBuyer(order.buyerId);
+        const existingTxns = await storage.getBonusTransactions(buyerId);
+        const buyerOrders = await storage.getOrdersByBuyer(buyerId);
         const deliveredOrders = buyerOrders.filter((o) => o.status === "delivered");
 
         const hasFirstOrderBonus = existingTxns.some((t) => t.reason === "first_order");
         if (!hasFirstOrderBonus && deliveredOrders.length === 1) {
-          await storage.addBonusTransaction(order.buyerId, 250, "first_order", "Бонус за первый заказ");
+          await storage.addBonusTransaction(buyerId, 250, "first_order", "Бонус за первый заказ");
         }
 
         const orderAmount = Number(order.totalAmount);
         const bonusForPurchase = Math.floor(orderAmount / 3000) * 100;
         const hasPurchaseBonus = existingTxns.some((t) => t.reason === "purchase_milestone" && t.description?.includes(order.id.slice(0, 8)));
         if (bonusForPurchase > 0 && !hasPurchaseBonus) {
-          await storage.addBonusTransaction(order.buyerId, bonusForPurchase, "purchase_milestone", `Бонус за покупку #${order.id.slice(0, 8)} на ${orderAmount.toLocaleString("ru-RU")} ₽`);
+          await storage.addBonusTransaction(buyerId, bonusForPurchase, "purchase_milestone", `Бонус за покупку #${order.id.slice(0, 8)} на ${orderAmount.toLocaleString("ru-RU")} ₽`);
         }
 
-        const buyerUser = await storage.getUser(order.buyerId);
+        const buyerUser = await storage.getUser(buyerId);
         if ((buyerUser as any)?.referredBy && deliveredOrders.length === 1 && orderAmount >= 3000) {
           const referrerId = (buyerUser as any).referredBy;
           const referrer = await storage.getUser(referrerId);
           if (referrer) {
             const referrerTxns = await storage.getBonusTransactions(referrer.id);
-            const hasReferralBonus = referrerTxns.some((t) => t.reason === "referral" && t.description?.includes(order.buyerId.slice(0, 8)));
+            const hasReferralBonus = referrerTxns.some((t) => t.reason === "referral" && t.description?.includes(buyerId.slice(0, 8)));
             if (!hasReferralBonus) {
-              await storage.addBonusTransaction(referrer.id, 500, "referral", `Реферальный бонус (${order.buyerId.slice(0, 8)})`);
+              await storage.addBonusTransaction(referrer.id, 500, "referral", `Реферальный бонус (${buyerId.slice(0, 8)})`);
             }
           }
         }
@@ -1148,7 +1150,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   app.patch("/api/orders/:id/photo-approval", requireAuth, async (req, res) => {
-    const existing = await storage.getOrder(req.params.id);
+    const existing = await storage.getOrder(req.params.id as string);
     if (!existing) return res.status(404).json({ error: "Заказ не найден" });
     const userId = (req.session as any).userId;
     if (existing.buyerId !== userId) return res.status(403).json({ error: "Нет доступа" });
@@ -1262,7 +1264,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   app.get("/api/shops/:id/reviews", async (req, res) => {
-    const revs = await storage.getReviewsByShop(req.params.id);
+    const revs = await storage.getReviewsByShop(req.params.id as string);
     const allUsers = await storage.getAllUsers();
     const userMap = Object.fromEntries(allUsers.map((u) => [u.id, u.name]));
     res.json(revs.map((r) => ({ ...r, buyerName: userMap[r.buyerId] })));
@@ -1291,8 +1293,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.get("/api/messages/:userId", requireAuth, async (req, res) => {
     const myId = (req.session as any).userId;
-    await storage.markMessagesRead(req.params.userId, myId);
-    const msgs = await storage.getMessages(myId, req.params.userId);
+    await storage.markMessagesRead(req.params.userId as string, myId);
+    const msgs = await storage.getMessages(myId, req.params.userId as string);
     res.json(msgs);
   });
 
@@ -1547,32 +1549,32 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
     res.json(ordersList.map((o) => ({
       ...o,
-      buyerName: userMap[o.buyerId],
+      buyerName: (o.buyerId ? userMap[o.buyerId] : undefined),
       shopName: shopMap[o.shopId],
       items: itemsByOrder[o.id] || [],
     })));
   });
 
   app.patch("/api/admin/shops/:id/status", requireRole("admin"), async (req, res) => {
-    const shop = await storage.updateShop(req.params.id, { status: req.body.status });
+    const shop = await storage.updateShop(req.params.id as string, { status: req.body.status });
     res.json(shop);
   });
 
   app.patch("/api/admin/users/:id/block", requireRole("admin"), async (req, res) => {
-    const targetUser = await storage.getUser(req.params.id);
+    const targetUser = await storage.getUser(req.params.id as string);
     if (!targetUser) return res.status(404).json({ error: "User not found" });
-    const updated = await storage.updateUser(req.params.id, { isBlocked: !targetUser.isBlocked });
+    const updated = await storage.updateUser(req.params.id as string, { isBlocked: !targetUser.isBlocked });
     if (!updated) return res.status(500).json({ error: "Failed to update user" });
     res.json(toSafeUser(updated as Record<string, unknown>));
   });
 
   app.delete("/api/admin/users/:id", requireRole("admin"), async (req, res) => {
     const sessionUserId = (req.session as any).userId;
-    if (sessionUserId === req.params.id) return res.status(400).json({ error: "Нельзя удалить свой аккаунт" });
-    const targetUser = await storage.getUser(req.params.id);
+    if (sessionUserId === req.params.id as string) return res.status(400).json({ error: "Нельзя удалить свой аккаунт" });
+    const targetUser = await storage.getUser(req.params.id as string);
     if (!targetUser) return res.status(404).json({ error: "User not found" });
     if (targetUser.role === "admin") return res.status(403).json({ error: "Нельзя удалить администратора" });
-    await storage.deleteUser(req.params.id);
+    await storage.deleteUser(req.params.id as string);
     res.json({ success: true });
   });
 
@@ -1679,7 +1681,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.delete("/api/admin/shops/:id", requireRole("admin"), async (req, res) => {
     try {
-      await storage.deleteShop(req.params.id);
+      await storage.deleteShop(req.params.id as string);
       res.json({ ok: true });
     } catch (e: any) {
       if (e.code === "23503") return res.status(400).json({ error: "Невозможно удалить магазин, у него есть связанные данные" });
@@ -1688,7 +1690,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   app.patch("/api/admin/shops/:id", requireRole("admin"), async (req, res) => {
-    const shop = await storage.updateShop(req.params.id, req.body);
+    const shop = await storage.updateShop(req.params.id as string, req.body);
     res.json(shop);
   });
 
@@ -1699,7 +1701,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (price !== undefined) updateData.price = String(price);
       if (discountPercent !== undefined) updateData.discountPercent = Number(discountPercent);
       if (assemblyTime !== undefined) updateData.assemblyTime = Number(assemblyTime);
-      const p = await storage.updateProduct(req.params.id, updateData);
+      const p = await storage.updateProduct(req.params.id as string, updateData);
       res.json(p);
     } catch (e: any) {
       console.error("[admin/products PATCH] error:", e?.message || e);
@@ -1709,10 +1711,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.delete("/api/admin/products/:id", requireRole("admin"), async (req, res) => {
     try {
-      await storage.deleteProduct(req.params.id);
+      await storage.deleteProduct(req.params.id as string);
     } catch (e: any) {
       if (e.code === "23503") {
-        await storage.updateProduct(req.params.id, { isActive: false, inStock: false });
+        await storage.updateProduct(req.params.id as string, { isActive: false, inStock: false });
       } else {
         throw e;
       }
@@ -1724,19 +1726,19 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.patch("/api/admin/shops/:id/commission", requireRole("admin"), async (req, res) => {
     const { commissionRate } = req.body;
     const val = commissionRate === "" || commissionRate === null ? null : Number(commissionRate);
-    const shop = await storage.updateShop(req.params.id, { commissionRate: val as any });
+    const shop = await storage.updateShop(req.params.id as string, { commissionRate: val as any });
     res.json(shop);
   });
 
   app.patch("/api/admin/shops/:id/featured", requireRole("admin"), async (req, res) => {
     const { isFeatured } = req.body;
-    await storage.setShopFeatured(req.params.id, !!isFeatured);
+    await storage.setShopFeatured(req.params.id as string, !!isFeatured);
     res.json({ ok: true });
   });
 
   app.patch("/api/admin/products/:id/featured", requireRole("admin"), async (req, res) => {
     const { isFeatured } = req.body;
-    await storage.setProductFeatured(req.params.id, !!isFeatured);
+    await storage.setProductFeatured(req.params.id as string, !!isFeatured);
     res.json({ ok: true });
   });
 
@@ -1758,9 +1760,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.delete("/api/admin/reviews/:id", requireRole("admin"), async (req, res) => {
     const allReviews = await storage.getAllReviews();
-    const review = allReviews.find((r) => r.id === req.params.id);
+    const review = allReviews.find((r) => r.id === req.params.id as string);
     if (!review) return res.status(404).json({ error: "Отзыв не найден" });
-    await storage.deleteReview(req.params.id);
+    await storage.deleteReview(req.params.id as string);
     // Recalculate ratings after deletion
     const shopRevs = await storage.getReviewsByShop(review.shopId);
     const shopOnlyRevs = shopRevs.filter((r) => !r.productId);
@@ -1788,9 +1790,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       return res.status(400).json({ error: "Недопустимый статус" });
     }
     const allReviews = await storage.getAllReviews();
-    const review = allReviews.find((r) => r.id === req.params.id);
+    const review = allReviews.find((r) => r.id === req.params.id as string);
     if (!review) return res.status(404).json({ error: "Отзыв не найден" });
-    await storage.updateReviewStatus(req.params.id, status);
+    await storage.updateReviewStatus(req.params.id as string, status);
     // Recalculate shop/product ratings using only approved reviews
     const shopRevs = await storage.getReviewsByShop(review.shopId);
     const shopOnlyRevs = shopRevs.filter((r) => !r.productId);
@@ -1911,7 +1913,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   app.get("/api/shops/:id/owner", requireAuth, async (req, res) => {
-    const shop = await storage.getShop(req.params.id);
+    const shop = await storage.getShop(req.params.id as string);
     if (!shop) return res.status(404).json({ error: "Shop not found" });
     res.json({ ownerId: shop.ownerId });
   });
@@ -1950,7 +1952,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   app.get("/api/admin/users/:id/bonuses", requireRole("admin"), async (req, res) => {
-    const userId = req.params.id;
+    const userId = req.params.id as string;
     const balance = await storage.getBonusBalance(userId);
     const transactions = await storage.getBonusTransactions(userId);
     res.json({ balance, transactions });
@@ -2005,13 +2007,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     if (expiresAt !== undefined) update.expiresAt = expiresAt ? new Date(expiresAt) : null;
     if (maxUses !== undefined) update.maxUses = maxUses || null;
     if (description !== undefined) update.description = description;
-    const promo = await storage.updatePromoCode(req.params.id, update);
+    const promo = await storage.updatePromoCode(req.params.id as string, update);
     if (!promo) return res.status(404).json({ error: "Не найден" });
     res.json(promo);
   });
 
   app.delete("/api/admin/promo-codes/:id", requireRole("admin"), async (req, res) => {
-    await storage.deletePromoCode(req.params.id);
+    await storage.deletePromoCode(req.params.id as string);
     res.json({ ok: true });
   });
 
@@ -2027,7 +2029,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.get("/api/admin/crm/customers/:id", requireRole("admin"), async (req, res) => {
     try {
-      const uid = req.params.id;
+      const uid = req.params.id as string;
       const [orderList, reviewList, bonusData, userViews, userMessages] = await Promise.all([
         storage.getOrdersByBuyer(uid),
         storage.getReviewsByBuyer(uid),
@@ -2093,7 +2095,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.patch("/api/admin/crm/customers/:id/notes", requireRole("admin"), async (req, res) => {
     try {
       const { notes } = req.body;
-      await storage.updateUserAdminNotes(req.params.id, notes ?? "");
+      await storage.updateUserAdminNotes(req.params.id as string, notes ?? "");
       res.json({ ok: true });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
@@ -2104,7 +2106,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const { tags } = req.body;
       if (!Array.isArray(tags)) return res.status(400).json({ error: "tags must be an array" });
-      await storage.updateUserTags(req.params.id, tags.map(String));
+      await storage.updateUserTags(req.params.id as string, tags.map(String));
       res.json({ ok: true });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
@@ -2113,7 +2115,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.post("/api/admin/push/cart-reminder/:userId", requireRole("admin"), async (req, res) => {
     try {
-      const { userId } = req.params;
+      const userId = req.params.userId as string;
       const user = await storage.getUser(userId);
       if (!user) return res.status(404).json({ error: "Пользователь не найден" });
       const subs = await storage.getPushSubscriptionsByUser(userId);
@@ -2133,7 +2135,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.get("/api/shops/:id/customers", requireAuth, async (req, res) => {
     try {
-      const shopId = req.params.id;
+      const shopId = req.params.id as string;
       const userId = (req.session as any).userId;
       const shop = await storage.getShop(shopId);
       if (!shop) return res.status(404).json({ error: "Магазин не найден" });
@@ -2152,8 +2154,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.get("/api/shops/:id/customers/:userId", requireAuth, async (req, res) => {
     try {
-      const shopId = req.params.id;
-      const targetUserId = req.params.userId;
+      const shopId = req.params.id as string;
+      const targetUserId = req.params.userId as string;
       const sessionUserId = (req.session as any).userId;
       const shop = await storage.getShop(shopId);
       if (!shop) return res.status(404).json({ error: "Магазин не найден" });
@@ -2176,7 +2178,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.get("/api/shops/:id/crm/customers", requireAuth, async (req, res) => {
     try {
-      const shopId = req.params.id;
+      const shopId = req.params.id as string;
       const userId = (req.session as any).userId;
       const shop = await storage.getShop(shopId);
       if (!shop) return res.status(404).json({ error: "Магазин не найден" });
@@ -2195,8 +2197,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.get("/api/shops/:id/crm/customers/:userId", requireAuth, async (req, res) => {
     try {
-      const shopId = req.params.id;
-      const targetUserId = req.params.userId;
+      const shopId = req.params.id as string;
+      const targetUserId = req.params.userId as string;
       const sessionUserId = (req.session as any).userId;
       const shop = await storage.getShop(shopId);
       if (!shop) return res.status(404).json({ error: "Магазин не найден" });
@@ -2222,7 +2224,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // Create a supplement invoice (shop/worker/admin)
   app.post("/api/orders/:id/supplements", requireRole("shop", "admin"), async (req, res) => {
     try {
-      const orderId = req.params.id;
+      const orderId = req.params.id as string;
       const order = await storage.getOrder(orderId);
       if (!order) return res.status(404).json({ error: "Заказ не найден" });
 
@@ -2280,7 +2282,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // Get supplements for an order
   app.get("/api/orders/:id/supplements", requireAuth, async (req, res) => {
     try {
-      const supplements = await storage.getOrderSupplements(req.params.id);
+      const supplements = await storage.getOrderSupplements(req.params.id as string);
       res.json({ supplements });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
@@ -2290,7 +2292,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // Generate Robokassa payment URL for supplement (buyer)
   app.post("/api/supplements/:id/pay", requireAuth, async (req, res) => {
     try {
-      const supplement = await storage.getSupplementById(req.params.id);
+      const supplement = await storage.getSupplementById(req.params.id as string);
       if (!supplement) return res.status(404).json({ error: "Доплата не найдена" });
       if (supplement.status !== "pending") return res.status(400).json({ error: "Доплата уже оплачена или отменена" });
 
@@ -2314,10 +2316,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // Cancel a supplement (shop/admin)
   app.patch("/api/supplements/:id/cancel", requireRole("shop", "admin"), async (req, res) => {
     try {
-      const supplement = await storage.getSupplementById(req.params.id);
+      const supplement = await storage.getSupplementById(req.params.id as string);
       if (!supplement) return res.status(404).json({ error: "Доплата не найдена" });
       if (supplement.status !== "pending") return res.status(400).json({ error: "Можно отменить только ожидающую доплату" });
-      await storage.cancelSupplement(req.params.id);
+      await storage.cancelSupplement(req.params.id as string);
       res.json({ ok: true });
     } catch (e: any) {
       res.status(500).json({ error: e.message });

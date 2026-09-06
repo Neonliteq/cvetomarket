@@ -2626,9 +2626,9 @@ export default function Admin() {
                           <div key={i} className="flex items-center gap-2 text-xs border-b py-1.5" data-testid={`crm-pageview-${i}`}>
                             <Globe className="w-3 h-3 text-muted-foreground shrink-0" />
                             <span className="font-mono truncate flex-1">{pv.page}</span>
-                            {pv.deviceType === "mobile" && <Smartphone className="w-3 h-3 text-muted-foreground shrink-0" title="Мобильный" />}
-                            {pv.deviceType === "tablet" && <Tablet className="w-3 h-3 text-muted-foreground shrink-0" title="Планшет" />}
-                            {(pv.deviceType === "desktop" || !pv.deviceType) && <Monitor className="w-3 h-3 text-muted-foreground shrink-0" title="Компьютер" />}
+                            {pv.deviceType === "mobile" && <Smartphone className="w-3 h-3 text-muted-foreground shrink-0" aria-label="Мобильный" />}
+                            {pv.deviceType === "tablet" && <Tablet className="w-3 h-3 text-muted-foreground shrink-0" aria-label="Планшет" />}
+                            {(pv.deviceType === "desktop" || !pv.deviceType) && <Monitor className="w-3 h-3 text-muted-foreground shrink-0" aria-label="Компьютер" />}
                             <span className="text-muted-foreground shrink-0">
                               {pv.createdAt ? format(new Date(pv.createdAt), "d MMM HH:mm", { locale: ru }) : ""}
                             </span>
