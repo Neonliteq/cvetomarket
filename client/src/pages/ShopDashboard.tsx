@@ -966,7 +966,21 @@ export default function ShopDashboard() {
 
   const toggleProductMutation = useMutation({
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) => apiRequest("PATCH", `/api/products/${id}`, { isActive }),
-    onSuccess: () => {
+    onMutate: async ({ id, isActive }) => {
+      const listKey = [`/api/shops/${myShop?.id}/products`];
+      await qc.cancelQueries({ queryKey: listKey });
+      const prev = qc.getQueryData<Product[]>(listKey);
+      // Instant feedback: flip the flag right away, reconcile on refetch.
+      qc.setQueryData<Product[]>(listKey, (old) =>
+        old?.map((p) => (p.id === id ? { ...p, isActive } : p))
+      );
+      return { prev };
+    },
+    onError: (_err, _vars, ctx: { prev?: Product[] } | undefined) => {
+      if (ctx?.prev) qc.setQueryData([`/api/shops/${myShop?.id}/products`], ctx.prev);
+      toast({ title: "Не удалось изменить статус", variant: "destructive" });
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: [`/api/shops/${myShop?.id}/products`] });
       qc.invalidateQueries({ queryKey: ["/api/products/featured"] });
       qc.invalidateQueries({ queryKey: ["/api/products"] });
@@ -1241,6 +1255,7 @@ export default function ShopDashboard() {
                         size="icon"
                         variant="ghost"
                         onClick={() => toggleProductMutation.mutate({ id: p.id, isActive: !p.isActive })}
+                        disabled={toggleProductMutation.isPending && toggleProductMutation.variables?.id === p.id}
                         data-testid={`button-toggle-${p.id}`}
                       >
                         {p.isActive ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
