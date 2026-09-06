@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCart } from "@/lib/cart";
 import { useAuth } from "@/lib/auth";
+import { responsiveImage } from "@/lib/utils";
 import type { Shop } from "@shared/schema";
 
 export default function Cart() {
@@ -53,7 +54,7 @@ export default function Cart() {
               <Card key={item.product.id}>
                 <CardContent className="p-4 flex gap-4">
                   <div className="w-20 h-20 rounded-md overflow-hidden shrink-0 bg-muted">
-                    <img src={image} alt={item.product.name} className="w-full h-full object-cover" />
+                    <img src={responsiveImage(image, 200)} alt={item.product.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">

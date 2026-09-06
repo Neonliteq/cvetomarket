@@ -19,6 +19,7 @@ import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { CheckoutMap } from "@/components/CheckoutMap";
+import { responsiveImage } from "@/lib/utils";
 import type { Shop } from "@shared/schema";
 
 const checkoutSchema = z.object({
@@ -432,8 +433,10 @@ export default function Checkout() {
                   <div key={item.product.id} className="flex items-center gap-2 text-sm">
                     <div className="w-10 h-10 rounded bg-muted overflow-hidden shrink-0">
                       <img
-                        src={item.product.images?.[0] || "/images/placeholder-bouquet.png"}
+                        src={responsiveImage(item.product.images?.[0] || "/images/placeholder-bouquet.png", 160)}
                         alt={item.product.name}
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-cover"
                       />
                     </div>
