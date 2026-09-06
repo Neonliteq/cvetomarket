@@ -175,6 +175,41 @@ export async function runMigrations() {
         ON product_drafts(user_id, product_key);
     `);
 
+    // Analytics tables must stay in sync with shared/schema.ts.
+    // Older environments predate the utm/duration columns, so INSERT into
+    // page_views fails with "column utm_source ... does not exist".
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS page_views (
+        id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+        session_id text NOT NULL,
+        user_id varchar REFERENCES users(id) ON DELETE SET NULL,
+        page text NOT NULL,
+        referrer text,
+        device_type text NOT NULL DEFAULT 'desktop',
+        utm_source text,
+        utm_medium text,
+        utm_campaign text,
+        duration_seconds integer,
+        created_at timestamp DEFAULT now()
+      );
+      ALTER TABLE page_views ADD COLUMN IF NOT EXISTS utm_source text;
+      ALTER TABLE page_views ADD COLUMN IF NOT EXISTS utm_medium text;
+      ALTER TABLE page_views ADD COLUMN IF NOT EXISTS utm_campaign text;
+      ALTER TABLE page_views ADD COLUMN IF NOT EXISTS duration_seconds integer;
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS analytics_events (
+        id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+        session_id text NOT NULL,
+        user_id varchar REFERENCES users(id) ON DELETE SET NULL,
+        event_name text NOT NULL,
+        properties jsonb DEFAULT '{}'::jsonb,
+        page text NOT NULL,
+        created_at timestamp DEFAULT now()
+      );
+    `);
+
     console.log("[migrate] Schema up to date");
   } catch (err) {
     console.error("[migrate] Migration error:", err);
