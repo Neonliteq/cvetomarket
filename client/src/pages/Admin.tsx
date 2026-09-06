@@ -529,7 +529,20 @@ export default function Admin() {
 
   const adminToggleProductMutation = useMutation({
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) => apiRequest("PATCH", `/api/admin/products/${id}`, { isActive }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["/api/admin/products"] }),
+    onMutate: async ({ id, isActive }) => {
+      await qc.cancelQueries({ queryKey: ["/api/admin/products"] });
+      const prev = qc.getQueryData<ProductWithMeta[]>(["/api/admin/products"]);
+      // Instant feedback, reconcile on refetch.
+      qc.setQueryData<ProductWithMeta[]>(["/api/admin/products"], (old) =>
+        old?.map((p) => (p.id === id ? { ...p, isActive } : p))
+      );
+      return { prev };
+    },
+    onError: (_err, _vars, ctx: { prev?: ProductWithMeta[] } | undefined) => {
+      if (ctx?.prev) qc.setQueryData(["/api/admin/products"], ctx.prev);
+      toast({ title: "Ошибка", description: "Не удалось изменить статус товара", variant: "destructive" });
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["/api/admin/products"] }),
   });
 
   const toggleShopFeaturedMutation = useMutation({
@@ -1337,6 +1350,7 @@ export default function Admin() {
                       <Button
                         size="icon" variant="ghost"
                         onClick={() => adminToggleProductMutation.mutate({ id: p.id, isActive: !p.isActive })}
+                        disabled={adminToggleProductMutation.isPending && adminToggleProductMutation.variables?.id === p.id}
                         data-testid={`button-admin-toggle-${p.id}`}
                       >
                         {p.isActive ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
