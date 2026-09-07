@@ -27,8 +27,8 @@ function createS3Client(): S3Client {
     // Fail fast when S3 is slow/unreachable (Reg.ru had outages) instead of
     // letting requests hang for minutes and wedging the resize pipeline.
     requestHandler: new NodeHttpHandler({
-      connectionTimeout: 5000,
-      socketTimeout: 15000,
+      connectionTimeout: 3000,
+      socketTimeout: 8000,
     }),
   });
 }
@@ -104,7 +104,7 @@ export class S3File {
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         stream.destroy(new Error("S3 read timed out"));
-      }, 20_000);
+      }, 10_000);
       stream.on("data", (chunk: Buffer) => chunks.push(chunk));
       stream.on("end", () => {
         clearTimeout(timer);
