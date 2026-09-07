@@ -433,7 +433,7 @@ export default function Checkout() {
                   <div key={item.product.id} className="flex items-center gap-2 text-sm">
                     <div className="w-10 h-10 rounded bg-muted overflow-hidden shrink-0">
                       <img
-                        src={responsiveImage(item.product.images?.[0] || "/images/placeholder-bouquet.png", 160)}
+                        src={responsiveImage(item.product.images?.[0] || "/images/placeholder-bouquet.webp", 160)}
                         alt={item.product.name}
                         loading="lazy"
                         decoding="async"

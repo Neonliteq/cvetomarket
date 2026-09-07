@@ -76,7 +76,7 @@ export default function ProductDetail() {
 
   if (!product) return <div className="text-center py-20">Товар не найден</div>;
 
-  const images = product.images?.length ? product.images : ["/images/placeholder-bouquet.jpg"];
+  const images = product.images?.length ? product.images : ["/images/placeholder-bouquet.webp"];
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">

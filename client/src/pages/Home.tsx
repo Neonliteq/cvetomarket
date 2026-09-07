@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import heroBg from "@assets/hero_bg_generated.png";
+import heroBg from "@assets/hero_bg_generated.webp";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -28,7 +28,7 @@ const SLUG_ICONS: Record<string, LucideIcon> = {
 
 const CATEGORY_IMAGES: Record<string, string> = {
   romance: "/images/product-romantic.png",
-  march8: "/images/hero-flowers.png",
+  march8: "/images/hero-flowers.webp",
   wedding: "/images/product-wedding.png",
   birthday: "/images/product-pions.png",
   sympathy: "/images/product-sympathy.png",
@@ -235,7 +235,7 @@ export default function Home() {
                       />
                     ) : (
                       <img
-                        src="/images/hero-flowers.png"
+                        src="/images/hero-flowers.webp"
                         alt={bannerProduct.name}
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                       />
@@ -250,7 +250,7 @@ export default function Home() {
                 </Link>
               ) : (
                 <div className="relative z-10 w-64 h-64 rounded-full overflow-hidden shadow-2xl border-4 border-white">
-                  <img src="/images/hero-flowers.png" alt="Букет" className="w-full h-full object-cover" />
+                  <img src="/images/hero-flowers.webp" alt="Букет" className="w-full h-full object-cover" />
                 </div>
               )}
 

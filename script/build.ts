@@ -59,7 +59,9 @@ async function buildAll() {
         srcDir: "src",
         filename: "sw.ts",
         injectManifest: {
-          globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+          // Images are cached at runtime by the SW's static-assets route —
+          // do not precache megabytes of PNG/JPEG/WebP into sw.js.
+          globPatterns: ["**/*.{js,css,html,ico,svg,woff2}"],
         },
       }),
     ],
