@@ -20,11 +20,10 @@ module.exports = {
   apps: [
     {
       name: 'cvetomarket',
-      script: 'npm',
-      args: 'start',
+      script: path.join(__dirname, '..', 'dist', 'index.cjs'),
       cwd: '/var/www/cvetomarket',
 
-      instances: 1,
+      instances: 2,
       exec_mode: 'cluster',
 
       watch: false,
