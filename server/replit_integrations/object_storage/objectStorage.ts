@@ -6,6 +6,7 @@ import {
 } from "@aws-sdk/client-s3";
 import { PassThrough } from "stream";
 import type { Response } from "express";
+import { NodeHttpHandler } from "@smithy/node-http-handler";
 import {
   ObjectAclPolicy,
   ObjectPermission,
@@ -23,6 +24,12 @@ function createS3Client(): S3Client {
       secretAccessKey: process.env.REGRU_S3_SECRET_KEY || "",
     },
     forcePathStyle: true,
+    // Fail fast when S3 is slow/unreachable (Reg.ru had outages) instead of
+    // letting requests hang for minutes and wedging the resize pipeline.
+    requestHandler: new NodeHttpHandler({
+      connectionTimeout: 5000,
+      socketTimeout: 15000,
+    }),
   });
 }
 
@@ -91,11 +98,22 @@ export class S3File {
   /** Download the full object into memory (needed for on-the-fly resizing). */
   async getBuffer(): Promise<Buffer> {
     const chunks: Buffer[] = [];
-    const stream = this.createReadStream();
+    // createReadStream() is typed as the legacy ReadableStream interface;
+    // the concrete PassThrough exposes destroy().
+    const stream = this.createReadStream() as unknown as import("stream").Readable;
     return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        stream.destroy(new Error("S3 read timed out"));
+      }, 20_000);
       stream.on("data", (chunk: Buffer) => chunks.push(chunk));
-      stream.on("end", () => resolve(Buffer.concat(chunks)));
-      stream.on("error", reject);
+      stream.on("end", () => {
+        clearTimeout(timer);
+        resolve(Buffer.concat(chunks));
+      });
+      stream.on("error", (err: Error) => {
+        clearTimeout(timer);
+        reject(err);
+      });
     });
   }
 
