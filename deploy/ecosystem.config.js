@@ -2,19 +2,21 @@ module.exports = {
   apps: [
     {
       name: "cvetomarket",
-      script: "npm",
-      args: "start",
+      script: "/var/www/cvetomarket/dist/index.cjs",
       cwd: "/var/www/cvetomarket",
 
-      instances: "max",
+      instances: 2,
       exec_mode: "cluster",
+      // Cluster shares the port via Node's cluster module; the app uses
+      // Postgres-backed sessions and HTTP polling (no WebSockets), so no
+      // sticky sessions are required.
 
       watch: false,
       max_memory_restart: "512M",
 
-      // Run as the dedicated app user, not root
-      uid: "cvetomarket",
-      gid: "cvetomarket",
+      // NOTE: runs as the same user PM2 was started with (root on this
+      // host), matching the previous fork setup — avoids chown issues with
+      // dist/node_modules owned by the deploy user.
 
       env: {
         NODE_ENV: "production",
