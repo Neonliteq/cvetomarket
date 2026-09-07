@@ -222,7 +222,7 @@ function ProductReviewDialog({ order, item, alreadyReviewed }: {
         <div className="space-y-4 mt-2">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded bg-muted overflow-hidden shrink-0">
-              <img src={responsiveImage(item.productImage || "/images/placeholder-bouquet.png", 200)} alt={item.productName} className="w-full h-full object-cover" />
+              <img src={responsiveImage(item.productImage || "/images/placeholder-bouquet.webp", 200)} alt={item.productName} className="w-full h-full object-cover" />
             </div>
             <p className="font-medium text-sm">{item.productName}</p>
           </div>
@@ -1120,7 +1120,7 @@ export default function Account() {
                           <div key={item.id} className="flex items-center gap-2">
                             <div className="w-10 h-10 rounded bg-muted overflow-hidden shrink-0">
                               <img
-                                src={item.productImage || "/images/placeholder-bouquet.png"}
+                                src={item.productImage || "/images/placeholder-bouquet.webp"}
                                 alt={item.productName}
                                 className="w-full h-full object-cover"
                               />

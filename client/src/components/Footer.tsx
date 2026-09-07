@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { Flower2, Gift } from "lucide-react";
-import eucalyptusBg from "@assets/footer_eucalyptus.png";
+import eucalyptusBg from "@assets/footer_eucalyptus.webp";
 
 export function Footer() {
   return (

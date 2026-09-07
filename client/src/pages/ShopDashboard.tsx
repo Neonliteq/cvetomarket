@@ -1233,7 +1233,7 @@ export default function ShopDashboard() {
                   <CardContent className="p-4 flex items-center gap-3">
                     <div className="w-14 h-14 rounded-md overflow-hidden bg-muted shrink-0">
                       <img
-                        src={p.images?.[0] || "/images/placeholder-bouquet.png"}
+                        src={p.images?.[0] || "/images/placeholder-bouquet.webp"}
                         alt={p.name}
                         className="w-full h-full object-cover"
                       />
@@ -1435,7 +1435,7 @@ export default function ShopDashboard() {
                             <div key={idx} className="flex items-center gap-3 p-2 rounded-md bg-muted/40" data-testid={`order-item-${order.id}-${idx}`}>
                               <div className="w-9 h-9 rounded-md overflow-hidden bg-muted shrink-0">
                                 <img
-                                  src={item.productImage || "/images/placeholder-bouquet.png"}
+                                  src={item.productImage || "/images/placeholder-bouquet.webp"}
                                   alt={item.productName}
                                   className="w-full h-full object-cover"
                                 />

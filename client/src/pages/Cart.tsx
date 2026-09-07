@@ -49,7 +49,7 @@ export default function Cart() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-3">
           {items.map((item) => {
-            const image = item.product.images?.[0] || "/images/placeholder-bouquet.png";
+            const image = item.product.images?.[0] || "/images/placeholder-bouquet.webp";
             return (
               <Card key={item.product.id}>
                 <CardContent className="p-4 flex gap-4">

@@ -16,7 +16,9 @@ export default defineConfig({
       srcDir: "src",
       filename: "sw.ts",
       injectManifest: {
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+        // Images are heavy and cached at runtime by the SW's static-assets
+        // route — do not precache megabytes of PNG/JPEG/WebP into sw.js.
+        globPatterns: ["**/*.{js,css,html,ico,svg,woff2}"],
       },
     }),
     ...(process.env.NODE_ENV !== "production" &&

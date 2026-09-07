@@ -11,7 +11,7 @@ export function cn(...inputs: ClassValue[]) {
  * The server resizes on the fly via sharp and caches the result.
  */
 export function responsiveImage(url: string | null | undefined, width: number): string {
-  if (!url) return "/images/placeholder-bouquet.png";
+  if (!url) return "/images/placeholder-bouquet.webp";
   if (!url.startsWith("/objects/")) return url;
   const sep = url.includes("?") ? "&" : "?";
   return `${url}${sep}w=${Math.min(Math.max(Math.round(width), 16), 1600)}`;

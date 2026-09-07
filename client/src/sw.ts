@@ -24,7 +24,7 @@ registerRoute(
 );
 
 registerRoute(
-  ({ url }: { url: URL }) => /\.(png|jpg|jpeg|svg|ico|woff2?|ttf|eot)$/.test(url.pathname),
+  ({ url }: { url: URL }) => /\.(png|jpg|jpeg|webp|svg|ico|woff2?|ttf|eot)$/.test(url.pathname),
   new CacheFirst({
     cacheName: "static-assets",
     plugins: [

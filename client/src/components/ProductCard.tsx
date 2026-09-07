@@ -45,7 +45,7 @@ export function ProductCard({ product, shopId, className }: ProductCardProps) {
     }
   };
 
-  const image = product.images?.[0] || "/images/placeholder-bouquet.png";
+  const image = product.images?.[0] || "/images/placeholder-bouquet.webp";
 
   return (
     <Link href={`/product/${product.id}`}>
