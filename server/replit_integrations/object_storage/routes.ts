@@ -150,7 +150,10 @@ export function registerObjectStorageRoutes(app: Express): void {
       // so product cards never show an empty/broken photo.
       res.set({
         "Content-Type": "image/webp",
-        "Cache-Control": "public, max-age=300",
+        "Cache-Control": "public, max-age=60",
+        // don't let nginx cache this temporary placeholder (it would outlive
+        // the S3 outage); normal images are cached as usual
+        "X-Accel-Expires": "0",
       });
       res.sendFile(PLACEHOLDER_IMAGE, (err) => {
         if (err && !res.headersSent) res.status(404).end();
