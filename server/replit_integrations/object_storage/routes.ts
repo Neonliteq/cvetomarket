@@ -1,6 +1,10 @@
 import type { Express } from "express";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import sharp from "sharp";
+import path from "path";
+
+/** Neutral fallback served when object storage is unavailable (S3 outages). */
+const PLACEHOLDER_IMAGE = path.resolve(process.cwd(), "client/public/images/placeholder-bouquet.webp");
 
 /**
  * On-the-fly image resizing (used via ?w=NNN on /objects/uploads/... URLs).
@@ -142,10 +146,15 @@ export function registerObjectStorageRoutes(app: Express): void {
       await objectStorageService.downloadObject(objectFile, res);
     } catch (error) {
       console.error("Error serving object:", error);
-      if (error instanceof ObjectNotFoundError) {
-        return res.status(404).json({ error: "Object not found" });
-      }
-      return res.status(500).json({ error: "Failed to serve object" });
+      // S3 flaps — serve a neutral placeholder instead of a broken image,
+      // so product cards never show an empty/broken photo.
+      res.set({
+        "Content-Type": "image/webp",
+        "Cache-Control": "public, max-age=300",
+      });
+      res.sendFile(PLACEHOLDER_IMAGE, (err) => {
+        if (err && !res.headersSent) res.status(404).end();
+      });
     }
   });
 }
