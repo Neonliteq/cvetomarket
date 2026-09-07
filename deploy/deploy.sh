@@ -27,7 +27,7 @@ npm run build
 echo "[4/4] Перезапуск PM2 (кластер, 2 воркера)..."
 pm2 delete "${APP_NAME}" 2>/dev/null || true
 set -a && source .env && set +a
-pm2 start deploy/ecosystem.config.js
+pm2 start deploy/ecosystem.config.cjs
 pm2 save
 
 echo ""
