@@ -17,6 +17,10 @@ echo "=========================================="
 echo "[1/4] Получение последних изменений из Git..."
 git pull origin main
 
+# Stop the app before the memory-hungry build steps — on a 2GB box the
+# running PM2 workers + npm ci/build can get OOM-killed, aborting the deploy.
+pm2 stop "${APP_NAME}" 2>/dev/null || true
+
 echo "[2/4] Установка зависимостей (включая devDependencies для сборки)..."
 # Unset NODE_ENV so npm ci installs devDependencies needed for build
 NODE_ENV=development npm ci
