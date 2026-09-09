@@ -58,7 +58,6 @@ export default function Checkout() {
   const [outsideZone, setOutsideZone] = useState(false);
   const [addressChecked, setAddressChecked] = useState(false);
   const [deliveryCoords, setDeliveryCoords] = useState<{ lat: number; lng: number } | null>(null);
-  const [bonusToUse, setBonusToUse] = useState(0);
   const [promoInput, setPromoInput] = useState("");
   const [promoApplied, setPromoApplied] = useState<{ code: string; discount: number; discountType: string; discountValue: number; description: string | null } | null>(null);
   const [promoError, setPromoError] = useState<string | null>(null);
@@ -66,19 +65,8 @@ export default function Checkout() {
   const shopHasZones = !!(shop as any)?.deliveryZones?.length;
   const DELIVERY = deliveryCost !== null ? deliveryCost : defaultDelivery;
 
-  const { data: bonusData } = useQuery<{ balance: number }>({
-    queryKey: ["/api/bonuses"],
-    enabled: !!user,
-  });
-  const bonusBalance = bonusData?.balance || 0;
-  const maxBonus = Math.min(bonusBalance, Math.floor((total + DELIVERY) * 0.20));
-
-  useEffect(() => {
-    if (bonusToUse > maxBonus) setBonusToUse(maxBonus);
-  }, [maxBonus, bonusToUse]);
-
   const promoDiscount = promoApplied?.discount || 0;
-  const finalTotal = Math.max(0, total + DELIVERY - bonusToUse - promoDiscount);
+  const finalTotal = Math.max(0, total + DELIVERY - promoDiscount);
 
   const applyPromo = async () => {
     if (!promoInput.trim()) return;
@@ -182,7 +170,6 @@ export default function Checkout() {
         })),
         totalAmount: total + DELIVERY,
         deliveryCost: DELIVERY,
-        bonusUsed: user ? bonusToUse : 0,
         promoCode: promoApplied?.code || null,
         guestEmail: !user ? (guestEmail || null) : null,
         deliveryLat: deliveryCoords?.lat ?? null,
@@ -194,20 +181,8 @@ export default function Checkout() {
       trackEvent("order_placed", { orderId: data.order?.id, total: total + DELIVERY, shopId: shopId || undefined });
       clearCart();
       if (data.paymentUrl) {
-        if (bonusToUse > 0 && (data.bonusUsed ?? 0) < bonusToUse) {
-          toast({
-            title: "Бонусы применены частично",
-            description: `Списано ${data.bonusUsed ?? 0} из ${bonusToUse} бонусов`,
-          });
-        }
         window.location.href = data.paymentUrl;
         return;
-      }
-      if (bonusToUse > 0 && (data.bonusUsed ?? 0) < bonusToUse) {
-        toast({
-          title: "Бонусы применены частично",
-          description: `Списано ${data.bonusUsed ?? 0} из ${bonusToUse} бонусов`,
-        });
       }
       setOrderId(data.order?.id);
       setSuccess(true);
@@ -461,42 +436,6 @@ export default function Checkout() {
                   <span>{DELIVERY.toLocaleString("ru-RU")} ₽</span>
                 </div>
               </div>
-              {bonusBalance > 0 && (
-                <>
-                  <Separator />
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm">
-                      <Gift className="w-4 h-4 text-amber-600" />
-                      <span className="font-medium">Списать бонусы</span>
-                      <span className="text-xs text-muted-foreground">(доступно {bonusBalance}, макс. 20% от суммы — {maxBonus})</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="number"
-                        min={0}
-                        max={maxBonus}
-                        value={bonusToUse || ""}
-                        onChange={(e) => {
-                          const v = Math.min(Math.max(0, parseInt(e.target.value) || 0), maxBonus);
-                          setBonusToUse(v);
-                        }}
-                        className="w-24 h-8 text-sm"
-                        placeholder="0"
-                        data-testid="input-bonus-use"
-                      />
-                      <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={() => setBonusToUse(maxBonus)} data-testid="button-use-all-bonuses">
-                        Все
-                      </Button>
-                    </div>
-                    {bonusToUse > 0 && (
-                      <div className="flex justify-between text-sm text-green-600 dark:text-green-400">
-                        <span>Скидка бонусами</span>
-                        <span>-{bonusToUse.toLocaleString("ru-RU")} ₽</span>
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
               <Separator />
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm">

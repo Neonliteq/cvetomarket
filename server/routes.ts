@@ -180,26 +180,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.post("/api/auth/register", authRateLimit, async (req, res) => {
     try {
-      const { email: rawEmail, password, name, phone, role, referralCode: refCode } = req.body;
+      const { email: rawEmail, password, name, phone, role } = req.body;
       const email = rawEmail?.toLowerCase?.() || rawEmail;
       const existing = await storage.getUserByEmail(email);
       if (existing) return res.status(400).json({ error: "Пользователь с таким email уже существует" });
       const hash = await bcrypt.hash(password, SALT_ROUNDS);
-      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-      let newRefCode = "";
-      for (let i = 0; i < 8; i++) newRefCode += chars[Math.floor(Math.random() * chars.length)];
-      const existingRef = await storage.getUserByReferralCode(newRefCode);
-      if (existingRef) {
-        newRefCode = "";
-        for (let i = 0; i < 8; i++) newRefCode += chars[Math.floor(Math.random() * chars.length)];
-      }
-      let referredBy: string | null = null;
-      if (refCode) {
-        const referrer = await storage.getUserByReferralCode(refCode);
-        if (referrer) referredBy = referrer.id;
-      }
-      const user = await storage.createUser({ email, password: hash, name, phone: phone || null, role: role || "buyer", referralCode: newRefCode, referredBy } as any);
-      await storage.addBonusTransaction(user.id, 1000, "welcome", "Приветственный бонус за регистрацию");
+      const user = await storage.createUser({ email, password: hash, name, phone: phone || null, role: role || "buyer" } as any);
       if (role === "shop") {
         const { inn, ogrn, legalName, legalAddress, legalType, description, cityId, address } = req.body;
         await storage.createShop({
@@ -386,19 +372,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           const email = vkEmail || `vk_${vkId}@vkauth.local`;
           const name = `${vkUser.first_name || ""} ${vkUser.last_name || ""}`.trim() || "VK User";
           const avatarUrl = vkUser.avatar || vkUser.photo_200 || null;
-          const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-          let refCode = "";
-          for (let i = 0; i < 8; i++) refCode += chars[Math.floor(Math.random() * chars.length)];
           user = await storage.createUser({
             email,
             password: null,
             name,
             role: "buyer",
             avatarUrl,
-            referralCode: refCode,
             vkId: String(vkId),
           });
-          await storage.addBonusTransaction(user!.id, 1000, "welcome", "Приветственный бонус за регистрацию");
         }
       }
       if (user!.isBlocked) return res.redirect("/auth?error=vk_blocked");
@@ -803,7 +784,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/orders", async (req, res) => {
     try {
       const userId = (req.session as any).userId || null;
-      const { items, shopId, totalAmount, deliveryCost, deliveryLat, deliveryLng, bonusUsed: rawBonusUsed, promoCode: rawPromoCode, guestEmail, ...orderData } = req.body;
+      const { items, shopId, totalAmount, deliveryCost, deliveryLat, deliveryLng, promoCode: rawPromoCode, guestEmail, ...orderData } = req.body;
 
       const shop = await storage.getShop(shopId);
       if (!shop) return res.status(404).json({ error: "Магазин не найден" });
@@ -862,13 +843,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
 
       // Step 4: Use server-computed total for all downstream calculations
-      let bonusUsed = 0;
-      if (userId && rawBonusUsed && Number(rawBonusUsed) > 0) {
-        const balance = await storage.getBonusBalance(userId);
-        const maxAllowed = Math.floor(serverBaseTotal * 0.20);
-        bonusUsed = Math.min(Number(rawBonusUsed), balance, maxAllowed);
-      }
-
       let promoDiscount = 0;
       let appliedPromoCode: string | null = null;
       let promoCodeId: string | null = null;
@@ -892,7 +866,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         }
       }
 
-      const finalAmount = Math.max(0, serverBaseTotal - bonusUsed - promoDiscount);
+      const finalAmount = Math.max(0, serverBaseTotal - promoDiscount);
       const settings = await storage.getSettings();
       const shopForCommission = shop;
       const effectiveRate = shopForCommission?.commissionRate != null
@@ -912,15 +886,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         totalAmount: finalAmount.toString(),
         deliveryCost: serverDelivery.toString(),
         platformCommission: commission.toString(),
-        bonusUsed,
         promoCode: appliedPromoCode,
         promoDiscount: promoDiscount.toString(),
         paymentStatus,
       });
 
-      if (bonusUsed > 0 && userId) {
-        await storage.addBonusTransaction(userId, -bonusUsed, "order_spend", `Списание за заказ #${order.id.slice(0, 8)}`);
-      }
       if (promoCodeId) {
         await storage.incrementPromoCodeUsage(promoCodeId);
       }
@@ -937,7 +907,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       if (!isCardPayment) {
         await notifyShopNewOrder(shopId, serverBaseTotal);
-        return res.json({ order, bonusUsed });
+        return res.json({ order });
       }
 
       // Card payment — generate Robokassa URL
@@ -955,7 +925,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         desc: `Заказ #${order.orderNumber} — ЦветоМаркет`,
         email: paymentEmail,
       });
-      res.json({ order, paymentUrl, bonusUsed });
+      res.json({ order, paymentUrl });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
@@ -1082,42 +1052,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           body: shopForNotif ? `Магазин «${shopForNotif.name}»` : "Статус вашего заказа изменился",
           link: "/account",
         });
-      }
-    }
-    // Accrue bonuses on delivery (idempotent — check existing transactions)
-    if (req.body.status === "delivered" && order && order.buyerId) {
-      const buyerId = order.buyerId;
-      try {
-        const existingTxns = await storage.getBonusTransactions(buyerId);
-        const buyerOrders = await storage.getOrdersByBuyer(buyerId);
-        const deliveredOrders = buyerOrders.filter((o) => o.status === "delivered");
-
-        const hasFirstOrderBonus = existingTxns.some((t) => t.reason === "first_order");
-        if (!hasFirstOrderBonus && deliveredOrders.length === 1) {
-          await storage.addBonusTransaction(buyerId, 250, "first_order", "Бонус за первый заказ");
-        }
-
-        const orderAmount = Number(order.totalAmount);
-        const bonusForPurchase = Math.floor(orderAmount / 3000) * 100;
-        const hasPurchaseBonus = existingTxns.some((t) => t.reason === "purchase_milestone" && t.description?.includes(order.id.slice(0, 8)));
-        if (bonusForPurchase > 0 && !hasPurchaseBonus) {
-          await storage.addBonusTransaction(buyerId, bonusForPurchase, "purchase_milestone", `Бонус за покупку #${order.id.slice(0, 8)} на ${orderAmount.toLocaleString("ru-RU")} ₽`);
-        }
-
-        const buyerUser = await storage.getUser(buyerId);
-        if ((buyerUser as any)?.referredBy && deliveredOrders.length === 1 && orderAmount >= 3000) {
-          const referrerId = (buyerUser as any).referredBy;
-          const referrer = await storage.getUser(referrerId);
-          if (referrer) {
-            const referrerTxns = await storage.getBonusTransactions(referrer.id);
-            const hasReferralBonus = referrerTxns.some((t) => t.reason === "referral" && t.description?.includes(buyerId.slice(0, 8)));
-            if (!hasReferralBonus) {
-              await storage.addBonusTransaction(referrer.id, 500, "referral", `Реферальный бонус (${buyerId.slice(0, 8)})`);
-            }
-          }
-        }
-      } catch (e) {
-        console.error("Bonus accrual error:", e);
       }
     }
     // Notify buyer about photo pending approval
@@ -1247,18 +1181,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           await storage.updateProduct(review.productId, { rating: avg.toFixed(2), reviewCount: productRevs.length });
         }
       }
-    }
-    try {
-      const allBuyerReviews = await storage.getReviewsByBuyer(userId);
-      if (allBuyerReviews.length === 1) {
-        const existingTxns = await storage.getBonusTransactions(userId);
-        const hasReviewBonus = existingTxns.some((t) => t.reason === "first_review");
-        if (!hasReviewBonus) {
-          await storage.addBonusTransaction(userId, 250, "first_review", "Бонус за первый отзыв");
-        }
-      }
-    } catch (e) {
-      console.error("Bonus for review error:", e);
     }
     res.json(review);
   });
@@ -1918,45 +1840,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.json({ ownerId: shop.ownerId });
   });
 
-  // ---- BONUSES ----
-  function generateReferralCode(): string {
-    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    let code = "";
-    for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
-    return code;
-  }
-
-  app.get("/api/bonuses", requireAuth, async (req, res) => {
-    const userId = (req.session as any).userId;
-    const balance = await storage.getBonusBalance(userId);
-    const transactions = await storage.getBonusTransactions(userId);
-    res.json({ balance, transactions });
-  });
-
-  app.get("/api/bonuses/referral-code", requireAuth, async (req, res) => {
-    const userId = (req.session as any).userId;
-    const code = await storage.getReferralCode(userId);
-    const proto = req.headers["x-forwarded-proto"] || req.protocol;
-    const host = req.headers["x-forwarded-host"] || req.headers.host;
-    const referralLink = `${proto}://${host}/auth?ref=${code}`;
-    res.json({ code, referralLink });
-  });
-
-  app.post("/api/admin/bonuses/grant", requireRole("admin"), async (req, res) => {
-    const { userId, amount, description } = req.body;
-    if (!userId || !amount || amount <= 0) return res.status(400).json({ error: "Укажите пользователя и сумму" });
-    const targetUser = await storage.getUser(userId);
-    if (!targetUser) return res.status(404).json({ error: "Пользователь не найден" });
-    const txn = await storage.addBonusTransaction(userId, amount, "admin_grant", description || "Начисление администратором");
-    res.json({ ok: true, transaction: txn });
-  });
-
-  app.get("/api/admin/users/:id/bonuses", requireRole("admin"), async (req, res) => {
-    const userId = req.params.id as string;
-    const balance = await storage.getBonusBalance(userId);
-    const transactions = await storage.getBonusTransactions(userId);
-    res.json({ balance, transactions });
-  });
+  // ---- BONUSES (removed) ----
 
   // ---- PROMO CODES ----
   app.post("/api/promo/validate", async (req, res) => {
@@ -2030,10 +1914,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.get("/api/admin/crm/customers/:id", requireRole("admin"), async (req, res) => {
     try {
       const uid = req.params.id as string;
-      const [orderList, reviewList, bonusData, userViews, userMessages] = await Promise.all([
+      const [orderList, reviewList, userViews, userMessages] = await Promise.all([
         storage.getOrdersByBuyer(uid),
         storage.getReviewsByBuyer(uid),
-        storage.getBonusTransactions(uid),
         storage.getPageViewsByUser(uid, 20),
         storage.getMessagesByUser(uid),
       ]);
@@ -2042,22 +1925,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         const shop = o.shopId ? await storage.getShop(o.shopId) : null;
         return { ...o, items, shopName: shop?.name || "" };
       }));
-      const bonusBalance = await storage.getBonusBalance(uid);
-      const targetUser = await storage.getUser(uid);
-      let referredBy: { id: string; name: string; email: string } | null = null;
-      let referrals: { id: string; name: string; email: string }[] = [];
-      if (targetUser) {
-        const referredByCode = (targetUser as any).referredBy;
-        if (referredByCode) {
-          const refUser = await storage.getUserByReferralCode(referredByCode);
-          if (refUser) referredBy = { id: refUser.id, name: refUser.name, email: refUser.email };
-        }
-        const allUsers = await storage.getAllUsers();
-        referrals = allUsers
-          .filter(u => (u as any).referredBy === ((targetUser as any).referralCode || ""))
-          .map(u => ({ id: u.id, name: u.name, email: u.email }))
-          .slice(0, 10);
-      }
       const chats = userMessages.reduce<{ partnerId: string; partnerName?: string; lastMessage: string; lastAt: string | null; count: number }[]>((acc, msg: any) => {
         const partnerId = msg.senderId === uid ? msg.receiverId : msg.senderId;
         const existing = acc.find(c => c.partnerId === partnerId);
@@ -2068,11 +1935,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       res.json({
         orders: enrichedOrders,
         reviews: reviewList,
-        bonusTransactions: bonusData,
-        bonusBalance,
         pageViews: userViews,
         chats,
-        referralInfo: { referredBy, referrals },
       });
     } catch (e: any) {
       res.status(500).json({ error: e.message });

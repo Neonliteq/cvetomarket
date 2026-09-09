@@ -35,7 +35,6 @@ export function Footer() {
             <Link href="/catalog"><p className="text-sm cursor-pointer transition-colors" style={{ color: "hsl(140 20% 72%)" }}>Каталог</p></Link>
             <Link href="/shops"><p className="text-sm cursor-pointer transition-colors" style={{ color: "hsl(140 20% 72%)" }}>Магазины</p></Link>
             <Link href="/account"><p className="text-sm cursor-pointer transition-colors" style={{ color: "hsl(140 20% 72%)" }}>Мои заказы</p></Link>
-            <Link href="/account?tab=bonuses"><p className="text-sm cursor-pointer transition-colors" style={{ color: "hsl(140 20% 72%)" }}>Мои бонусы</p></Link>
           </div>
         </div>
         <div className="space-y-2">

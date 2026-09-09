@@ -53,7 +53,6 @@ type CRMCustomer = {
   name: string;
   email: string;
   phone: string | null;
-  bonusBalance: number;
   orderCount: number;
   totalSpent: number;
   avgCheck: number;
@@ -67,14 +66,8 @@ type CRMCustomer = {
 type CRMProfile = {
   orders: any[];
   reviews: any[];
-  bonusTransactions: any[];
-  bonusBalance: number;
   pageViews: any[];
   chats: any[];
-  referralInfo: {
-    referredBy: { id: string; name: string; email: string } | null;
-    referrals: { id: string; name: string; email: string }[];
-  } | null;
 };
 
 const CRM_SEGMENT_LABELS: Record<CRMSegment, string> = {
@@ -147,69 +140,6 @@ function getStatusColor(status: string) {
   return ORDER_STATUSES.find((s) => s.value === status)?.color || "bg-gray-100 text-gray-800";
 }
 
-const BONUS_REASON_LABELS: Record<string, string> = {
-  first_order: "Первый заказ",
-  purchase_milestone: "Бонус за покупку",
-  first_review: "Первый отзыв",
-  referral: "Реферальный бонус",
-  admin_grant: "Начисление",
-  order_spend: "Списание",
-};
-
-function AdminBonusCard({ userId }: { userId: string }) {
-  const { data, isLoading } = useQuery<{ balance: number; transactions: any[] }>({
-    queryKey: ["/api/admin/users", userId, "bonuses"],
-    queryFn: async () => {
-      const res = await fetch(`/api/admin/users/${userId}/bonuses`, { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to fetch");
-      return res.json();
-    },
-  });
-
-  if (isLoading) return <Skeleton className="h-20 rounded-lg" />;
-
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
-          <Gift className="w-5 h-5 text-amber-600" />
-        </div>
-        <div>
-          <div className="text-xs text-muted-foreground">Текущий баланс</div>
-          <div className="text-xl font-bold" data-testid="text-admin-bonus-balance">{data?.balance || 0} бонусов</div>
-        </div>
-      </div>
-      <div>
-        <h4 className="text-sm font-medium mb-2">История транзакций</h4>
-        {!data?.transactions?.length ? (
-          <p className="text-xs text-muted-foreground">Нет операций</p>
-        ) : (
-          <div className="space-y-2 max-h-48 overflow-y-auto">
-            {data.transactions.map((t: any) => (
-              <div key={t.id} className="flex justify-between items-start text-xs border-b pb-1.5 last:border-0" data-testid={`admin-bonus-txn-${t.id}`}>
-                <div className="min-w-0 flex-1">
-                  <div className="font-medium">{t.description || BONUS_REASON_LABELS[t.reason] || t.reason}</div>
-                  <div className="text-muted-foreground">
-                    {t.createdAt ? format(new Date(t.createdAt), "d MMM yyyy, HH:mm", { locale: ru }) : ""}
-                    {t.amount > 0 && t.expiresAt && (
-                      <span className="ml-2 text-amber-600">
-                        сгорает {format(new Date(t.expiresAt), "d MMM yyyy", { locale: ru })}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <Badge variant={t.amount > 0 ? "default" : "destructive"} className="shrink-0 ml-2">
-                  {t.amount > 0 ? "+" : ""}{t.amount}
-                </Badge>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 export default function Admin() {
   const { user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
@@ -239,9 +169,6 @@ export default function Admin() {
   const [crmSelectedCustomer, setCrmSelectedCustomer] = useState<CRMCustomer | null>(null);
   const [crmNotes, setCrmNotes] = useState("");
   const [crmNotesSaved, setCrmNotesSaved] = useState("");
-  const [crmGrantAmount, setCrmGrantAmount] = useState("");
-  const [crmGrantDesc, setCrmGrantDesc] = useState("");
-  const [crmGrantOpen, setCrmGrantOpen] = useState(false);
   const [crmTagInput, setCrmTagInput] = useState("");
   const [crmTagFilter, setCrmTagFilter] = useState("all");
   const [crmCartReminderSent, setCrmCartReminderSent] = useState<string | null>(null);
@@ -324,19 +251,6 @@ export default function Admin() {
     onError: () => toast({ title: "Ошибка сохранения", variant: "destructive" }),
   });
 
-  const crmGrantBonusMutation = useMutation({
-    mutationFn: ({ userId, amount, description }: { userId: string; amount: number; description: string }) =>
-      apiRequest("POST", "/api/admin/bonuses/grant", { userId, amount, description }),
-    onSuccess: () => {
-      toast({ title: "Бонусы начислены" });
-      if (crmSelectedCustomer) {
-        qc.invalidateQueries({ queryKey: ["/api/admin/crm/customers", crmSelectedCustomer.id, "profile"] });
-        qc.invalidateQueries({ queryKey: ["/api/admin/crm/customers"] });
-      }
-    },
-    onError: () => toast({ title: "Ошибка начисления", variant: "destructive" }),
-  });
-
   const crmBlockMutation = useMutation({
     mutationFn: (id: string) => apiRequest("PATCH", `/api/admin/users/${id}/block`, {}),
     onSuccess: () => {
@@ -399,10 +313,6 @@ export default function Admin() {
     },
   });
 
-  const [bonusGrantUser, setBonusGrantUser] = useState<{ id: string; name: string } | null>(null);
-  const [bonusViewUser, setBonusViewUser] = useState<{ id: string; name: string } | null>(null);
-  const [bonusAmount, setBonusAmount] = useState("");
-  const [bonusDesc, setBonusDesc] = useState("");
   const [msgTarget, setMsgTarget] = useState<{ id: string; name: string } | null>(null);
   const [msgContent, setMsgContent] = useState("");
 
@@ -425,26 +335,6 @@ export default function Admin() {
       setMsgTarget(null);
     },
     onError: () => toast({ title: "Ошибка отправки", variant: "destructive" }),
-  });
-
-  const grantBonusMutation = useMutation({
-    mutationFn: ({ userId, amount, description }: { userId: string; amount: number; description: string }) =>
-      apiRequest("POST", "/api/admin/bonuses/grant", { userId, amount, description }),
-    onSuccess: () => {
-      toast({ title: "Бонусы начислены" });
-      setBonusGrantUser(null);
-      setBonusAmount("");
-      setBonusDesc("");
-      qc.invalidateQueries({ queryKey: ["/api/admin/users"] });
-      if (bonusViewUser) {
-        qc.invalidateQueries({ queryKey: ["/api/admin/users", bonusViewUser.id, "bonuses"] });
-      }
-    },
-    onError: (err: any) => {
-      let msg = "Ошибка";
-      try { msg = JSON.parse(err.message.slice(err.message.indexOf("{"))).error; } catch {}
-      toast({ title: msg, variant: "destructive" });
-    },
   });
 
   const updateOrderStatusMutation = useMutation({
@@ -1153,15 +1043,6 @@ export default function Admin() {
                       </div>
                       {u.role !== "admin" && (
                         <div className="flex items-center gap-2 shrink-0">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setBonusViewUser({ id: u.id, name: u.name })}
-                            className="gap-1.5 text-xs"
-                            data-testid={`button-view-bonus-${u.id}`}
-                          >
-                            <Gift className="w-3.5 h-3.5" /> Бонусы
-                          </Button>
                           <Button
                             size="sm"
                             variant="outline"
@@ -2194,7 +2075,6 @@ export default function Admin() {
                             <th className="text-left px-4 py-2 font-medium hidden lg:table-cell">Телефон</th>
                             <th className="text-right px-4 py-2 font-medium hidden md:table-cell">Заказов</th>
                             <th className="text-right px-4 py-2 font-medium">LTV</th>
-                            <th className="text-right px-4 py-2 font-medium hidden lg:table-cell">Бонусы</th>
                             <th className="text-right px-4 py-2 font-medium hidden xl:table-cell">Посл. заказ</th>
                             <th className="px-4 py-2"></th>
                           </tr>
@@ -2208,9 +2088,6 @@ export default function Admin() {
                                 setCrmSelectedCustomer(c);
                                 setCrmNotes(c.adminNotes || "");
                                 setCrmNotesSaved(c.adminNotes || "");
-                                setCrmGrantOpen(false);
-                                setCrmGrantAmount("");
-                                setCrmGrantDesc("");
                                 setCrmTagInput("");
                                 setCrmCartReminderSent(null);
                               }}
@@ -2235,7 +2112,6 @@ export default function Admin() {
                               <td className="px-4 py-3 text-xs text-muted-foreground hidden lg:table-cell">{c.phone || "—"}</td>
                               <td className="px-4 py-3 text-right hidden md:table-cell">{c.orderCount}</td>
                               <td className="px-4 py-3 text-right font-medium">{c.totalSpent.toLocaleString("ru")} ₽</td>
-                              <td className="px-4 py-3 text-right hidden lg:table-cell">{c.bonusBalance}</td>
                               <td className="px-4 py-3 text-right text-xs text-muted-foreground hidden xl:table-cell">
                                 {c.lastOrderAt ? format(new Date(c.lastOrderAt), "d MMM yyyy", { locale: ru }) : "—"}
                               </td>
@@ -2268,7 +2144,7 @@ export default function Admin() {
           })()}
 
           {/* Customer Profile Sheet */}
-          <Sheet open={!!crmSelectedCustomer} onOpenChange={(open) => { if (!open) { setCrmSelectedCustomer(null); setCrmGrantOpen(false); setCrmTagInput(""); setCrmCartReminderSent(null); } }}>
+          <Sheet open={!!crmSelectedCustomer} onOpenChange={(open) => { if (!open) { setCrmSelectedCustomer(null); setCrmTagInput(""); setCrmCartReminderSent(null); } }}>
             <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
               {crmSelectedCustomer && (
                 <>
@@ -2292,11 +2168,10 @@ export default function Admin() {
                   </SheetHeader>
 
                   {/* Stats row */}
-                  <div className="grid grid-cols-3 gap-3 mb-4">
+                  <div className="grid grid-cols-2 gap-3 mb-4">
                     {[
                       { label: "Заказов", value: crmSelectedCustomer.orderCount },
                       { label: "LTV", value: `${crmSelectedCustomer.totalSpent.toLocaleString("ru")} ₽` },
-                      { label: "Бонусов", value: loadingCrmProfile ? "..." : (crmProfile?.bonusBalance ?? crmSelectedCustomer.bonusBalance) },
                     ].map((s) => (
                       <div key={s.label} className="rounded-lg border p-3 text-center">
                         <div className="text-xs text-muted-foreground">{s.label}</div>
@@ -2375,15 +2250,6 @@ export default function Admin() {
                       size="sm"
                       variant="outline"
                       className="gap-1.5 flex-1"
-                      onClick={() => setCrmGrantOpen((o) => !o)}
-                      data-testid="button-crm-grant-bonus"
-                    >
-                      <Gift className="w-3.5 h-3.5" /> Начислить бонусы
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="gap-1.5 flex-1"
                       onClick={() => crmCartReminderMutation.mutate(crmSelectedCustomer.id)}
                       disabled={crmCartReminderMutation.isPending || crmCartReminderSent === crmSelectedCustomer.id}
                       data-testid="button-crm-cart-reminder"
@@ -2407,51 +2273,6 @@ export default function Admin() {
                       {users?.find((u) => u.id === crmSelectedCustomer.id)?.isBlocked ? "Разблокировать" : "Заблокировать"}
                     </Button>
                   </div>
-
-                  {/* Grant bonus inline form */}
-                  {crmGrantOpen && (
-                    <div className="border rounded-lg p-3 mb-4 space-y-2 bg-muted/30">
-                      <p className="text-xs font-medium">Начислить бонусы покупателю</p>
-                      <div className="flex gap-2">
-                        <Input
-                          type="number"
-                          min={1}
-                          placeholder="Сумма"
-                          value={crmGrantAmount}
-                          onChange={(e) => setCrmGrantAmount(e.target.value)}
-                          className="w-24"
-                          data-testid="input-crm-grant-amount"
-                        />
-                        <Input
-                          placeholder="Причина"
-                          value={crmGrantDesc}
-                          onChange={(e) => setCrmGrantDesc(e.target.value)}
-                          className="flex-1"
-                          data-testid="input-crm-grant-desc"
-                        />
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          disabled={!crmGrantAmount || Number(crmGrantAmount) <= 0 || crmGrantBonusMutation.isPending}
-                          onClick={() => {
-                            crmGrantBonusMutation.mutate({
-                              userId: crmSelectedCustomer.id,
-                              amount: Number(crmGrantAmount),
-                              description: crmGrantDesc || "Начисление администратором",
-                            });
-                            setCrmGrantAmount("");
-                            setCrmGrantDesc("");
-                            setCrmGrantOpen(false);
-                          }}
-                          data-testid="button-crm-grant-confirm"
-                        >
-                          {crmGrantBonusMutation.isPending ? "Начисляем..." : "Начислить"}
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={() => setCrmGrantOpen(false)}>Отмена</Button>
-                      </div>
-                    </div>
-                  )}
 
                   <Separator className="mb-4" />
 
@@ -2516,36 +2337,6 @@ export default function Admin() {
                   </div>
 
                   <Separator className="mb-4" />
-
-                  {/* Bonus history */}
-                  <div className="mb-4">
-                    <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
-                      <Gift className="w-4 h-4" /> История бонусов
-                    </h4>
-                    {loadingCrmProfile ? (
-                      <div className="space-y-2">{Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-8 rounded" />)}</div>
-                    ) : !crmProfile?.bonusTransactions?.length ? (
-                      <p className="text-sm text-muted-foreground">Операций нет</p>
-                    ) : (
-                      <div className="space-y-1.5 max-h-40 overflow-y-auto">
-                        {crmProfile.bonusTransactions.map((t: any) => (
-                          <div key={t.id} className="flex justify-between items-center text-xs border rounded p-2" data-testid={`crm-bonus-txn-${t.id}`}>
-                            <div>
-                              <span className="font-medium">{t.description || BONUS_REASON_LABELS[t.reason] || t.reason}</span>
-                              {t.createdAt && (
-                                <span className="ml-2 text-muted-foreground">
-                                  {format(new Date(t.createdAt), "d MMM yyyy", { locale: ru })}
-                                </span>
-                              )}
-                            </div>
-                            <Badge variant={t.amount > 0 ? "default" : "destructive"} className="shrink-0 ml-2 text-xs">
-                              {t.amount > 0 ? "+" : ""}{t.amount}
-                            </Badge>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
 
                   <Separator className="mb-4" />
 
@@ -2651,31 +2442,6 @@ export default function Admin() {
                       </div>
                     )}
                   </div>
-
-                  {/* Referral Info */}
-                  {!loadingCrmProfile && crmProfile?.referralInfo && (crmProfile.referralInfo.referredBy || crmProfile.referralInfo.referrals.length > 0) && (
-                    <>
-                      <Separator className="mb-4" />
-                      <div>
-                        <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
-                          <Gift className="w-4 h-4" /> Реферальная программа
-                        </h4>
-                        {crmProfile.referralInfo.referredBy && (
-                          <p className="text-xs text-muted-foreground mb-1">
-                            Приглашён: <span className="font-medium text-foreground">{crmProfile.referralInfo.referredBy.name}</span> ({crmProfile.referralInfo.referredBy.email})
-                          </p>
-                        )}
-                        {crmProfile.referralInfo.referrals.length > 0 && (
-                          <div>
-                            <p className="text-xs text-muted-foreground mb-1">Привлёк {crmProfile.referralInfo.referrals.length} польз.:</p>
-                            {crmProfile.referralInfo.referrals.map(r => (
-                              <p key={r.id} className="text-xs">{r.name} ({r.email})</p>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </>
-                  )}
                 </>
               )}
             </SheetContent>
@@ -3680,45 +3446,6 @@ export default function Admin() {
                   {sendMsgMutation.isPending ? "Отправка..." : "Отправить"}
                 </Button>
               </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={!!bonusViewUser} onOpenChange={(open) => { if (!open) { setBonusViewUser(null); setBonusGrantUser(null); setBonusAmount(""); setBonusDesc(""); } }}>
-        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Бонусы — {bonusViewUser?.name}</DialogTitle>
-          </DialogHeader>
-          {bonusViewUser && <AdminBonusCard userId={bonusViewUser.id} />}
-          <Separator />
-          {!bonusGrantUser ? (
-            <Button variant="outline" onClick={() => setBonusGrantUser(bonusViewUser)} className="w-full gap-2" data-testid="button-open-grant-form">
-              <Gift className="w-4 h-4" /> Начислить бонусы
-            </Button>
-          ) : (
-            <div className="space-y-3">
-              <h4 className="font-medium text-sm">Начислить бонусы</h4>
-              <div>
-                <Label>Сумма</Label>
-                <Input type="number" min={1} value={bonusAmount} onChange={(e) => setBonusAmount(e.target.value)} placeholder="100" data-testid="input-bonus-grant-amount" />
-              </div>
-              <div>
-                <Label>Описание</Label>
-                <Input value={bonusDesc} onChange={(e) => setBonusDesc(e.target.value)} placeholder="Причина начисления" data-testid="input-bonus-grant-desc" />
-              </div>
-              <Button
-                onClick={() => {
-                  if (bonusGrantUser && Number(bonusAmount) > 0) {
-                    grantBonusMutation.mutate({ userId: bonusGrantUser.id, amount: Number(bonusAmount), description: bonusDesc });
-                  }
-                }}
-                disabled={!bonusAmount || Number(bonusAmount) <= 0 || grantBonusMutation.isPending}
-                className="w-full"
-                data-testid="button-confirm-bonus-grant"
-              >
-                {grantBonusMutation.isPending ? "Начисляем..." : "Начислить"}
-              </Button>
             </div>
           )}
         </DialogContent>
