@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { Flower2, Gift } from "lucide-react";
+import { Flower2 } from "lucide-react";
 import eucalyptusBg from "@assets/footer_eucalyptus.webp";
 
 export function Footer() {
@@ -22,10 +22,10 @@ export function Footer() {
             Маркетплейс цветочных магазинов — доставляем по городу и области
           </p>
           <div className="flex items-start gap-2 rounded-md px-3 py-2.5" style={{ background: "hsl(152 35% 20% / 0.6)", border: "1px solid hsl(152 30% 28%)" }}>
-            <Gift className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "hsl(45 90% 65%)" }} />
+            <Flower2 className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "hsl(45 90% 65%)" }} />
             <div>
-              <p className="text-xs font-semibold" style={{ color: "hsl(45 90% 75%)" }}>Бонусная программа</p>
-              <p className="text-xs mt-0.5" style={{ color: "hsl(140 20% 65%)" }}>1000 бонусов при регистрации — до 20% скидки на заказ</p>
+              <p className="text-xs font-semibold" style={{ color: "hsl(45 90% 75%)" }}>Свежие цветы каждый день</p>
+              <p className="text-xs mt-0.5" style={{ color: "hsl(140 20% 65%)" }}>Доставка по городу и области за 1–3 часа</p>
             </div>
           </div>
         </div>

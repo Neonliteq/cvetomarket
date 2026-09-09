@@ -251,7 +251,7 @@ export default function Checkout() {
                         <p className="text-muted-foreground text-xs mt-0.5">
                           Вы можете сделать заказ как гость.{" "}
                           <a href="/auth" className="text-primary underline underline-offset-2">Войдите или зарегистрируйтесь</a>,
-                          чтобы отслеживать заказы и получать бонусы.
+                          чтобы отслеживать свои заказы.
                         </p>
                       </div>
                     </div>

@@ -19,7 +19,6 @@ const mockStorage = vi.hoisted(() => ({
   getUser: vi.fn(),
   getUserByEmail: vi.fn().mockResolvedValue(undefined),
   getUserByVkId: vi.fn().mockResolvedValue(undefined),
-  getUserByReferralCode: vi.fn().mockResolvedValue(undefined),
   getUserByResetToken: vi.fn().mockResolvedValue(undefined),
   getUserById: vi.fn().mockResolvedValue(undefined),
   getAllUsers: vi.fn().mockResolvedValue([]),
@@ -91,10 +90,6 @@ const mockStorage = vi.hoisted(() => ({
   createNotification: vi.fn().mockResolvedValue(undefined),
   markNotificationRead: vi.fn(),
   markAllNotificationsRead: vi.fn(),
-
-  getBonusTransactions: vi.fn().mockResolvedValue([]),
-  addBonusTransaction: vi.fn().mockResolvedValue(undefined),
-  getBonusBalance: vi.fn().mockResolvedValue(0),
 
   getOrderSupplements: vi.fn().mockResolvedValue([]),
   createOrderSupplement: vi.fn(),
