@@ -995,6 +995,14 @@ export default function ShopDashboard() {
       if (ctx?.prev) qc.setQueryData([`/api/shops/${myShop?.id}/products`], ctx.prev);
       toast({ title: "Не удалось изменить статус", variant: "destructive" });
     },
+    onSuccess: (product: Product) => {
+      // Authoritative server product — prevents a stale in-flight refetch
+      // (from the previous toggle's invalidate) from leaving the UI out of sync
+      // when toggling visibility back, which was visible on mobile.
+      qc.setQueryData<Product[]>([`/api/shops/${myShop?.id}/products`], (old) =>
+        old?.map((p) => (p.id === product.id ? product : p)) || old
+      );
+    },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: [`/api/shops/${myShop?.id}/products`] });
       qc.invalidateQueries({ queryKey: ["/api/products/featured"] });
