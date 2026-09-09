@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Plus, Edit, Trash2, Package, ShoppingBag, BarChart2, MessageCircle,
   Eye, EyeOff, Star, MapPin, Phone, Calendar, Clock, User, FileText, Send, Settings, Truck,
-  Upload, Image, X, Users, UserPlus, UserMinus, Crown, Tag, CheckCircle, ExternalLink, Search, ArrowUpDown, Bell, ArrowLeft
+  Upload, Image, X, Users, UserPlus, UserMinus, Crown, Tag, CheckCircle, ExternalLink, Search, ArrowUpDown, Bell, ArrowLeft, Filter
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -808,6 +808,7 @@ export default function ShopDashboard() {
   const [productEditorDirty, setProductEditorDirty] = useState(false);
   const productDraftFlushRef = useRef<(() => void) | null>(null);
   const [productSort, setProductSort] = useState("default");
+  const [productTypeFilter, setProductTypeFilter] = useState("all");
   const [orderStatusFilter, setOrderStatusFilter] = useState("all");
   const [orderSort, setOrderSort] = useState<"date-desc" | "date-asc" | "time-asc" | "time-desc">("date-desc");
   const [orderSearch, setOrderSearch] = useState("");
@@ -824,7 +825,10 @@ export default function ShopDashboard() {
 
   const sortedProducts = useMemo(() => {
     if (!products) return [];
-    const arr = [...products];
+    const filtered = productTypeFilter === "all"
+      ? [...products]
+      : products.filter((p) => (p.type || "bouquet") === productTypeFilter);
+    const arr = [...filtered];
     switch (productSort) {
       case "name-asc":  return arr.sort((a, b) => a.name.localeCompare(b.name, "ru"));
       case "name-desc": return arr.sort((a, b) => b.name.localeCompare(a.name, "ru"));
@@ -836,7 +840,7 @@ export default function ShopDashboard() {
       case "type-desc": return arr.sort((a, b) => productTypeLabel(b.type).localeCompare(productTypeLabel(a.type), "ru"));
       default:          return arr;
     }
-  }, [products, productSort]);
+  }, [products, productSort, productTypeFilter]);
 
   const { data: orders, isLoading: loadingOrders } = useQuery<OrderWithItems[]>({
     queryKey: ["/api/orders/shop"],
@@ -1182,8 +1186,21 @@ export default function ShopDashboard() {
 
         <TabsContent value="products">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold">Товары ({products?.length || 0})</h3>
+            <h3 className="font-semibold">Товары ({sortedProducts.length})</h3>
             <div className="flex items-center gap-2">
+              <Select value={productTypeFilter} onValueChange={setProductTypeFilter}>
+                <SelectTrigger className="h-8 w-40 text-xs gap-1" data-testid="select-product-type-filter">
+                  <Filter className="w-3 h-3 shrink-0" />
+                  <SelectValue placeholder="Тип товара" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Все типы</SelectItem>
+                  <SelectItem value="bouquet">Букет</SelectItem>
+                  <SelectItem value="gift">Подарок</SelectItem>
+                  <SelectItem value="tasty_gift">Вкусный подарок</SelectItem>
+                  <SelectItem value="addon">Доп. товар</SelectItem>
+                </SelectContent>
+              </Select>
               <Select value={productSort} onValueChange={setProductSort}>
                 <SelectTrigger className="h-8 w-48 text-xs gap-1" data-testid="select-product-sort">
                   <ArrowUpDown className="w-3 h-3 shrink-0" />
