@@ -192,7 +192,16 @@ function getDeliveryDateLabel(value?: string | null): string | null {
   return null;
 }
 
-const PRODUCT_TYPES = { bouquet: "Букет", gift: "Подарок", tasty_gift: "Вкусный подарок" } as const;
+const PRODUCT_TYPES: Record<string, string> = {
+  bouquet: "Букет",
+  gift: "Подарок",
+  tasty_gift: "Вкусный подарок",
+  addon: "Доп. товар",
+};
+
+function productTypeLabel(type?: string | null): string {
+  return (type && PRODUCT_TYPES[type]) || "Без типа";
+}
 
 const productSchema = z.object({
   type: z.string().default("bouquet"),
@@ -823,6 +832,8 @@ export default function ShopDashboard() {
       case "price-desc":return arr.sort((a, b) => Number(b.price) - Number(a.price));
       case "stock":     return arr.sort((a, b) => (b.inStock ? 1 : 0) - (a.inStock ? 1 : 0));
       case "active":    return arr.sort((a, b) => (b.isActive ? 1 : 0) - (a.isActive ? 1 : 0));
+      case "type-asc":  return arr.sort((a, b) => productTypeLabel(a.type).localeCompare(productTypeLabel(b.type), "ru"));
+      case "type-desc": return arr.sort((a, b) => productTypeLabel(b.type).localeCompare(productTypeLabel(a.type), "ru"));
       default:          return arr;
     }
   }, [products, productSort]);
@@ -1186,6 +1197,8 @@ export default function ShopDashboard() {
                   <SelectItem value="price-desc">Цена: дороже</SelectItem>
                   <SelectItem value="stock">В наличии первыми</SelectItem>
                   <SelectItem value="active">Активные первыми</SelectItem>
+                  <SelectItem value="type-asc">Тип: А→Я</SelectItem>
+                  <SelectItem value="type-desc">Тип: Я→А</SelectItem>
                 </SelectContent>
               </Select>
               <Button
@@ -1242,6 +1255,7 @@ export default function ShopDashboard() {
                       <p className="font-medium text-sm truncate">{p.name}</p>
                       <div className="flex flex-wrap items-center gap-2 mt-1">
                         <span className="font-bold text-sm">{Number(p.price).toLocaleString("ru-RU")} ₽</span>
+                        <Badge variant="outline" className="text-xs">{productTypeLabel(p.type)}</Badge>
                         <Badge variant={p.inStock ? "default" : "secondary"} className="text-xs">
                           {p.inStock ? "В наличии" : "Нет в наличии"}
                         </Badge>
