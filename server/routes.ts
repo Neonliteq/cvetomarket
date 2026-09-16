@@ -144,24 +144,22 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     if (!files || files.length === 0) return res.status(400).json({ error: "No files uploaded" });
 
     try {
-      const privateDir = objStorageService.getPrivateObjectDir();
-      const { bucketName, objectName: basePath } = parseObjPath(privateDir);
-      const bucket = objectStorageClient.bucket(bucketName);
-
       const urls: string[] = [];
       for (const file of files) {
         const ext = path.extname(file.originalname);
         const uniqueName = `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
-        const objectName = `${basePath}/uploads/${uniqueName}`;
-        const gcsFile = bucket.file(objectName);
 
         // Local copy first — photos must keep working while S3 is under
         // maintenance; the server serves uploaded objects from its own disk.
         await writeLocalObject(uniqueName, file.buffer);
 
-        // S3 backup is best effort: a failed S3 write must not fail the upload.
+        // S3 backup is best effort: a failed (or unconfigured) S3 write must
+        // never fail the upload, the local copy is already authoritative.
         try {
-          await gcsFile.save(file.buffer, {
+          const privateDir = objStorageService.getPrivateObjectDir();
+          const { bucketName, objectName: basePath } = parseObjPath(privateDir);
+          const objectName = `${basePath}/uploads/${uniqueName}`;
+          await objectStorageClient.bucket(bucketName).file(objectName).save(file.buffer, {
             contentType: file.mimetype,
             resumable: false,
           });
