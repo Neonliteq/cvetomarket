@@ -2,6 +2,12 @@ import type { Express } from "express";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import sharp from "sharp";
 import path from "path";
+import {
+  contentTypeForName,
+  localNameForObjectPath,
+  readLocalObject,
+  writeLocalObject,
+} from "../../localObjectStore";
 
 /** Neutral fallback served when object storage is unavailable (S3 outages). */
 const PLACEHOLDER_IMAGE = path.resolve(process.cwd(), "client/public/images/placeholder-bouquet.webp");
@@ -101,64 +107,106 @@ export function registerObjectStorageRoutes(app: Express): void {
    * For protected files, add authentication middleware and ACL checks.
    */
   app.get("/objects/{*objectPath}", async (req, res) => {
-    try {
-      const rawParam = (req.params as any).objectPath;
-      const objectPath = `/objects/${Array.isArray(rawParam) ? rawParam.join("/") : rawParam}`;
-      const objectFile = await objectStorageService.getObjectEntityFile(objectPath);
+    const rawParam = (req.params as any).objectPath;
+    const objectPath = `/objects/${Array.isArray(rawParam) ? rawParam.join("/") : rawParam}`;
+    const requestedWidth = clampInt(String(req.query.w ?? ""), 16, RESIZE_MAX_WIDTH, 0);
+    const quality = clampInt(String(req.query.q ?? ""), 50, 90, 80);
 
-      // Resized variant requested: /objects/uploads/....jpg?w=800
-      const requestedWidth = clampInt(String(req.query.w ?? ""), 16, RESIZE_MAX_WIDTH, 0);
-      if (requestedWidth > 0 && objectPath.startsWith("/objects/uploads/")) {
-        const quality = clampInt(String(req.query.q ?? ""), 50, 90, 80);
-        const cacheKey = `${objectPath}|w=${requestedWidth}|q=${quality}`;
-
-        let cached = resizeCache.get(cacheKey);
-        if (!cached && inflightResizes < MAX_INFLIGHT_RESIZES) {
-          inflightResizes += 1;
-          try {
-            const original = await objectFile.getBuffer();
-            const resized = await resizeImage(original, requestedWidth, quality);
-            cached = { data: resized, length: resized.length };
-            resizeCache.set(cacheKey, cached);
-            if (resizeCache.size > RESIZE_CACHE_LIMIT) {
-              const oldest = resizeCache.keys().next().value;
-              if (oldest !== undefined) resizeCache.delete(oldest);
-            }
-          } catch (err) {
-            console.error("Error resizing object:", err);
-          } finally {
-            inflightResizes -= 1;
-          }
+    // Uploaded objects are served from the server's local mirror first, so
+    // product photos keep working while S3 is under maintenance.
+    const localName = localNameForObjectPath(objectPath);
+    if (localName) {
+      let original = await readLocalObject(localName);
+      if (!original) {
+        // First sight of this object: pull it from S3 once and keep a local copy.
+        try {
+          const objectFile = await objectStorageService.getObjectEntityFile(objectPath);
+          original = await objectFile.getBuffer();
+          await writeLocalObject(localName, original).catch((err) =>
+            console.error("Failed to persist local copy of object:", err),
+          );
+        } catch (err) {
+          console.error("Error fetching object from S3:", err);
+          original = null;
         }
-
-        if (cached) {
-          res.set({
-            "Content-Type": "image/webp",
-            "Content-Length": String(cached.length),
-            "Cache-Control": "public, max-age=31536000, immutable",
-          });
-          res.send(cached.data);
-          return;
-        }
-        // Busy or resize failed — fall through to the original file below.
       }
+      if (original) {
+        await sendLocalObject(res, original, localName, requestedWidth, quality);
+      } else {
+        sendPlaceholder(res);
+      }
+      return;
+    }
 
+    // Other objects keep the previous S3 streaming behavior.
+    try {
+      const objectFile = await objectStorageService.getObjectEntityFile(objectPath);
       await objectStorageService.downloadObject(objectFile, res);
     } catch (error) {
       console.error("Error serving object:", error);
-      // S3 flaps — serve a neutral placeholder instead of a broken image,
-      // so product cards never show an empty/broken photo.
-      res.set({
-        "Content-Type": "image/webp",
-        "Cache-Control": "public, max-age=60",
-        // don't let nginx cache this temporary placeholder (it would outlive
-        // the S3 outage); normal images are cached as usual
-        "X-Accel-Expires": "0",
-      });
-      res.sendFile(PLACEHOLDER_IMAGE, (err) => {
-        if (err && !res.headersSent) res.status(404).end();
-      });
+      sendPlaceholder(res);
     }
   });
+
+  /** Neutral fallback so product cards never show a broken photo. */
+  function sendPlaceholder(res: any): void {
+    res.set({
+      "Content-Type": "image/webp",
+      "Cache-Control": "public, max-age=60",
+      // don't let nginx cache this temporary placeholder (it would outlive
+      // the S3 outage); normal images are cached as usual
+      "X-Accel-Expires": "0",
+    });
+    res.sendFile(PLACEHOLDER_IMAGE, (err: any) => {
+      if (err && !res.headersSent) res.status(404).end();
+    });
+  }
+
+  /** Serve a locally mirrored object, resizing to webp when ?w= is present. */
+  async function sendLocalObject(
+    res: any,
+    original: Buffer,
+    name: string,
+    requestedWidth: number,
+    quality: number,
+  ): Promise<void> {
+    if (requestedWidth > 0) {
+      const cacheKey = `${name}|w=${requestedWidth}|q=${quality}`;
+      let cached = resizeCache.get(cacheKey);
+      if (!cached && inflightResizes < MAX_INFLIGHT_RESIZES) {
+        inflightResizes += 1;
+        try {
+          const resized = await resizeImage(original, requestedWidth, quality);
+          cached = { data: resized, length: resized.length };
+          resizeCache.set(cacheKey, cached);
+          if (resizeCache.size > RESIZE_CACHE_LIMIT) {
+            const oldest = resizeCache.keys().next().value;
+            if (oldest !== undefined) resizeCache.delete(oldest);
+          }
+        } catch (err) {
+          console.error("Error resizing object:", err);
+        } finally {
+          inflightResizes -= 1;
+        }
+      }
+      if (cached) {
+        res.set({
+          "Content-Type": "image/webp",
+          "Content-Length": String(cached.length),
+          "Cache-Control": "public, max-age=31536000, immutable",
+        });
+        res.send(cached.data);
+        return;
+      }
+      // Busy or resize failed — fall through to the original file below.
+    }
+
+    res.set({
+      "Content-Type": contentTypeForName(name),
+      "Content-Length": String(original.length),
+      "Cache-Control": "public, max-age=31536000, immutable",
+    });
+    res.send(original);
+  }
 }
 

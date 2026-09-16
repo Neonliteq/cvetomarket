@@ -13,6 +13,7 @@ import { insertUserSchema, insertShopSchema, insertProductSchema, insertOrderSch
 import { z } from "zod";
 import { objectStorageClient, ObjectStorageService } from "./replit_integrations/object_storage";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
+import { writeLocalObject } from "./localObjectStore";
 import { sendTelegramMessage, generateLinkToken, consumeLinkToken, getBotUsername, ORDER_STATUS_MESSAGES, registerWebhook } from "./telegram";
 import { sendMaxMessage, generateMaxLinkToken, consumeMaxLinkToken, getMaxBotNick, ORDER_STATUS_MESSAGES_MAX, registerMaxWebhook } from "./max";
 import { sendPasswordResetEmail } from "./resend";
@@ -154,10 +155,19 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         const objectName = `${basePath}/uploads/${uniqueName}`;
         const gcsFile = bucket.file(objectName);
 
-        await gcsFile.save(file.buffer, {
-          contentType: file.mimetype,
-          resumable: false,
-        });
+        // Local copy first — photos must keep working while S3 is under
+        // maintenance; the server serves uploaded objects from its own disk.
+        await writeLocalObject(uniqueName, file.buffer);
+
+        // S3 backup is best effort: a failed S3 write must not fail the upload.
+        try {
+          await gcsFile.save(file.buffer, {
+            contentType: file.mimetype,
+            resumable: false,
+          });
+        } catch (err: any) {
+          console.warn("S3 backup of upload failed (local copy kept):", err?.message ?? err);
+        }
 
         urls.push(`/objects/uploads/${uniqueName}`);
       }
