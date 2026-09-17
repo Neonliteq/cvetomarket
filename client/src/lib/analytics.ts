@@ -6,6 +6,29 @@ const SESSION_TS_KEY = "cveto_session_ts";
 const SESSION_SOURCE_KEY = "cveto_session_source";
 const SESSION_TTL = 30 * 60 * 1000;
 
+/** Yandex.Metrika counter id — must match the snippet in client/index.html. */
+const YM_COUNTER_ID = 112737627;
+
+declare global {
+  interface Window {
+    ym?: (...args: unknown[]) => void;
+  }
+}
+
+/**
+ * Report a pageview to Yandex.Metrika.
+ *
+ * This is an SPA: the counter is initialised with `defer: true`
+ * (see client/index.html), which disables the automatic pageview, so every
+ * route change — including the first — is reported here explicitly. Without
+ * this only the initial document load would ever be counted.
+ */
+function sendMetrikaHit(): void {
+  try {
+    window.ym?.(YM_COUNTER_ID, "hit", window.location.href);
+  } catch {}
+}
+
 function getDeviceType(): string {
   const ua = navigator.userAgent;
   if (/tablet|ipad|playbook|silk/i.test(ua)) return "tablet";
@@ -156,6 +179,7 @@ export function useAnalytics() {
     lastPage.current = location;
     pageEnterTime.current = Date.now();
     sendPageView(location);
+    sendMetrikaHit();
   }, [location]);
 
   useEffect(() => {

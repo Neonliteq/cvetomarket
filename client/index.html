@@ -2,6 +2,21 @@
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
+    <!-- Yandex.Metrika counter -->
+    <script type="text/javascript">
+      (function(m,e,t,r,i,k,a){
+        m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+        m[i].l=1*new Date();
+        for (var j = 0; j < document.scripts.length; j++) { if (document.scripts[j].src === r) { return; } }
+        k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
+      })(window, document, 'script', 'https://mc.yandex.ru/metrika/tag.js?id=112737627', 'ym');
+
+      // defer:true — сайт SPA: отключаем автоматическую отправку просмотра при
+      // инициализации и отправляем хиты сами на каждой смене маршрута
+      // (см. client/src/lib/analytics.ts), включая первый.
+      ym(112737627, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLayer", accurateTrackBounce:true, trackLinks:true, defer:true});
+    </script>
+    <!-- /Yandex.Metrika counter -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover" />
     <meta name="verification" content="e345fc876f37d0a4614f336a99f6d6" />
     <meta name="theme-color" content="#16a34a" />
@@ -17,6 +32,9 @@
     <link rel="apple-touch-icon" sizes="128x128" href="/icon-128.png" />
   </head>
   <body>
+    <!-- Yandex.Metrika counter (noscript) -->
+    <noscript><div><img src="https://mc.yandex.ru/watch/112737627" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+    <!-- /Yandex.Metrika counter (noscript) -->
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
