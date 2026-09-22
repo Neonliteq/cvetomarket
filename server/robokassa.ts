@@ -10,7 +10,10 @@ function getConfig() {
   const login = process.env.ROBOKASSA_LOGIN;
   const password1 = process.env.ROBOKASSA_PASSWORD1;
   const password2 = process.env.ROBOKASSA_PASSWORD2;
-  const isTest = process.env.ROBOKASSA_TEST === "true" ? 1 : 0;
+  // Accept both names: ROBOKASSA_TEST (documented) and the legacy
+  // ROBOKASSA_IS_TEST that is present in the production .env.
+  const rawTest = process.env.ROBOKASSA_TEST ?? process.env.ROBOKASSA_IS_TEST;
+  const isTest = rawTest === "true" ? 1 : 0;
   return { login, password1, password2, isTest };
 }
 
