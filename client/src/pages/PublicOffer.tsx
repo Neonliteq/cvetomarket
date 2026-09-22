@@ -196,6 +196,7 @@ export default function PublicOffer() {
             <InfoRow label="Полное наименование" value="Аршинская Елена Анатольевна" />
             <InfoRow label="ИНН" value="860231688514" />
             <InfoRow label="ОГРНИП" value="320861700043258" />
+            <InfoRow label="Адрес" value="Калининград, СНТ Радуга, пер. Вильямса, 4" />
             <InfoRow label="Контактный телефон" value="+7 909 790-66-99" />
             <InfoRow label="Контактный e-mail" value="arshinskaya.e.a@gmail.com" />
           </CardContent>

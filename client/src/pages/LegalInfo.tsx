@@ -40,7 +40,7 @@ export default function LegalInfo() {
           <InfoRow label="ИНН" value="860231688514" />
           <InfoRow label="ОГРНИП" value="320861700043258" />
           <InfoRow label="Дата регистрации" value="25 августа 2020 г." />
-          <InfoRow label="Регион регистрации" value="г. Сургут" />
+          <InfoRow label="Адрес" value="Калининград, СНТ Радуга, пер. Вильямса, 4" />
         </CardContent>
       </Card>
 
