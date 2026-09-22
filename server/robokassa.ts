@@ -11,9 +11,13 @@ function getConfig() {
   const password1 = process.env.ROBOKASSA_PASSWORD1;
   const password2 = process.env.ROBOKASSA_PASSWORD2;
   // Accept both names: ROBOKASSA_TEST (documented) and the legacy
-  // ROBOKASSA_IS_TEST that is present in the production .env.
-  const rawTest = process.env.ROBOKASSA_TEST ?? process.env.ROBOKASSA_IS_TEST;
-  const isTest = rawTest === "true" ? 1 : 0;
+  // ROBOKASSA_IS_TEST that is present in the production .env. Accept the usual
+  // truthy spellings (true/1/yes/on) — the flag was previously compared to the
+  // literal "true", so a value of "1" silently kept the counter live.
+  const rawTest = (process.env.ROBOKASSA_TEST ?? process.env.ROBOKASSA_IS_TEST ?? "")
+    .trim()
+    .toLowerCase();
+  const isTest = ["true", "1", "yes", "on"].includes(rawTest) ? 1 : 0;
   return { login, password1, password2, isTest };
 }
 
