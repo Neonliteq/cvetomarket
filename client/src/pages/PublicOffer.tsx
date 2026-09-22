@@ -193,7 +193,7 @@ export default function PublicOffer() {
         </div>
         <Card>
           <CardContent className="pt-5">
-            <InfoRow label="Полное наименование" value="Аршинская Елена Анатольевна" />
+            <InfoRow label="Полное наименование" value="Индивидуальный предприниматель Аршинская Елена Анатольевна" />
             <InfoRow label="ИНН" value="860231688514" />
             <InfoRow label="ОГРНИП" value="320861700043258" />
             <InfoRow label="Адрес" value="Калининград, СНТ Радуга, пер. Вильямса, 4" />

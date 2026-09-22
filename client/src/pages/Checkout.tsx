@@ -22,6 +22,13 @@ import { CheckoutMap } from "@/components/CheckoutMap";
 import { responsiveImage } from "@/lib/utils";
 import type { Shop } from "@shared/schema";
 
+/**
+ * Онлайн-оплата картой временно отключена: Robokassa активирует нового
+ * мерчанта. Чтобы вернуть оплату картой — поставить true (после активации
+ * мерчанта и настройки Result/Success/Fail URL).
+ */
+const CARD_PAYMENT_ENABLED = false;
+
 const checkoutSchema = z.object({
   deliveryAddress: z.string().min(5, "Введите адрес доставки"),
   deliveryDate: z.string().min(1, "Выберите дату доставки"),
@@ -146,7 +153,7 @@ export default function Checkout() {
       recipientPhone: user?.phone || "",
       guestEmail: "",
       comment: "",
-      paymentMethod: "card",
+      paymentMethod: CARD_PAYMENT_ENABLED ? "card" : "cash",
     },
   });
 
@@ -381,14 +388,16 @@ export default function Checkout() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="card">Картой онлайн</SelectItem>
+                          {CARD_PAYMENT_ENABLED && <SelectItem value="card">Картой онлайн</SelectItem>}
                           <SelectItem value="cash">Наличными при получении</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>
                   )} />
-                  <p className="text-xs text-muted-foreground">Оплата через защищённый платёжный сервис Robokassa.</p>
+                  {CARD_PAYMENT_ENABLED && (
+                    <p className="text-xs text-muted-foreground">Оплата через защищённый платёжный сервис Robokassa.</p>
+                  )}
                 </CardContent>
               </Card>
 
