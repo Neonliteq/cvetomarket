@@ -49,6 +49,7 @@ export function Footer() {
           <div className="space-y-1.5">
             <Link href="/delivery-and-payment"><p className="text-sm cursor-pointer transition-colors" style={{ color: "hsl(140 20% 72%)" }} data-testid="link-delivery-payment">Доставка и оплата</p></Link>
             <Link href="/terms-of-use"><p className="text-sm cursor-pointer transition-colors" style={{ color: "hsl(140 20% 72%)" }} data-testid="link-terms">Условия использования</p></Link>
+            <Link href="/oferta"><p className="text-sm cursor-pointer transition-colors" style={{ color: "hsl(140 20% 72%)" }} data-testid="link-oferta">Публичная оферта</p></Link>
             <Link href="/privacy-policy"><p className="text-sm cursor-pointer transition-colors" style={{ color: "hsl(140 20% 72%)" }} data-testid="link-privacy">Политика конфиденциальности</p></Link>
             <Link href="/legal-info"><p className="text-sm cursor-pointer transition-colors" style={{ color: "hsl(140 20% 72%)" }} data-testid="link-legal">Юридическая информация</p></Link>
           </div>

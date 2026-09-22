@@ -89,6 +89,9 @@ export default function LegalInfo() {
       </div>
 
       <div className="flex flex-wrap gap-3 pt-4">
+        <Link href="/oferta">
+          <Button variant="outline" data-testid="button-legal-to-oferta">Публичная оферта</Button>
+        </Link>
         <Link href="/terms-of-use">
           <Button variant="outline" data-testid="button-legal-to-terms">Условия использования</Button>
         </Link>

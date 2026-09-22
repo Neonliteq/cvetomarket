@@ -32,6 +32,7 @@ const Chat = lazy(() => import("@/pages/Chat"));
 const DeliveryAndPayment = lazy(() => import("@/pages/DeliveryAndPayment"));
 const TermsOfUse = lazy(() => import("@/pages/TermsOfUse"));
 const PrivacyPolicy = lazy(() => import("@/pages/PrivacyPolicy"));
+const PublicOffer = lazy(() => import("@/pages/PublicOffer"));
 const LegalInfo = lazy(() => import("@/pages/LegalInfo"));
 const PaymentSuccess = lazy(() => import("@/pages/PaymentSuccess"));
 const PaymentFail = lazy(() => import("@/pages/PaymentFail"));
@@ -98,6 +99,7 @@ function Router() {
             <Route path="/delivery-and-payment" component={DeliveryAndPayment} />
             <Route path="/terms-of-use" component={TermsOfUse} />
             <Route path="/privacy-policy" component={PrivacyPolicy} />
+            <Route path="/oferta" component={PublicOffer} />
             <Route path="/legal-info" component={LegalInfo} />
             <Route path="/payment/success" component={PaymentSuccess} />
             <Route path="/payment/fail" component={PaymentFail} />

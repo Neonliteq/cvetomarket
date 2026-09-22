@@ -1,4 +1,4 @@
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { trackEvent } from "@/lib/analytics";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -395,6 +395,10 @@ export default function Checkout() {
               <Button type="submit" size="lg" className="w-full" disabled={mutation.isPending || outsideZone || geocoding || (shopHasZones && !addressChecked)} data-testid="button-place-order">
                 {mutation.isPending ? "Оформляем..." : outsideZone ? "Адрес за пределами зоны доставки" : (shopHasZones && !addressChecked) ? "Укажите адрес в зоне доставки" : `Оформить заказ на ${finalTotal.toLocaleString("ru-RU")} ₽`}
               </Button>
+              <p className="text-xs text-muted-foreground text-center">
+                Оформляя заказ, вы принимаете условия{" "}
+                <Link href="/oferta" className="text-primary underline underline-offset-2">публичной оферты</Link>.
+              </p>
             </form>
           </Form>
         </div>
