@@ -23,11 +23,12 @@ import { responsiveImage } from "@/lib/utils";
 import type { Shop } from "@shared/schema";
 
 /**
- * Онлайн-оплата картой временно отключена: Robokassa активирует нового
- * мерчанта. Чтобы вернуть оплату картой — поставить true (после активации
- * мерчанта и настройки Result/Success/Fail URL).
+ * Онлайн-оплата картой. Мерчант Robokassa активирован — оплата включена.
+ * Если понадобится снова временно отключить (например, при смене мерчанта или
+ * сбоях у провайдера), достаточно поставить false: пункт «Картой онлайн»,
+ * дефолт способа оплаты и подпись Robokassa будут убраны из чекаута.
  */
-const CARD_PAYMENT_ENABLED = false;
+const CARD_PAYMENT_ENABLED = true;
 
 const checkoutSchema = z.object({
   deliveryAddress: z.string().min(5, "Введите адрес доставки"),
