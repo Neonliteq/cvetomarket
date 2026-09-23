@@ -246,6 +246,14 @@ export class DbStorage implements IStorage {
     await db.delete(reviews).where(eq(reviews.buyerId, id));
     await db.delete(orders).where(eq(orders.buyerId, id));
     await db.delete(shopWorkers).where(eq(shopWorkers.userId, id));
+    // Rows that reference the user with ON DELETE NO ACTION would otherwise make
+    // the delete below fail with a foreign-key violation.
+    await db.execute(sql`delete from notifications where user_id = ${id}`);
+    await db.execute(sql`delete from notification_preferences where user_id = ${id}`);
+    await db.execute(sql`delete from push_subscriptions where user_id = ${id}`);
+    // Legacy bonus table: the feature was removed but the table (and its FK) is
+    // kept for reversibility, so its rows must still be cleaned up.
+    await db.execute(sql`delete from bonus_transactions where user_id = ${id}`);
     await db.delete(users).where(eq(users.id, id));
   }
   async getAllUsers() {
