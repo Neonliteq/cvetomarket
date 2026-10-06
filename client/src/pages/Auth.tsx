@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
+import { metrikaGoal } from "@/lib/analytics";
 import { useToast } from "@/hooks/use-toast";
 import { useSearch } from "wouter";
 import type { City } from "@shared/schema";
@@ -136,6 +137,7 @@ export default function Auth() {
     try {
       const { confirmPassword, ...payload } = data;
       await register(payload);
+      metrikaGoal("registration");
       toast({ title: "Добро пожаловать!", description: "Аккаунт успешно создан" });
       if (data.role === "shop") navigate("/shop-dashboard");
       else navigate("/");

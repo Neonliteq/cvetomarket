@@ -29,6 +29,17 @@ function sendMetrikaHit(): void {
   } catch {}
 }
 
+/**
+ * Report a goal (conversion) to Yandex.Metrika.
+ * The goal name must match a goal created in the Metrika interface, e.g.
+ * "registration" or "payment_success".
+ */
+export function metrikaGoal(goal: string, params?: Record<string, unknown>): void {
+  try {
+    window.ym?.(YM_COUNTER_ID, "reachGoal", goal, params);
+  } catch {}
+}
+
 function getDeviceType(): string {
   const ua = navigator.userAgent;
   if (/tablet|ipad|playbook|silk/i.test(ua)) return "tablet";
