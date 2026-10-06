@@ -26,6 +26,11 @@ module.exports = {
       instances: 2,
       exec_mode: 'cluster',
 
+      // All workers share one log file. Without this PM2 appends the instance
+      // index (out-0.log, out-1.log, ...) and every deploy — which recreates the
+      // app — leaves a new set of orphaned files behind.
+      merge_logs: true,
+
       watch: false,
       max_memory_restart: '512M',
 
