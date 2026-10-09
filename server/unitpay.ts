@@ -1,3 +1,14 @@
+/**
+ * Интеграция с UnitPay — **НЕ ПОДКЛЮЧЕНА**.
+ *
+ * Файл оставлен как заготовка второй платёжной системы: ни один маршрут его не
+ * использует (приём платежей идёт через Robokassa — `server/robokassa.ts`,
+ * `docs/payments.md`).
+ *
+ * Чтобы подключить: добавить `UNITPAY_PUBLIC_KEY` и `UNITPAY_SECRET_KEY` в `.env`,
+ * зарегистрировать маршруты создания платежа и обработки уведомления по аналогии
+ * с Robokassa и вывести способ оплаты в `client/src/pages/Checkout.tsx`.
+ */
 import crypto from "crypto";
 
 const UNITPAY_BASE_URL = "https://unitpay.ru/pay";

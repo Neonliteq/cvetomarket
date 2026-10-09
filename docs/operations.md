@@ -88,13 +88,29 @@ psql "$DATABASE_URL" -c "select count(*) from orders;"
 bash scripts/db-query.sh "select order_number, payment_status, payment_id from orders order by created_at desc limit 5;"
 ```
 
-Бэкап (пример):
+### Бэкапы БД
+
+Дампы делает `scripts/backup-db.sh` (pg_dump → gzip в `/var/backups/cvetomarket`, хранение 14 дней):
 
 ```bash
-pg_dump "$DATABASE_URL" | gzip > /root/backup-$(date +%F).sql.gz
+cd /var/www/cvetomarket && bash scripts/backup-db.sh        # вручную
+ls -lh /var/backups/cvetomarket                             # список дампов
 ```
 
-> Регулярные бэкапы **не настроены** — при необходимости добавьте cron и выгрузку во внешнее хранилище.
+Настроен cron — ежедневно в 03:30, лог пишется в `/var/log/cvetomarket/backup.log`:
+
+```bash
+crontab -l | grep backup-db
+tail -n 20 /var/log/cvetomarket/backup.log
+```
+
+Восстановление:
+
+```bash
+gunzip -c /var/backups/cvetomarket/db-<дата>.sql.gz | psql "$DATABASE_URL"
+```
+
+> Дампы лежат **локально на том же сервере**. Для устойчивости к потере сервера стоит выгружать их во внешнее хранилище (S3/облако) — можно добавить в тот же скрипт.
 
 ## Диск и файлы
 

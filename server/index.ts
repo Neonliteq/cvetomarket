@@ -100,7 +100,14 @@ app.use((req, res, next) => {
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || "5000", 10);
   if (process.env.NODE_ENV === "production") {
-    const domain = (process.env.REPLIT_DEV_DOMAIN || process.env.REPLIT_DOMAINS || "").split(",")[0].trim();
+    // APP_DOMAIN — актуальное имя переменной. REPLIT_DOMAINS/REPLIT_DEV_DOMAIN
+    // оставлены для обратной совместимости с уже настроенным окружением.
+    const domain = (
+      process.env.APP_DOMAIN ||
+      process.env.REPLIT_DEV_DOMAIN ||
+      process.env.REPLIT_DOMAINS ||
+      ""
+    ).split(",")[0].trim();
     if (domain) {
       registerWebhook(domain).catch(() => {});
       registerMaxWebhook(domain).catch(() => {});

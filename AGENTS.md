@@ -116,6 +116,9 @@ npm run backfill:uploads  # скачать файлы из S3 в локальн�
 | Логи на проде не растут / растут бесконтрольно | PM2 пишет в `/var/log/cvetomarket/{out,error}.log` (merge_logs). Старый `~/.pm2/logs/*` — легаси |
 | Флаг тестового режима Robokassa не работает | Код читает `ROBOKASSA_TEST` **или** `ROBOKASSA_IS_TEST`, значения `true/1/yes/on` |
 | Оплата не помечается оплаченной | Проверить Result URL в ЛК Robokassa (POST на `/api/payment/robokassa/result`) и логи `[robokassa/result]` |
+| На пустой боевой БД появился админ `admin@cveto.ru` | Сиды пропускаются при `NODE_ENV=production`; принудительно — `SEED_DEMO_DATA=true` |
+| Вебхуки Telegram/MAX не регистрируются | Домен берётся из `APP_DOMAIN` (легаси-имя `REPLIT_DOMAINS` тоже поддерживается) |
+| Бэкапы БД | `scripts/backup-db.sh` + cron 03:30 → `/var/backups/cvetomarket` (см. `docs/operations.md`) |
 
 Подробнее — `docs/troubleshooting.md`.
 

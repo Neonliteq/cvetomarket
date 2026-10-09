@@ -5,6 +5,13 @@ import bcrypt from "bcrypt";
 
 export async function seed() {
   try {
+    // На боевом окружении демо-данные не создаём: на пустой БД сиды завели бы
+    // администратора с известным паролем (admin@cveto.ru / admin123).
+    // Явное включение демо-данных — SEED_DEMO_DATA=true.
+    if (process.env.NODE_ENV === "production" && process.env.SEED_DEMO_DATA !== "true") {
+      return;
+    }
+
     const existingUsers = await db.select().from(users).limit(1);
     if (existingUsers.length > 0) return;
 
