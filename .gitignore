@@ -9,5 +9,10 @@ test-results
 # local env
 .env
 .env.local
+# env backups / dumps (keep the template)
+.env.*
+!.env.example
+# logs
+*.log
 # local mirror of uploaded objects (served instead of S3)
 uploads
