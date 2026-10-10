@@ -1,5 +1,5 @@
 /// <reference lib="webworker" />
-import { precacheAndRoute, cleanupOutdatedCaches } from "workbox-precaching";
+import { precacheAndRoute, cleanupOutdatedCaches, type PrecacheEntry } from "workbox-precaching";
 import { registerRoute } from "workbox-routing";
 import { NetworkFirst, CacheFirst, StaleWhileRevalidate } from "workbox-strategies";
 import { ExpirationPlugin } from "workbox-expiration";
@@ -12,7 +12,20 @@ self.skipWaiting();
 clientsClaim();
 
 cleanupOutdatedCaches();
-precacheAndRoute(self.__WB_MANIFEST);
+
+// Чанки админки и кабинета продавца исключаем из предзагрузки: они нужны
+// единицам пользователей, но весят ~245 КБ и скачивались у каждого покупателя
+// при первом визите. Догружаются по требованию и кэшируются рантайм-маршрутом
+// app-chunks ниже. (vite-plugin-pwa 1.2 не умеет globIgnores, поэтому фильтруем
+// манифест здесь.)
+const PRECACHE_EXCLUDE = /(?:^|\/)(?:Admin|ShopDashboard|SellerAuth)-[^/]+\.js$/;
+
+const precacheEntries = (self.__WB_MANIFEST as Array<PrecacheEntry | string>).filter((entry) => {
+  const url = typeof entry === "string" ? entry : entry.url;
+  return !PRECACHE_EXCLUDE.test(url);
+});
+
+precacheAndRoute(precacheEntries);
 
 registerRoute(
   ({ url }: { url: URL }) => url.pathname.startsWith("/api/"),
@@ -29,6 +42,20 @@ registerRoute(
     cacheName: "static-assets",
     plugins: [
       new ExpirationPlugin({ maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 30 }),
+      new CacheableResponsePlugin({ statuses: [0, 200] }),
+    ],
+  })
+);
+
+// JS/CSS-чанки, которые сознательно исключены из precache (админка, кабинет
+// продавца — см. globIgnores в vite.config.ts): кэшируем при первом обращении.
+// Имена файлов хэшированные, поэтому содержимое по одному URL никогда не меняется.
+registerRoute(
+  ({ request }: { request: Request }) => request.destination === "script" || request.destination === "style",
+  new CacheFirst({
+    cacheName: "app-chunks",
+    plugins: [
+      new ExpirationPlugin({ maxEntries: 80, maxAgeSeconds: 60 * 60 * 24 * 30 }),
       new CacheableResponsePlugin({ statuses: [0, 200] }),
     ],
   })

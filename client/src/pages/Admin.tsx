@@ -10,6 +10,7 @@ import {
   Globe, Target, Timer, TrendingDown, ShoppingCart, ArrowRight, Smartphone, Monitor, Tablet,
   Truck, Shield, Clock, Heart, Zap, Leaf, GripVertical, Megaphone, Send
 } from "lucide-react";
+import { responsiveImage } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -1203,7 +1204,7 @@ export default function Admin() {
                 <Card key={p.id} className={!p.isActive ? "opacity-60" : ""} data-testid={`card-admin-product-${p.id}`}>
                   <CardContent className="p-4 flex items-center gap-3">
                     <div className="w-12 h-12 rounded-md overflow-hidden bg-muted shrink-0">
-                      <img src={p.images?.[0] || "/images/placeholder-bouquet.webp"} alt={p.name} className="w-full h-full object-cover" />
+                      <img src={responsiveImage(p.images?.[0], 160)} alt={p.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm truncate">{p.name}</p>

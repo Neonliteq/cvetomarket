@@ -18,6 +18,9 @@ export default defineConfig({
       injectManifest: {
         // Images are heavy and cached at runtime by the SW's static-assets
         // route — do not precache megabytes of PNG/JPEG/WebP into sw.js.
+        // Тяжёлые чанки админки/кабинета продавца исключаются из precache
+        // фильтром манифеста в client/src/sw.ts (плагин не поддерживает
+        // globIgnores).
         globPatterns: ["**/*.{js,css,html,ico,svg,woff2}"],
       },
     }),

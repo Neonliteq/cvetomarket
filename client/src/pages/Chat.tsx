@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { cn } from "@/lib/utils";
+import { cn, responsiveImage } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { useLocation, useSearch } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
@@ -269,8 +269,10 @@ export default function Chat() {
                             {msg.imageUrl && (
                               <a href={msg.imageUrl} target="_blank" rel="noopener noreferrer">
                                 <img
-                                  src={msg.imageUrl}
+                                  src={responsiveImage(msg.imageUrl, 800)}
                                   alt="Фото"
+                                  loading="lazy"
+                                  decoding="async"
                                   className="max-w-full max-h-64 object-cover block"
                                 />
                               </a>
@@ -309,7 +311,7 @@ export default function Chat() {
                 <div className="px-3 pt-2 border-t border-border">
                   <div className="relative w-fit">
                     <img
-                      src={imagePreview}
+                      src={responsiveImage(imagePreview, 200)}
                       alt="Предпросмотр"
                       className="h-20 w-auto rounded-lg object-cover border border-border"
                     />

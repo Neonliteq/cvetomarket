@@ -923,7 +923,7 @@ export default function Account() {
         <div className="flex items-center gap-4">
           <div className="relative group">
             {user.avatarUrl ? (
-              <img src={user.avatarUrl} alt="Аватар" className="w-14 h-14 rounded-full object-cover border-2 border-primary/20" />
+              <img src={responsiveImage(user.avatarUrl, 128)} alt="Аватар" className="w-14 h-14 rounded-full object-cover border-2 border-primary/20" />
             ) : (
               <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center border-2 border-primary/20">
                 <User className="w-6 h-6 text-primary" />
@@ -1014,8 +1014,10 @@ export default function Account() {
                           <div key={item.id} className="flex items-center gap-2">
                             <div className="w-10 h-10 rounded bg-muted overflow-hidden shrink-0">
                               <img
-                                src={item.productImage || "/images/placeholder-bouquet.webp"}
+                                src={responsiveImage(item.productImage, 160)}
                                 alt={item.productName}
+                                loading="lazy"
+                                decoding="async"
                                 className="w-full h-full object-cover"
                               />
                             </div>
@@ -1053,7 +1055,7 @@ export default function Account() {
                           )}
                         </div>
                         <img
-                          src={order.assemblyPhotoUrl}
+                          src={responsiveImage(order.assemblyPhotoUrl, 800)}
                           alt="Фото готового букета"
                           className="w-full max-h-72 object-cover"
                           data-testid={`img-assembly-photo-${order.id}`}
@@ -1134,7 +1136,7 @@ export default function Account() {
                 <div className="relative">
                   {user.avatarUrl ? (
                     <div className="relative">
-                      <img src={user.avatarUrl} alt="Аватар" className="w-20 h-20 rounded-full object-cover border-2 border-primary/20" />
+                      <img src={responsiveImage(user.avatarUrl, 160)} alt="Аватар" className="w-20 h-20 rounded-full object-cover border-2 border-primary/20" />
                       <button
                         className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-destructive text-white flex items-center justify-center"
                         onClick={async () => {

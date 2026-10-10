@@ -32,6 +32,7 @@ import { ru } from "date-fns/locale";
 import { DeliveryZonesMap, type DeliveryZone } from "@/components/DeliveryZonesMap";
 import { ShopLocationMap } from "@/components/ShopLocationMap";
 import { createProductDraftController, readProductDraft, selectNewerProductDraft, type ProductDraft } from "@/lib/productDraft";
+import { responsiveImage } from "@/lib/utils";
 
 const STATUS_LABELS: Record<string, string> = {
   new: "Новый", confirmed: "Подтверждён", assembling: "Сборка",
@@ -533,7 +534,7 @@ function ProductForm({
           <div className="flex flex-wrap gap-2 mb-2">
             {uploadedImages.map((img, idx) => (
               <div key={idx} className="relative w-16 h-16 rounded-md overflow-hidden border group">
-                <img src={img} alt="" className="w-full h-full object-cover" />
+                <img src={responsiveImage(img, 160)} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                 <button
                   type="button"
                   onClick={() => removeImage(idx)}
@@ -1271,8 +1272,10 @@ export default function ShopDashboard() {
                   <CardContent className="p-4 flex items-center gap-3">
                     <div className="w-14 h-14 rounded-md overflow-hidden bg-muted shrink-0">
                       <img
-                        src={p.images?.[0] || "/images/placeholder-bouquet.webp"}
+                        src={responsiveImage(p.images?.[0], 160)}
                         alt={p.name}
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-cover"
                       />
                     </div>
@@ -1474,8 +1477,10 @@ export default function ShopDashboard() {
                             <div key={idx} className="flex items-center gap-3 p-2 rounded-md bg-muted/40" data-testid={`order-item-${order.id}-${idx}`}>
                               <div className="w-9 h-9 rounded-md overflow-hidden bg-muted shrink-0">
                                 <img
-                                  src={item.productImage || "/images/placeholder-bouquet.webp"}
+                                  src={responsiveImage(item.productImage, 160)}
                                   alt={item.productName}
+                                  loading="lazy"
+                                  decoding="async"
                                   className="w-full h-full object-cover"
                                 />
                               </div>
@@ -1530,7 +1535,7 @@ export default function ShopDashboard() {
                         {(assemblyPhotos[order.id]?.url || order.assemblyPhotoUrl) ? (
                           <div className="relative inline-block">
                             <img
-                              src={assemblyPhotos[order.id]?.url || order.assemblyPhotoUrl!}
+                              src={responsiveImage(assemblyPhotos[order.id]?.url || order.assemblyPhotoUrl, 320)}
                               alt="Фото букета"
                               className="h-32 w-32 object-cover rounded-lg border"
                               data-testid={`img-assembly-photo-${order.id}`}
@@ -2055,7 +2060,7 @@ export default function ShopDashboard() {
                     <div className="flex items-center gap-4">
                       {myShop?.logoUrl ? (
                         <div className="relative w-20 h-20 rounded-lg overflow-hidden border">
-                          <img src={myShop.logoUrl} alt="Логотип" className="w-full h-full object-cover" />
+                          <img src={responsiveImage(myShop.logoUrl, 200)} alt="Логотип" className="w-full h-full object-cover" />
                           <button
                             className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center"
                             onClick={() => updateShopMutation.mutate({ logoUrl: null })}
@@ -2097,7 +2102,7 @@ export default function ShopDashboard() {
                     <span className="text-sm font-medium mb-2 block">Обложка магазина</span>
                     {myShop?.coverUrl ? (
                       <div className="relative w-full h-36 rounded-lg overflow-hidden border">
-                        <img src={myShop.coverUrl} alt="Обложка" className="w-full h-full object-cover" />
+                        <img src={responsiveImage(myShop.coverUrl, 1400)} alt="Обложка" className="w-full h-full object-cover" />
                         <button
                           className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center"
                           onClick={() => updateShopMutation.mutate({ coverUrl: null })}

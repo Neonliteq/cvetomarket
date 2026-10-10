@@ -12,6 +12,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useAuth } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
+import { responsiveImage } from "@/lib/utils";
 import { useCity } from "@/lib/cityContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useRef, useEffect } from "react";
@@ -324,7 +325,7 @@ export function Header() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" className="gap-1.5" data-testid="button-user-menu">
                   {user.avatarUrl ? (
-                    <img src={user.avatarUrl} alt="" className="w-5 h-5 rounded-full object-cover" />
+                    <img src={responsiveImage(user.avatarUrl, 64)} alt="" className="w-5 h-5 rounded-full object-cover" />
                   ) : (
                     <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center">
                       <User className="w-3 h-3 text-primary" />
@@ -338,7 +339,7 @@ export function Header() {
                 <div className="p-4 border-b border-border">
                   <div className="flex items-center gap-3">
                     {user.avatarUrl ? (
-                      <img src={user.avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover shrink-0" />
+                      <img src={responsiveImage(user.avatarUrl, 96)} alt="" className="w-10 h-10 rounded-full object-cover shrink-0" />
                     ) : (
                       <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                         <User className="w-5 h-5 text-primary" />
