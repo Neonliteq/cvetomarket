@@ -52,18 +52,14 @@ ssh root@ВАШ_IP
 
 ---
 
-## 2. Создание бакета Object Storage
+## 2. Файлы (изображения товаров)
 
-1. В панели Reg.ru перейдите в раздел **Облачное хранилище** (Object Storage)
-   - Ссылка: [reg.ru/panel/storage](https://www.reg.ru/panel/storage/)
-2. Создайте новый бакет — задайте понятное имя, например `cvetomarket-files`
-3. В настройках бакета создайте пару **Access Key / Secret Key**
-4. Сохраните:
-   - `Access Key`
-   - `Secret Key`
-   - Имя бакета
-   - Эндпоинт: `https://s3.regru.ru`
-   - Регион: `ru-1`
+Отдельное объектное хранилище **не требуется**: изображения товаров, логотипы магазинов и аватары хранятся на диске сервера — в каталоге `<APP_DIR>/uploads` — и отдаются маршрутом `/objects/...`.
+
+Что важно:
+- на диске должно хватать места (файлы + архивы);
+- настроить бэкап изображений: `bash scripts/backup-uploads.sh` (см. `docs/operations.md`);
+- резервной копии вне сервера нет, поэтому при потере диска изображения будут утеряны.
 
 ---
 
@@ -130,12 +126,7 @@ PORT=5000
 DATABASE_URL=postgresql://cvetomarket:ВАШ_ПАРОЛЬ@localhost:5432/cvetomarket
 SESSION_SECRET=СЛУЧАЙНАЯ_СТРОКА_32_СИМВОЛА
 
-# Reg.ru Object Storage
-REGRU_S3_ACCESS_KEY=ВАШ_ACCESS_KEY
-REGRU_S3_SECRET_KEY=ВАШ_SECRET_KEY
-REGRU_S3_BUCKET=cvetomarket-files
-REGRU_S3_ENDPOINT=https://s3.regru.ru
-REGRU_S3_REGION=ru-1
+# Файлы (изображения) хранятся на диске сервера в uploads/ — переменные S3 не нужны
 
 # Telegram
 TELEGRAM_BOT_TOKEN=ВАШИ_ДАННЫЕ

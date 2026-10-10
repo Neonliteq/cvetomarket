@@ -155,12 +155,8 @@ vi.mock("connect-pg-simple", async () => {
   return { default: () => session.MemoryStore };
 });
 
-vi.mock("../replit_integrations/object_storage", () => ({
-  objectStorageClient: { bucket: vi.fn() },
-  ObjectStorageService: class {
-    getPrivateObjectDir() { return "/private"; }
-  },
-  registerObjectStorageRoutes: vi.fn(),
+vi.mock("../objectRoutes", () => ({
+  registerObjectRoutes: vi.fn(),
 }));
 
 vi.mock("../telegram", () => ({

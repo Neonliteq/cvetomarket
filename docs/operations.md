@@ -110,18 +110,30 @@ tail -n 20 /var/log/cvetomarket/backup.log
 gunzip -c /var/backups/cvetomarket/db-<дата>.sql.gz | psql "$DATABASE_URL"
 ```
 
-> Дампы лежат **локально на том же сервере**. Для устойчивости к потере сервера стоит выгружать их во внешнее хранилище (S3/облако) — можно добавить в тот же скрипт.
+> Дампы лежат **локально на том же сервере**. Для устойчивости к потере сервера стоит выгружать их во внешнее хранилище (облако) — можно добавить в тот же скрипт.
 
 ## Диск и файлы
 
+Изображения хранятся только на диске сервера, внешнего хранилища нет — поэтому важны и место, и резервные копии.
+
 ```bash
-df -h /                        # свободное место
-du -sh /var/www/cvetomarket/uploads        # локальное зеркало картинок
-ls /var/www/cvetomarket/uploads | wc -l
-npm run backfill:uploads        # дозаполнить зеркало из S3 (повторный запуск безопасен)
+df -h /                                     # свободное место
+du -sh /var/www/cvetomarket/uploads         # размер каталога с файлами
+ls /var/www/cvetomarket/uploads | wc -l     # количество файлов
 ```
 
-Зеркало `uploads` — основной источник изображений (S3 — резерв при сбоях). Если добавлялись файлы в обход сайта, дозаполните зеркало.
+### Архив изображений
+
+`scripts/backup-uploads.sh` делает tar.gz-архив `uploads/` в `/var/backups/cvetomarket` и хранит 3 последних копии:
+
+```bash
+cd /var/www/cvetomarket && bash scripts/backup-uploads.sh
+ls -lh /var/backups/cvetomarket/uploads-*.tar.gz
+```
+
+Восстановление: `tar -xzf /var/backups/cvetomarket/uploads-<дата>.tar.gz -C /var/www/cvetomarket`
+
+> Архив лежит на том же диске — это защита от случайного удаления, но не от потери сервера. Для полной защиты нужна выгрузка за пределы сервера.
 
 ## Проверка после деплоя (чек-лист)
 
@@ -136,7 +148,8 @@ npm run backfill:uploads        # дозаполнить зеркало из S3 
 
 | Задача | Команда |
 |---|---|
-| Дозаполнить зеркало картинок | `npm run backfill:uploads` |
+| Архив изображений | `bash scripts/backup-uploads.sh` |
+| Бэкап БД | `bash scripts/backup-db.sh` |
 | Проверить конфиг Robokassa | `scripts/verify-prod.sh` (раздел «Robokassa») |
 | Почистить кэш nginx `/objects` | `rm -rf /var/cache/nginx/cveto_objects/*` + `systemctl reload nginx` |
 | Перезапустить приложение | `pm2 restart cvetomarket` |

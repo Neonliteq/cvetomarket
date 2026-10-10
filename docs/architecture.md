@@ -10,8 +10,7 @@
 nginx (прод)  ──►  Node.js / Express :5000  (PM2 cluster, 2 воркера)
    │                    │
    │                    ├── PostgreSQL (Drizzle ORM)
-   │                    ├── /var/www/cvetomarket/uploads  (локальное зеркало файлов)
-   │                    └── Reg.ru S3  (резерв/источник, используется редко)
+   │                    └── /var/www/cvetomarket/uploads  (файлы: фото товаров, логотипы, аватары)
    └── кэш /objects (proxy_cache, 10 ГБ, 45 дней)
 ```
 
@@ -41,13 +40,12 @@ nginx (прод)  ──►  Node.js / Express :5000  (PM2 cluster, 2 ворке
 - Управление кодом оплаты картой — флаг `CARD_PAYMENT_ENABLED` в `client/src/pages/Checkout.tsx` (можно временно скрыть карту).
 
 ### Файлы и изображения
-- Загрузка: `POST /api/upload` (multer) → файл **сначала пишется локально** в `<APP_DIR>/uploads/<name>`, затем best-effort в S3. Ошибка S3 не ломает загрузку.
-- Отдача: маршрут `/objects/uploads/<name>` (`server/replit_integrations/object_storage/routes.ts`):
-  1. читает **локальный диск** (`server/localObjectStore.ts`);
-  2. если файла нет — один раз тянет из S3 и сохраняет локально;
-  3. если и S3 недоступен — отдаёт заглушку (`X-Accel-Expires: 0`, чтобы nginx её не закэшировал).
+Файлы хранятся **только на диске сервера** — в `<APP_DIR>/uploads`; внешнее объектное хранилище не используется.
+- Загрузка: `POST /api/upload` (multer, до 10 файлов) → `server/localObjectStore.ts` пишет файл в `uploads/<name>` и возвращает URL `/objects/uploads/<name>`.
+- Отдача: `GET /objects/uploads/<name>` (`server/objectRoutes.ts`) — читает файл с диска; если файла нет, отдаёт заглушку (`X-Accel-Expires: 0`, чтобы nginx её не закэшировал).
 - Ресайз `?w=NNN` — sharp, в webp, с in-memory LRU-кэшем.
-- Дозаполнение зеркала из S3: `npm run backfill:uploads`.
+- nginx кэширует ответы `/objects` (10 ГБ, 45 дней).
+- Резервной копии изображений вне сервера нет — архив зеркала делает `scripts/backup-uploads.sh` (см. `docs/operations.md`).
 
 ### Аналитика
 - **Своя:** `client/src/lib/analytics.ts` → `POST /api/analytics/pageview` (+ длительность, события) → таблицы `page_views`, `analytics_events`; отчёты в админке.

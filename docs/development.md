@@ -28,7 +28,7 @@ DATABASE_URL=postgresql://user:pass@localhost:5433/cvetomarket
 SESSION_SECRET=<случайная строка>
 ```
 
-Опционально (зависят от задачи): `VITE_YANDEX_MAPS_API_KEY`, `REGRU_S3_*`, `ROBOKASSA_*`, `TELEGRAM_BOT_TOKEN`, `MAX_BOT_TOKEN`, `RESEND_API_KEY`, `VAPID_*`.
+Опционально (зависят от задачи): `VITE_YANDEX_MAPS_API_KEY`, `ROBOKASSA_*`, `TELEGRAM_BOT_TOKEN`, `MAX_BOT_TOKEN`, `RESEND_API_KEY`, `VAPID_*`.
 Полный список с пояснениями — `deploy/.env.example`.
 
 ### Полезно знать про `.env`
@@ -77,8 +77,10 @@ npm run test:e2e   # playwright; перед первым запуском: npx p
 4. На проде схема применяется при старте (`server/migrate.ts`). **Данные не удаляйте**: бонусные таблицы/колонки намеренно оставлены (см. `docs/changelog.md`).
 
 ### Работа с файлами
-- Загрузка: `POST /api/upload` (поле `images`, до 10 файлов) — пишет локально в `uploads/` и best-effort в S3, возвращает `/objects/uploads/<name>`.
-- Отдача: `/objects/uploads/<name>` (+ `?w=NNN` для webp-ресайза) — сначала с диска, потом S3, потом заглушка.
+Файлы хранятся только на диске сервера, внешнего хранилища нет.
+- Загрузка: `POST /api/upload` (поле `images`, до 10 файлов) — пишет в `uploads/<name>` (`server/localObjectStore.ts`) и возвращает `/objects/uploads/<name>`.
+- Отдача: `/objects/uploads/<name>` (+ `?w=NNN` для webp-ресайза) — читает с диска (`server/objectRoutes.ts`), при отсутствии файла отдаёт заглушку.
+- Архив зеркала: `bash scripts/backup-uploads.sh` (см. `docs/operations.md`).
 
 ### Проверка перед коммитом
 

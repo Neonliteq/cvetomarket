@@ -15,7 +15,7 @@
 | Фронтенд | React 18 + TypeScript + Vite, TanStack Query, **wouter** (роутинг), Tailwind CSS + shadcn/ui (Radix), PWA (service worker, web-push) |
 | Бэкенд | Node.js + Express 5, TypeScript, сессии в cookie (`express-session` + `connect-pg-simple`), helmet (CSP выключен) |
 | БД | PostgreSQL + Drizzle ORM (`drizzle-kit push`), схема в `shared/schema.ts` |
-| Файлы | локальное зеркало на диске сервера + Reg.ru S3 как резерв (см. `docs/architecture.md`) |
+| Файлы | хранятся на диске сервера (`<APP_DIR>/uploads`); внешнего объектного хранилища нет (см. `docs/architecture.md`) |
 | Платежи | **Robokassa** (карта) + оплата наличными при получении. Есть неиспользуемый `server/unitpay.ts` |
 | Аналитика | своя (`/api/analytics/*`) + Яндекс.Метрика (счётчик `112737627`) |
 | Прод | VPS Reg.ru, nginx (reverse proxy + кэш `/objects`), PM2 в режиме **cluster (2 воркера)** |
@@ -39,10 +39,10 @@ server/
   static.ts        раздача SPA-сборки
   seed.ts          сиды для локальной разработки
   migrate.ts       применение схемы при старте
-  replit_integrations/object_storage/  отдача /objects (S3 + локальный диск + ресайз)
+  objectRoutes.ts  отдача /objects с диска (+ ресайз `?w=`)
 shared/schema.ts   ЕДИНАЯ схема БД и типы (Drizzle) — источник правды
 deploy/            deploy.sh, ecosystem.config.cjs (PM2), nginx.conf, .env.example, README (гайд по серверу)
-scripts/           служебные скрипты (dev, deploy, verify, backfill)
+scripts/           служебные скрипты (dev, deploy, verify, db-query, backup-db, backup-uploads)
 docs/              документация: architecture, operations, development, troubleshooting, payments, changelog
 ```
 
@@ -58,7 +58,6 @@ npm run check    # tsc (типы)
 npm test         # vitest (e2e исключены)
 npm run test:e2e # playwright (браузеры нужно ставить: npx playwright install)
 npm run db:push  # применить схему Drizzle к БД
-npm run backfill:uploads  # скачать файлы из S3 в локальное зеркало
 ```
 
 Полезные скрипты из `scripts/`:
@@ -109,7 +108,7 @@ npm run backfill:uploads  # скачать файлы из S3 в локальн�
 |---|---|
 | Прод не поднялся после деплоя, PM2 падает | Конфиг PM2 был `.js` — нужен `.cjs` (ESM-проект) |
 | `npm ci` на сервере падает по памяти | 2 ГБ RAM: `deploy.sh` сначала делает `pm2 stop`, потом ставит зависимости |
-| Фото товаров «битые» | Сбои Reg.ru S3 → файлы отдаются из локального зеркала `<APP_DIR>/uploads`; S3 — только резерв. Дозаполнить: `npm run backfill:uploads` |
+| Фото товаров «битые» | Файла нет в `<APP_DIR>/uploads` (хранилище только локальное). Проверить `ls uploads`, восстановить из архива `scripts/backup-uploads.sh` |
 | PostgreSQL не стартует локально | Шелл с правами админа → запускать через `runas /trustlevel` (см. `docs/troubleshooting.md`) |
 | Порт 5000 занят | На машине могут висеть чужие dev-серверы; используй другой `PORT` |
 | Изменения не видны в браузере | PWA кэширует оболочку — Ctrl+F5 (или инкогнито) |

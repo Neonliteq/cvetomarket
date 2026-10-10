@@ -38,16 +38,16 @@ $env:PORT='5055'; npx tsx server/index.ts
 4. Откат: `git reset --hard <предыдущий коммит> && bash deploy/deploy.sh`.
 
 ### Фото товаров не грузятся / «битые» картинки
-**Причина:** сбои Reg.ru S3 (частые ремонтные работы) — раньше все изображения шли напрямую из S3.
-**Решение:** изображения отдаются из локального зеркала `uploads/` на диске сервера (S3 — только резерв). Если файлов не хватает:
+**Причина:** файла нет в каталоге `uploads/` на диске сервера (изображения хранятся только там; внешнего хранилища нет). Маршрут `/objects/...` в этом случае отдаёт заглушку.
 
 ```bash
-cd /var/www/cvetomarket && npm run backfill:uploads      # безопасно перезапускать
-ls uploads | wc -l ; du -sh uploads
+cd /var/www/cvetomarket
+ls uploads | wc -l ; du -sh uploads            # что вообще есть
+ls -la uploads | grep <имя-из-URL>             # есть ли конкретный файл
+curl -sI http://127.0.0.1:5000/objects/uploads/<имя> | head -3
 ```
 
-Проверить, что отдаёт именно локальная ветка (без S3): заголовок ответа
-`Cache-Control: public, max-age=31536000, immutable` (у старого S3-пути было `max-age=3600`).
+Если файл потерян — восстановите из архива: `tar -xzf /var/backups/cvetomarket/uploads-<дата>.tar.gz -C /var/www/cvetomarket` (см. `docs/operations.md`).
 
 ### Плата прошла, но заказ остался «Ожидает оплаты»
 1. Result URL в ЛК Robokassa должен быть `https://cveto.market/api/payment/robokassa/result`, метод **POST**.

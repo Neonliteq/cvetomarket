@@ -11,8 +11,7 @@ import helmet from "helmet";
 import { storage } from "./storage";
 import { insertUserSchema, insertShopSchema, insertProductSchema, insertOrderSchema, insertReviewSchema, insertMessageSchema, insertCategorySchema, insertCitySchema } from "@shared/schema";
 import { z } from "zod";
-import { objectStorageClient, ObjectStorageService } from "./replit_integrations/object_storage";
-import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
+import { registerObjectRoutes } from "./objectRoutes";
 import { writeLocalObject } from "./localObjectStore";
 import { sendTelegramMessage, generateLinkToken, consumeLinkToken, getBotUsername, ORDER_STATUS_MESSAGES, registerWebhook } from "./telegram";
 import { sendMaxMessage, generateMaxLinkToken, consumeMaxLinkToken, getMaxBotNick, ORDER_STATUS_MESSAGES_MAX, registerMaxWebhook } from "./max";
@@ -23,12 +22,6 @@ import { sendPushToUser, VAPID_PUBLIC_KEY, setRetrySettings, getRetryAttempts, g
 function toSafeUser(user: Record<string, unknown>) {
   const { password: _pw, adminNotes: _notes, ...safe } = user;
   return safe;
-}
-
-function parseObjPath(p: string): { bucketName: string; objectName: string } {
-  if (!p.startsWith("/")) p = `/${p}`;
-  const parts = p.split("/");
-  return { bucketName: parts[1], objectName: parts.slice(2).join("/") };
 }
 
 function isPointInPolygon(point: [number, number], polygon: number[][]): boolean {
@@ -126,7 +119,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     },
   }));
 
-  registerObjectStorageRoutes(app);
+  registerObjectRoutes(app);
 
   // Load push retry settings from DB and apply them at startup
   storage.getSettings().then((s) => {
@@ -137,8 +130,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     console.warn("[webpush] Failed to load push retry settings from DB at startup, using env/defaults:", err?.message ?? err);
   });
 
-  const objStorageService = new ObjectStorageService();
-
   app.post("/api/upload", requireAuth, upload.array("images", 10), async (req, res) => {
     const files = req.files as Express.Multer.File[];
     if (!files || files.length === 0) return res.status(400).json({ error: "No files uploaded" });
@@ -146,27 +137,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const urls: string[] = [];
       for (const file of files) {
-        const ext = path.extname(file.originalname);
+        const ext = path.extname(file.originalname).toLowerCase();
         const uniqueName = `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
-
-        // Local copy first — photos must keep working while S3 is under
-        // maintenance; the server serves uploaded objects from its own disk.
+        // Файлы хранятся только на диске сервера (внешнее хранилище не используется).
         await writeLocalObject(uniqueName, file.buffer);
-
-        // S3 backup is best effort: a failed (or unconfigured) S3 write must
-        // never fail the upload, the local copy is already authoritative.
-        try {
-          const privateDir = objStorageService.getPrivateObjectDir();
-          const { bucketName, objectName: basePath } = parseObjPath(privateDir);
-          const objectName = `${basePath}/uploads/${uniqueName}`;
-          await objectStorageClient.bucket(bucketName).file(objectName).save(file.buffer, {
-            contentType: file.mimetype,
-            resumable: false,
-          });
-        } catch (err: any) {
-          console.warn("S3 backup of upload failed (local copy kept):", err?.message ?? err);
-        }
-
         urls.push(`/objects/uploads/${uniqueName}`);
       }
 
