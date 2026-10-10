@@ -45,11 +45,11 @@ if command -v npx >/dev/null 2>&1; then
   esac
 fi
 
-echo "-- локальное зеркало изображений --"
+echo "-- файлы изображений на диске --"
 files=$(ls uploads 2>/dev/null | wc -l | tr -d ' ')
 size=$(du -sh uploads 2>/dev/null | cut -f1)
 echo "  файлов: $files, размер: ${size:-0}"
-if [ "${files:-0}" -gt 0 ]; then ok "зеркало uploads заполнено"; else bad "каталог uploads пуст"; fi
+if [ "${files:-0}" -gt 0 ]; then ok "каталог uploads заполнен"; else bad "каталог uploads пуст"; fi
 
 echo "-- логи --"
 for f in /var/log/cvetomarket/out.log /var/log/cvetomarket/error.log; do
