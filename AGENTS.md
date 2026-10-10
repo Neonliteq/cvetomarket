@@ -65,6 +65,8 @@ npm run db:push  # применить схему Drizzle к БД
 - `scripts/deploy.ps1` — ветка → `main` → push → деплой на прод → автопроверка.
 - `scripts/verify-prod.sh` — смоук-проверка прода (запускается на сервере).
 - `scripts/db-query.sh` — SQL-запрос к прод-БД (запускается на сервере).
+- `scripts/backup-db.sh`, `scripts/backup-uploads.sh` — бэкапы БД и изображений.
+- `scripts/cleanup-uploads.sh` — очистка диска выше порога (старые фото сборки заказов; фото товаров не трогает).
 
 ---
 

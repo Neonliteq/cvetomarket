@@ -135,6 +135,25 @@ ls -lh /var/backups/cvetomarket/uploads-*.tar.gz
 
 > Архив лежит на том же диске — это защита от случайного удаления, но не от потери сервера. Для полной защиты нужна выгрузка за пределы сервера.
 
+### Очистка диска
+
+`scripts/cleanup-uploads.sh` срабатывает **только когда диск заполнен выше порога** (`THRESHOLD`, по умолчанию 85 %):
+
+```bash
+cd /var/www/cvetomarket
+THRESHOLD=70 DRY_RUN=1 bash scripts/cleanup-uploads.sh   # посмотреть, что удалилось бы
+bash scripts/cleanup-uploads.sh                          # реальная очистка
+```
+
+**Удаляется:**
+- **старые фото сборки заказов** (`orders.assembly_photo_url`) — только у доставленных и отменённых заказов старше `ORDER_PHOTO_MAX_AGE_DAYS` дней (по умолчанию 30). Ссылка в заказе обнуляется, чтобы не осталось «битых» картинок;
+- временные файлы `*.tmp-*` от прерванных загрузок;
+- опционально «осиротевшие» файлы, если задать `ORPHAN_MIN_AGE_DAYS > 0` (по умолчанию выключено).
+
+**Никогда не удаляется** (скрипт сверяется с БД): фото товаров (`products.images`), логотипы и обложки магазинов, аватары, изображения в чатах, фото товаров в позициях заказов, изображения черновиков товаров.
+
+Настроен cron — ежедневно в **04:10**, лог в `/var/log/cvetomarket/cleanup.log`.
+
 ## Проверка после деплоя (чек-лист)
 
 1. `git -C /var/www/cvetomarket rev-parse --short HEAD` — нужный коммит.
@@ -149,6 +168,7 @@ ls -lh /var/backups/cvetomarket/uploads-*.tar.gz
 | Задача | Команда |
 |---|---|
 | Архив изображений | `bash scripts/backup-uploads.sh` |
+| Очистка диска (только выше порога) | `bash scripts/cleanup-uploads.sh` |
 | Бэкап БД | `bash scripts/backup-db.sh` |
 | Проверить конфиг Robokassa | `scripts/verify-prod.sh` (раздел «Robokassa») |
 | Почистить кэш nginx `/objects` | `rm -rf /var/cache/nginx/cveto_objects/*` + `systemctl reload nginx` |
